@@ -18,7 +18,7 @@ class CustomerController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'per_page']);
+        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'buss_unit']);
 
         return response()->json($this->customerService->getAll($filters));
     }
@@ -263,7 +263,7 @@ class CustomerController extends Controller
 
     public function assignedToMe(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'per_page']);
+        $filters = $request->only(['search', 'per_page', 'buss_unit']);
         $customers = $this->customerService->getAssignedToMarketing($request->user()->id, $filters);
 
         return response()->json($customers);

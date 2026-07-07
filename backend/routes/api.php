@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('customers/all-ids', [CustomerController::class, 'allIds']);
             Route::post('customers/batch-delete', [CustomerController::class, 'batchDelete']);
             Route::post('assignments/assign', [AssignmentController::class, 'assign']);
+            Route::post('assignments/assign-by-unit', [AssignmentController::class, 'assignByUnit']);
             Route::post('assignments/unassign', [AssignmentController::class, 'unassign']);
             Route::get('assignments/distribution', [AssignmentController::class, 'distribution']);
             Route::get('admin/marketing-users', [AssignmentController::class, 'marketingUsers']);

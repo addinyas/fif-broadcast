@@ -4,7 +4,8 @@ import { Skeleton } from './Skeleton';
 
 interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
+  headerRight?: ReactNode;
   render?: (item: T) => ReactNode;
 }
 
@@ -44,7 +45,7 @@ export function DataTable<T extends { id: number }>({
   const isMarked = (id: number) => markedIds?.includes(id);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-100 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
+    <div className="rounded-xl border border-slate-100 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead>
@@ -60,7 +61,12 @@ export function DataTable<T extends { id: number }>({
                 </th>
               )}
               {columns.map((col) => (
-                <th key={col.key} className="px-2 py-2.5 whitespace-nowrap text-center">{col.header}</th>
+                <th key={col.key} className="px-2 py-2.5 whitespace-nowrap text-center">
+                  <div className="inline-flex items-center justify-center gap-1">
+                    {col.header}
+                    {col.headerRight}
+                  </div>
+                </th>
               ))}
               {(onEdit || onDelete) && <th className="px-2 py-2.5 text-right whitespace-nowrap">Aksi</th>}
             </tr>

@@ -33,6 +33,7 @@ async function processPending() {
       FROM broadcast_histories bh
       JOIN customers c ON c.id = bh.customer_id
       WHERE bh.status = 'pending'
+      ORDER BY RANDOM()
       LIMIT 5
     `).all();
 

@@ -19,7 +19,7 @@ class CustomerRepository implements CustomerRepositoryInterface
                 $q->where('name', 'like', "%{$searchTerm}%")
                     ->orWhere('phone_number', 'like', "%{$searchTerm}%")
                     ->orWhere('no_contract', 'like', "%{$searchTerm}%")
-                    ->orWhereRaw("json_extract(dynamic_data, '$.no_contract') LIKE ?", ["%{$searchTerm}%"]);
+                    ->orWhere('dynamic_data', 'like', "%{$searchTerm}%");
             });
         }
 
@@ -28,7 +28,21 @@ class CustomerRepository implements CustomerRepositoryInterface
         }
 
         if (! empty($filters['marketing_id'])) {
-            $query->where('marketing_id', $filters['marketing_id']);
+            $ids = is_array($filters['marketing_id'])
+                ? $filters['marketing_id']
+                : explode(',', $filters['marketing_id']);
+            $query->whereIn('marketing_id', array_map('intval', $ids));
+        }
+
+        if (! empty($filters['marketing_ids'])) {
+            $ids = is_array($filters['marketing_ids'])
+                ? $filters['marketing_ids']
+                : explode(',', $filters['marketing_ids']);
+            $query->whereIn('marketing_id', array_map('intval', $ids));
+        }
+
+        if (! empty($filters['buss_unit'])) {
+            $query->whereRaw("json_extract(dynamic_data, '$.buss_unit') = ?", [$filters['buss_unit']]);
         }
 
         return $query->latest()->paginate($filters['per_page'] ?? 50);
@@ -87,13 +101,17 @@ class CustomerRepository implements CustomerRepositoryInterface
                 $q->latest();
             }]);
 
+        if (! empty($filters['buss_unit'])) {
+            $query->where('dynamic_data->buss_unit', $filters['buss_unit']);
+        }
+
         if (! empty($filters['search'])) {
             $searchTerm = $filters['search'];
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('name', 'like', "%{$searchTerm}%")
                     ->orWhere('phone_number', 'like', "%{$searchTerm}%")
                     ->orWhere('no_contract', 'like', "%{$searchTerm}%")
-                    ->orWhereRaw("json_extract(dynamic_data, '$.no_contract') LIKE ?", ["%{$searchTerm}%"]);
+                    ->orWhere('dynamic_data', 'like', "%{$searchTerm}%");
             });
         }
 

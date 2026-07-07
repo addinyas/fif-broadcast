@@ -101,4 +101,13 @@ export const customerService = {
     const { data } = await api.get(`/customers/by-no-contract/${encodeURIComponent(noContract)}`);
     return data;
   },
+
+  async assignByUnit(marketingId: number, nmcCount: number, refiCount: number): Promise<{ assigned: unknown[]; total: number }> {
+    const { data } = await api.post('/assignments/assign-by-unit', {
+      marketing_id: marketingId,
+      nmc_count: nmcCount,
+      refi_count: refiCount,
+    });
+    return data;
+  },
 };

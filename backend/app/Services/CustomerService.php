@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Interfaces\CustomerRepositoryInterface;
+use App\Models\BroadcastHistory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -168,6 +169,35 @@ class CustomerService
 
     public function getDistributionReport(): array
     {
-        return $this->customerRepository->getDistributionReport();
+        $report = $this->customerRepository->getDistributionReport();
+
+        $byMarketing = $report['by_marketing'];
+        $marketingIds = $byMarketing->pluck('marketing_id')->toArray();
+
+        if (!empty($marketingIds)) {
+            $stats = BroadcastHistory::whereIn('marketing_id', $marketingIds)
+                ->selectRaw("
+                    marketing_id,
+                    COUNT(*) as total_broadcasts,
+                    SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing
+                ")
+                ->groupBy('marketing_id')
+                ->get()
+                ->keyBy('marketing_id');
+
+            foreach ($byMarketing as $item) {
+                $s = $stats->get($item->marketing_id);
+                $item->total_broadcasts = $s ? (int) $s->total_broadcasts : 0;
+                $item->sent = $s ? (int) $s->sent : 0;
+                $item->failed = $s ? (int) $s->failed : 0;
+                $item->pending = $s ? (int) $s->pending : 0;
+                $item->processing = $s ? (int) $s->processing : 0;
+            }
+        }
+
+        return $report;
     }
 }

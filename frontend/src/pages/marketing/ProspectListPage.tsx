@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Send, Save, Loader2, Clock, Plus, Trash2, RotateCw } from 'lucide-react';
+import { Search, Send, Save, Loader2, Clock, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2 } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -77,6 +77,9 @@ export function ProspectListPage() {
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [sentClickedIds, setSentClickedIds] = useState<number[]>([]);
+  const [bussUnitFilter, setBussUnitFilter] = useState('');
+  const [showBussUnitDropdown, setShowBussUnitDropdown] = useState(false);
+  const bussUnitRef = useRef<HTMLDivElement>(null);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleNoContractChange = (val: string) => {
@@ -117,7 +120,7 @@ export function ProspectListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE) });
+      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), buss_unit: bussUnitFilter });
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
     } catch {
@@ -126,7 +129,7 @@ export function ProspectListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, bussUnitFilter]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -140,6 +143,18 @@ export function ProspectListPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
   useEffect(() => () => { if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current); }, []);
+
+  useEffect(() => { setPage(1); }, [bussUnitFilter]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (bussUnitRef.current && !bussUnitRef.current.contains(e.target as Node)) {
+        setShowBussUnitDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const insertVariable = (variable: string) => {
     const textarea = textareaRef.current;
@@ -392,6 +407,49 @@ export function ProspectListPage() {
     ) },
     { key: 'tahun', header: 'Tahun', render: (c: Customer) => (
       <span className="text-[11px] text-slate-600 dark:text-slate-400">{dyn(c, 'tahun') || '-'}</span>
+    ) },
+    {
+      key: 'buss_unit',
+      header: (
+        <div className="relative inline-flex items-center gap-1">
+          <span>Buss Unit</span>
+          <div ref={bussUnitRef} className="relative">
+            <button
+              onClick={() => setShowBussUnitDropdown((p) => !p)}
+              className={`rounded p-0.5 transition-colors ${bussUnitFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+            >
+              <ChevronDown className={`h-3 w-3 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showBussUnitDropdown && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[110px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
+                {['', 'NMC', 'REFI'].map((val) => {
+                  const active = val ? bussUnitFilter === val : !bussUnitFilter;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => {
+                        setBussUnitFilter(val);
+                        setShowBussUnitDropdown(false);
+                        setPage(1);
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                        active
+                          ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300'
+                          : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {val || 'Semua'}
+                      {active && <CheckCircle2 className="ml-auto h-3 w-3 text-fif-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+      render: (c: Customer) => (
+      <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{dyn(c, 'buss_unit') || '-'}</span>
     ) },
     { key: 'plafon', header: 'Plafon', render: (c: Customer) => (
       <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(dyn(c, 'plafon'))}</span>

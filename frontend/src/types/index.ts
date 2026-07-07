@@ -92,7 +92,16 @@ export interface DistributionReport {
   total_customers: number;
   assigned: number;
   unassigned: number;
-  by_marketing: { marketing_id: number; total: number; marketing: { id: number; name: string } }[];
+  by_marketing: {
+    marketing_id: number;
+    total: number;
+    marketing: { id: number; name: string };
+    total_broadcasts: number;
+    sent: number;
+    failed: number;
+    pending: number;
+    processing: number;
+  }[];
 }
 
 export interface TenorOption {

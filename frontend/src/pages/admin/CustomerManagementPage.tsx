@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2 } from 'lucide-react';
+import { Plus, Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -34,24 +34,60 @@ export function CustomerManagementPage() {
   const [importResult, setImportResult] = useState<{ imported: number; failed: unknown[]; detected_columns?: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAssign, setShowAssign] = useState(false);
+  const [showAssignByUnit, setShowAssignByUnit] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<MarketingUser[]>([]);
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | null>(null);
+  const [assignCounts, setAssignCounts] = useState({ nmc: 0, refi: 0 });
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
   const [selectAllPages, setSelectAllPages] = useState(false);
+  const [selectedMceIds, setSelectedMceIds] = useState<number[]>([]);
+  const [allMarketingUsers, setAllMarketingUsers] = useState<MarketingUser[]>([]);
+  const [showAssigned, setShowAssigned] = useState(false);
+  const [bussUnitFilter, setBussUnitFilter] = useState('');
+  const [showBussUnitDropdown, setShowBussUnitDropdown] = useState(false);
+  const bussUnitRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (bussUnitRef.current && !bussUnitRef.current.contains(e.target as Node)) {
+        setShowBussUnitDropdown(false);
+      }
+    };
+    if (showBussUnitDropdown) {
+      document.addEventListener('mousedown', handler);
+      return () => document.removeEventListener('mousedown', handler);
+    }
+  }, [showBussUnitDropdown]);
+
+  const mceFilterKey = selectedMceIds.join(',');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAll({ page: page.toString(), search });
+      const params: Record<string, string> = { page: page.toString(), search, per_page: '250' };
+      if (!showAssigned) {
+        params.assignment_status = 'unassigned';
+      }
+      if (mceFilterKey) {
+        params.marketing_ids = mceFilterKey;
+      }
+      if (bussUnitFilter) {
+        params.buss_unit = bussUnitFilter;
+      }
+      const res = await customerService.getAll(params);
       setCustomers(res.data);
       setLastPage(res.last_page);
       setTotalCustomers(res.total);
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, mceFilterKey, showAssigned, bussUnitFilter]);
+
+  useEffect(() => {
+    customerService.getMarketingUsers().then(setAllMarketingUsers);
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -142,7 +178,49 @@ export function CustomerManagementPage() {
   const sharedColumns = [
     { key: 'no_contract', header: 'No Contract', render: (c: Customer) => dyn(c, 'no_contract') },
     { key: 'nama', header: 'Nama', render: (c: Customer) => dyn(c, 'nama') || c.name },
-    { key: 'buss_unit', header: 'Buss Unit', render: (c: Customer) => dyn(c, 'buss_unit') },
+    {
+      key: 'buss_unit',
+      header: (
+        <div className="relative inline-flex items-center gap-1">
+          <span>Buss Unit</span>
+          <div ref={bussUnitRef} className="relative">
+            <button
+              onClick={() => setShowBussUnitDropdown((p) => !p)}
+              className={`rounded p-0.5 transition-colors ${bussUnitFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+            >
+              <ChevronDown className={`h-3 w-3 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showBussUnitDropdown && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[110px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
+                {['', 'NMC', 'REFI'].map((val) => {
+                  const active = val ? bussUnitFilter === val : !bussUnitFilter;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => {
+                        setBussUnitFilter(val);
+                        setShowBussUnitDropdown(false);
+                        setPage(1);
+                        setSelectAllPages(false);
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                        active
+                          ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300'
+                          : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {val || 'Semua'}
+                      {active && <CheckCircle2 className="ml-auto h-3 w-3 text-fif-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+      render: (c: Customer) => dyn(c, 'buss_unit'),
+    },
     { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => dyn(c, 'obj_desc') },
     { key: 'vcode', header: 'V Code', render: (c: Customer) => dyn(c, 'vcode') },
     { key: 'tahun', header: 'Tahun', render: (c: Customer) => dyn(c, 'tahun') },
@@ -282,18 +360,33 @@ export function CustomerManagementPage() {
           {selectedIds.length > 0 && (
             <>
               {isAdmin && (
-                <Button
-                  variant="secondary"
-                  icon={<UserCheck className="h-4 w-4" />}
-                  onClick={async () => {
-                    const users = await customerService.getMarketingUsers();
-                    setMarketingUsers(users);
-                    setSelectedMarketingId(null);
-                    setShowAssign(true);
-                  }}
-                >
-                  Assign ({selectedIds.length})
-                </Button>
+                <>
+                  <Button
+                    variant="secondary"
+                    icon={<UserCheck className="h-4 w-4" />}
+                    onClick={async () => {
+                      const users = await customerService.getMarketingUsers();
+                      setMarketingUsers(users);
+                      setSelectedMarketingId(null);
+                      setShowAssign(true);
+                    }}
+                  >
+                    Assign ({selectedIds.length})
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    icon={<Filter className="h-4 w-4" />}
+                    onClick={async () => {
+                      const users = await customerService.getMarketingUsers();
+                      setMarketingUsers(users);
+                      setSelectedMarketingId(null);
+                      setAssignCounts({ nmc: 0, refi: 0 });
+                      setShowAssignByUnit(true);
+                    }}
+                  >
+                    By Unit
+                  </Button>
+                </>
               )}
               {isAdmin && (
                 <Button
@@ -332,15 +425,84 @@ export function CustomerManagementPage() {
         </div>
       </div>
 
-      <div className="relative max-w-xs">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); setSelectAllPages(false); }}
-          placeholder="Cari customer..."
-          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-        />
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="relative max-w-xs flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); setSelectAllPages(false); }}
+            placeholder="Cari customer..."
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+          />
+        </div>
+
+        {isAdmin && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm">
+            {allMarketingUsers.length > 0 && (
+              <>
+                <Filter className="h-4 w-4 text-slate-400" />
+                <span className="mr-1 text-xs font-medium text-slate-500 dark:text-slate-400">MCE:</span>
+              </>
+            )}
+            <button
+              onClick={() => { setShowAssigned((p) => !p); setPage(1); }}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                !showAssigned
+                  ? 'bg-fif-100 text-fif-700 ring-1 ring-fif-300 dark:bg-fif-900/30 dark:text-fif-300 dark:ring-fif-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
+              }`}
+            >
+              {!showAssigned ? (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              ) : (
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 dark:border-slate-500" />
+              )}
+              {showAssigned ? 'Tampilkan semua' : 'Hanya unassigned'}
+            </button>
+            {allMarketingUsers.length > 0 && allMarketingUsers.map((u) => {
+              const checked = selectedMceIds.includes(u.id);
+              return (
+                <label
+                  key={u.id}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                    checked
+                      ? 'bg-fif-100 text-fif-700 ring-1 ring-fif-300 dark:bg-fif-900/30 dark:text-fif-300 dark:ring-fif-700'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => {
+                      setSelectedMceIds((prev) =>
+                        prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
+                      );
+                      setPage(1);
+                      setSelectAllPages(false);
+                    }}
+                    className="sr-only"
+                  />
+                  {checked ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 dark:border-slate-500" />
+                  )}
+                  {u.name}
+                </label>
+              );
+            })}
+            {allMarketingUsers.length > 0 && selectedMceIds.length > 0 && (
+              <button
+                onClick={() => { setSelectedMceIds([]); setPage(1); }}
+                className="ml-1 rounded-md px-1.5 py-0.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+              >
+                clear
+              </button>
+            )}
+
+          </div>
+        )}
       </div>
 
       <DataTable
@@ -374,26 +536,70 @@ export function CustomerManagementPage() {
           <button
             onClick={async () => {
               const res = await customerService.getAllIds();
-              setSelectedIds(res.ids);
+              const ids = (res.ids as number[]).slice(0, 250);
+              setSelectedIds(ids);
               setSelectAllPages(false);
             }}
             className="text-sm font-medium text-fif-600 dark:text-fif-400 hover:text-fif-700 dark:hover:text-fif-300 hover:underline"
           >
-            Pilih semua {totalCustomers} customer
+            Pilih semua {Math.min(totalCustomers, 250)} customer
           </button>
           <span className="ml-1 text-sm text-slate-400 dark:text-slate-500">({selectedIds.length} dipilih)</span>
         </div>
       )}
 
-      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
         <span>Halaman {page} dari {lastPage}</span>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="sm" disabled={page <= 1} onClick={() => { setPage(page - 1); setSelectAllPages(false); }}>
-            Sebelumnya
-          </Button>
-          <Button variant="secondary" size="sm" disabled={page >= lastPage} onClick={() => { setPage(page + 1); setSelectAllPages(false); }}>
-            Selanjutnya
-          </Button>
+        <div className="flex items-center gap-1">
+          <button
+            disabled={page <= 1}
+            onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
+            className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Prev
+          </button>
+          {(() => {
+            const maxVisible = 5;
+            const pages: (number | 'ellipsis')[] = [];
+            let start = Math.max(1, page - Math.floor(maxVisible / 2));
+            let end = Math.min(lastPage, start + maxVisible - 1);
+            if (end - start + 1 < maxVisible) {
+              start = Math.max(1, end - maxVisible + 1);
+            }
+            if (start > 1) {
+              pages.push(1);
+              if (start > 2) pages.push('ellipsis');
+            }
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (end < lastPage) {
+              if (end < lastPage - 1) pages.push('ellipsis');
+              pages.push(lastPage);
+            }
+            return pages.map((p, i) =>
+              p === 'ellipsis' ? (
+                <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
+              ) : (
+                <button
+                  key={p}
+                  onClick={() => { setPage(p); setSelectAllPages(false); }}
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                    p === page
+                      ? 'bg-fif-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {p}
+                </button>
+              )
+            );
+          })()}
+          <button
+            disabled={page >= lastPage}
+            onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
+            className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+          >
+            Next
+          </button>
         </div>
       </div>
 
@@ -601,6 +807,68 @@ export function CustomerManagementPage() {
                 }
               }}
               disabled={!selectedMarketingId}
+            >
+              Assign
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showAssignByUnit} onClose={() => setShowAssignByUnit(false)} title="Assign by Unit">
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Tentukan jumlah NMC dan REFI yang akan diassign ke marketing</p>
+          <select
+            value={selectedMarketingId ?? ''}
+            onChange={(e) => setSelectedMarketingId(parseInt(e.target.value) || null)}
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+          >
+            <option value="">-- Pilih Marketing --</option>
+            {marketingUsers.map((u) => (
+              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+            ))}
+          </select>
+          {marketingUsers.length === 0 && (
+            <p className="text-sm text-red-500 dark:text-red-400">Tidak ada user marketing. Daftarkan marketing terlebih dahulu.</p>
+          )}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah NMC</label>
+              <input
+                type="number" min={0}
+                value={assignCounts.nmc}
+                onChange={(e) => setAssignCounts((p) => ({ ...p, nmc: Math.max(0, parseInt(e.target.value) || 0) }))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah REFI</label>
+              <input
+                type="number" min={0}
+                value={assignCounts.refi}
+                onChange={(e) => setAssignCounts((p) => ({ ...p, refi: Math.max(0, parseInt(e.target.value) || 0) }))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowAssignByUnit(false)}>Batal</Button>
+            <Button
+              onClick={async () => {
+                if (!selectedMarketingId) return;
+                const total = assignCounts.nmc + assignCounts.refi;
+                if (total === 0) return;
+                try {
+                  const res = await customerService.assignByUnit(selectedMarketingId, assignCounts.nmc, assignCounts.refi);
+                  toast('success', `${res.total} customer berhasil diassign`);
+                  setShowAssignByUnit(false);
+                  fetchData();
+                } catch {
+                  toast('error', 'Gagal mengassign customer');
+                }
+              }}
+              disabled={!selectedMarketingId || (assignCounts.nmc + assignCounts.refi) === 0}
             >
               Assign
             </Button>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Services\AuthService;
 use App\Services\CustomerService;
 use Illuminate\Http\JsonResponse;
@@ -71,5 +72,43 @@ class AssignmentController extends Controller
     public function marketingUsers(): JsonResponse
     {
         return response()->json($this->authService->getMarketingUsers());
+    }
+
+    public function assignByUnit(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'marketing_id' => 'required|exists:users,id',
+            'nmc_count' => 'required|integer|min:0',
+            'refi_count' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $assigned = [];
+
+        foreach (['NMC' => 'nmc_count', 'REFI' => 'refi_count'] as $unit => $countField) {
+            $count = (int) $request->$countField;
+            if ($count <= 0) continue;
+
+            $ids = Customer::where('assignment_status', 'unassigned')
+                ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = ?", [$unit])
+                ->inRandomOrder()
+                ->limit($count)
+                ->pluck('id')
+                ->toArray();
+
+            foreach ($ids as $customerId) {
+                try {
+                    $this->customerService->assignToMarketing($customerId, $request->marketing_id);
+                    $assigned[] = ['customer_id' => $customerId, 'buss_unit' => $unit];
+                } catch (\Exception $e) {
+                    $assigned[] = ['customer_id' => $customerId, 'error' => $e->getMessage()];
+                }
+            }
+        }
+
+        return response()->json(['assigned' => $assigned, 'total' => count($assigned)]);
     }
 }
