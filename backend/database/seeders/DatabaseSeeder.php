@@ -10,32 +10,18 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
-            'name' => 'Super Admin',
-            'email' => 'superadmin@crm.test',
-            'password' => Hash::make('password'),
-            'role' => 'superadmin',
-        ]);
+        $users = [
+            ['name' => 'Super Admin', 'email' => 'superadmin@crm.test', 'role' => 'superadmin'],
+            ['name' => 'Admin User', 'email' => 'admin@crm.test', 'role' => 'UH'],
+            ['name' => 'Marketing User', 'email' => 'marketing@crm.test', 'role' => 'marketing'],
+            ['name' => 'Marketing User 2', 'email' => 'marketing2@crm.test', 'role' => 'marketing'],
+        ];
 
-        User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@crm.test',
-            'password' => Hash::make('password'),
-            'role' => 'UH',
-        ]);
-
-        User::create([
-            'name' => 'Marketing User',
-            'email' => 'marketing@crm.test',
-            'password' => Hash::make('password'),
-            'role' => 'marketing',
-        ]);
-
-        User::create([
-            'name' => 'Marketing User 2',
-            'email' => 'marketing2@crm.test',
-            'password' => Hash::make('password'),
-            'role' => 'marketing',
-        ]);
+        foreach ($users as $user) {
+            User::firstOrCreate(
+                ['email' => $user['email']],
+                [...$user, 'password' => Hash::make('password')]
+            );
+        }
     }
 }

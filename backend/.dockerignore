@@ -1,0 +1,10 @@
+.env
+.git
+node_modules
+vendor
+public/build
+storage/framework/cache/data
+storage/framework/sessions
+storage/framework/views
+storage/logs
+docker-compose.yml
