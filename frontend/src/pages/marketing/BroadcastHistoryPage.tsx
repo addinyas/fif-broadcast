@@ -1,0 +1,104 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Send, Clock } from 'lucide-react';
+import { broadcastService } from '../../services/broadcastService';
+import { DataTable } from '../../components/ui/DataTable';
+import { Badge } from '../../components/ui/Badge';
+import type { BroadcastHistory } from '../../types';
+
+type Tab = 'sent' | 'not_sent';
+
+export function BroadcastHistoryPage() {
+  const [history, setHistory] = useState<BroadcastHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [tab, setTab] = useState<Tab>('not_sent');
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: Record<string, string> = { page: page.toString() };
+      if (tab === 'sent') params.status = 'sent';
+      const res = await broadcastService.getHistory(params);
+      setHistory(res.data);
+      setLastPage(res.last_page);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, tab]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' => {
+    switch (status) {
+      case 'pending': return 'warning';
+      case 'processing': return 'info';
+      case 'sent': return 'success';
+      case 'failed': return 'danger';
+      default: return 'warning';
+    }
+  };
+
+  const columns = [
+    { key: 'customer', header: 'Customer', render: (b: BroadcastHistory) => b.customer?.name || `#${b.customer_id}` },
+    {
+      key: 'exact_message', header: 'Message', render: (b: BroadcastHistory) => (
+        <div className="max-w-xs truncate text-slate-500 dark:text-slate-400">{b.exact_message}</div>
+      )
+    },
+    {
+      key: 'status', header: 'Status', render: (b: BroadcastHistory) => (
+        <Badge variant={statusVariant(b.status)}>{b.status}</Badge>
+      )
+    },
+    {
+      key: 'sent_at', header: 'Sent At', render: (b: BroadcastHistory) =>
+        b.sent_at ? new Date(b.sent_at).toLocaleString() : '-'
+    },
+  ];
+
+  const tabs: { key: Tab; label: string; icon: typeof Send }[] = [
+    { key: 'not_sent', label: 'Belum Dikirim', icon: Clock },
+    { key: 'sent', label: 'Terkirim', icon: Send },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Broadcast History</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Riwayat pengiriman broadcast WhatsApp</p>
+        </div>
+        <div className="flex gap-1 rounded-xl border border-slate-300 bg-slate-100 p-1 dark:border-slate-600 dark:bg-slate-800">
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.key}
+                onClick={() => { setTab(t.key); setPage(1); }}
+                className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all ${
+                  tab === t.key
+                    ? 'bg-white text-fif-700 shadow-sm dark:bg-slate-700 dark:text-fif-300'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <DataTable columns={columns} data={history} loading={loading} />
+
+      <div className="flex items-center justify-between text-sm text-slate-500 dark:text-slate-400">
+        <span>Halaman {page} dari {lastPage}</span>
+        <div className="flex gap-2">
+          <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-xl border border-slate-300 px-3.5 py-2 text-sm transition-colors hover:bg-slate-50 disabled:opacity-30 dark:border-slate-600 dark:hover:bg-slate-700">Sebelumnya</button>
+          <button disabled={page >= lastPage} onClick={() => setPage(page + 1)} className="rounded-xl border border-slate-300 px-3.5 py-2 text-sm transition-colors hover:bg-slate-50 disabled:opacity-30 dark:border-slate-600 dark:hover:bg-slate-700">Selanjutnya</button>
+        </div>
+      </div>
+    </div>
+  );
+}

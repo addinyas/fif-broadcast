@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "npx concurrently -c \"#93c5fd,#c4b5fd,#34d399,#f59e0b\" \"npm:serve\" \"npm:queue\" \"npm:frontend\" \"npm:worker\" --names=serve,queue,frontend,worker --kill-others",
+    "serve": "cd backend && php artisan serve",
+    "queue": "cd backend && php artisan queue:listen --tries=1 --timeout=0",
+    "frontend": "cd frontend && npm run dev",
+    "worker": "cd worker && npm run start",
+    "setup": "cd backend && composer install && npm install && cd ..\\frontend && npm install && cd ..\\worker && npm install && cd ..\\backend && php artisan key:generate && php artisan migrate"
+  }
+}
