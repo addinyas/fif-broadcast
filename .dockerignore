@@ -1,0 +1,15 @@
+.git
+.gitignore
+.env
+node_modules
+frontend/
+vendor/
+storage/
+auth_info/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.md
+AGENTS.md
+dev.bat
+start-app.bat
