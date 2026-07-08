@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Smartphone, Wifi, WifiOff, AlertTriangle, RefreshCw, Unlink } from 'lucide-react';
 import QRCode from 'qrcode';
 import { getSocket } from '../../services/socketService';
@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import api from '../../services/api';
 
 export function QRScannerPage() {
   const [waQR, setWaQR] = useState<string | null>(null);
@@ -41,12 +42,15 @@ export function QRScannerPage() {
     }
   }, [waQR]);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(async () => {
     const socket = getSocket();
     socket.emit('wa:disconnect');
     setWaStatus('disconnected');
     setWaQR(null);
-  };
+    try {
+      await api.post('/whatsapp/disconnect');
+    } catch {}
+  }, []);
 
   const handleRefresh = () => {
     window.location.reload();
@@ -65,7 +69,7 @@ export function QRScannerPage() {
     <div className="mx-auto max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Connect WhatsApp</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hubungkan WhatsApp untuk mengirim broadcast</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hubungkan WhatsApp pribadi Anda untuk mengirim broadcast</p>
       </div>
 
       <Card>
@@ -98,7 +102,7 @@ export function QRScannerPage() {
               <div className="space-y-4">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center dark:border-emerald-800 dark:bg-emerald-900/20">
                   <p className="font-medium text-emerald-800 dark:text-emerald-200">WhatsApp sudah terhubung</p>
-                  <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">Broadcast siap dikirim</p>
+                  <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">Broadcast siap dikirim dari nomor Anda</p>
                 </div>
                 <div className="flex justify-center">
                   <Button variant="danger" icon={<Unlink className="h-4 w-4" />} onClick={handleDisconnect}>

@@ -1,5 +1,5 @@
 const { getWritableDb } = require('./db');
-const { sendWAMessage, isConnected } = require('./wa-client');
+const { sendMessage, isConnected, getConnectedUsers } = require('./wa-manager');
 const { emitBroadcastStatus } = require('./socket-server');
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '5', 10);
@@ -14,11 +14,6 @@ function randomDelay() {
 }
 
 async function processPending() {
-  if (!isConnected()) {
-    console.log('[Queue] WA client not connected');
-    return;
-  }
-
   let writeDb;
   try {
     writeDb = getWritableDb();
@@ -29,7 +24,7 @@ async function processPending() {
 
   try {
     const pending = writeDb.prepare(`
-      SELECT bh.id, bh.customer_id, bh.exact_message, c.phone_number
+      SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, c.phone_number
       FROM broadcast_histories bh
       JOIN customers c ON c.id = bh.customer_id
       WHERE bh.status = 'pending'
@@ -39,21 +34,29 @@ async function processPending() {
 
     if (pending.length === 0) return;
 
-    console.log(`[Queue] Processing ${pending.length} pending broadcast(s)`);
+    const connectedUsers = getConnectedUsers();
+    const toProcess = pending.filter((row) => connectedUsers.includes(row.marketing_id));
 
-    for (const row of pending) {
+    if (toProcess.length === 0) {
+      console.log('[Queue] No connected WA clients for pending broadcasts');
+      return;
+    }
+
+    console.log(`[Queue] Processing ${toProcess.length} pending broadcast(s)`);
+
+    for (const row of toProcess) {
       writeDb.prepare(`
         UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now')
         WHERE id = ?
       `).run(row.id);
 
-      emitBroadcastStatus({ customer_id: row.customer_id, status: 'processing' });
+      emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'processing' });
 
       try {
         const raw = row.phone_number.replace(/[^0-9]/g, '');
         const normalized = raw.startsWith('0') ? '62' + raw.slice(1) : raw;
         const jid = `${normalized}@s.whatsapp.net`;
-        await sendWAMessage(jid, row.exact_message);
+        await sendMessage(row.marketing_id, jid, row.exact_message);
 
         writeDb.prepare(`
           UPDATE broadcast_histories
@@ -61,8 +64,8 @@ async function processPending() {
           WHERE id = ?
         `).run(row.id);
 
-        emitBroadcastStatus({ customer_id: row.customer_id, status: 'sent' });
-        console.log(`[Queue] Sent #${row.id} to ${row.phone_number}`);
+        emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'sent' });
+        console.log(`[Queue] Sent #${row.id} (marketing ${row.marketing_id}) to ${row.phone_number}`);
       } catch (err) {
         const errMsg = err.message || 'Unknown error';
         writeDb.prepare(`
@@ -71,7 +74,7 @@ async function processPending() {
           WHERE id = ?
         `).run(errMsg, row.id);
 
-        emitBroadcastStatus({ customer_id: row.customer_id, status: 'failed', error: errMsg });
+        emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'failed', error: errMsg });
         console.error(`[Queue] Failed #${row.id}: ${errMsg}`);
       }
 

@@ -1,8 +1,37 @@
 const { Server } = require('socket.io');
+const path = require('path');
+const crypto = require('crypto');
+
+const Database = require('better-sqlite3');
+
+const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite');
 
 let io = null;
 let onDisconnectRequest = null;
-let lastWAStatus = null;
+
+function validateToken(token) {
+  if (!token || !token.includes('|')) return null;
+
+  const parts = token.split('|');
+  const tokenId = parseInt(parts[0], 10);
+  const secret = parts.slice(1).join('|');
+
+  if (!tokenId || !secret) return null;
+
+  const hash = crypto.createHash('sha256').update(secret).digest('hex');
+
+  let db;
+  try {
+    db = new Database(DB_PATH, { readonly: true });
+    const row = db.prepare('SELECT tokenable_id FROM personal_access_tokens WHERE id = ? AND token = ?').get(tokenId, hash);
+    return row ? { userId: row.tokenable_id } : null;
+  } catch (err) {
+    console.error('[Socket] Token validation error:', err.message);
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
 
 function createSocketServer(httpServer) {
   io = new Server(httpServer, {
@@ -12,49 +41,60 @@ function createSocketServer(httpServer) {
     },
   });
 
-  io.on('connection', (socket) => {
-    console.log(`[Socket] Client connected: ${socket.id}`);
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    const result = validateToken(token);
+    if (!result) {
+      return next(new Error('Invalid token'));
+    }
 
-    if (lastWAStatus) {
-      socket.emit('wa:status', lastWAStatus);
+    socket.data.userId = result.userId;
+    next();
+  });
+
+  io.on('connection', (socket) => {
+    const userId = socket.data.userId;
+    const room = `user:${userId}`;
+    socket.join(room);
+
+    console.log(`[Socket] User ${userId} connected (socket ${socket.id})`);
+
+    const { getOrCreateClient, isConnected, disconnect } = require('./wa-manager');
+
+    if (isConnected(userId)) {
+      socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
+    } else {
+      socket.emit('wa:status', { status: 'disconnected', message: 'Menghubungkan...' });
+      getOrCreateClient(userId, () => {
+        console.log(`[Socket] WA client ready for user ${userId}`);
+      }).catch((err) => {
+        console.error(`[Socket] Failed to create WA client for user ${userId}:`, err.message);
+      });
     }
 
     socket.on('disconnect', () => {
-      console.log(`[Socket] Client disconnected: ${socket.id}`);
+      console.log(`[Socket] User ${userId} disconnected (socket ${socket.id})`);
     });
 
     socket.on('wa:disconnect', () => {
-      console.log('[Socket] Disconnect request received');
-      if (onDisconnectRequest) onDisconnectRequest();
+      console.log(`[Socket] Disconnect request from user ${userId}`);
+      disconnect(userId);
     });
   });
 
   return io;
 }
 
-function setOnDisconnectRequest(handler) {
-  onDisconnectRequest = handler;
-}
-
-function getIO() {
-  return io;
-}
-
-function emitBroadcastStatus(data) {
+function emitWAStatus(userId, data) {
   if (io) {
-    io.emit('broadcast:status', data);
+    io.to(`user:${userId}`).emit('wa:status', data);
   }
 }
 
-function emitWAStatus(data) {
-  lastWAStatus = data;
+function emitBroadcastStatus(userId, data) {
   if (io) {
-    io.emit('wa:status', data);
+    io.to(`user:${userId}`).emit('broadcast:status', data);
   }
 }
 
-function clearLastWAStatus() {
-  lastWAStatus = null;
-}
-
-module.exports = { createSocketServer, getIO, emitBroadcastStatus, emitWAStatus, setOnDisconnectRequest, clearLastWAStatus };
+module.exports = { createSocketServer, emitWAStatus, emitBroadcastStatus };

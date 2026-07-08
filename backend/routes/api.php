@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\GoogleSheetsController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WhatsappConnectionController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -89,6 +90,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('google-sheets/tenors', [GoogleSheetsController::class, 'getTenors']);
 
     Route::get('admin/permissions', [PermissionController::class, 'index']);
+
+    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+        Route::prefix('whatsapp')->group(function () {
+            Route::get('status', [WhatsappConnectionController::class, 'status']);
+            Route::post('disconnect', [WhatsappConnectionController::class, 'disconnect']);
+        });
+    });
 
     Route::middleware('role:superadmin')->group(function () {
         Route::get('admin/users', [UserController::class, 'index']);
