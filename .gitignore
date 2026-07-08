@@ -36,6 +36,13 @@ Thumbs.db
 .idea/
 *.sublime-*
 
+# Android (Capacitor)
+/frontend/android/.gradle/
+/frontend/android/build/
+/frontend/android/local.properties
+/frontend/android/captures/
+/frontend/android/.externalNativeBuild/
+
 # Logs
 *.log
 npm-debug.log*
