@@ -418,36 +418,44 @@ export function CalculatorPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>
                 <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{manual?.name ?? selected?.name ?? '-'}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol} tahun {dyn('tahun')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol} Tahun {dyn('tahun')}</p>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
-                    angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
+                    Angsuran Kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} × {formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
                   </p>
-                  {dinego && (<p className="text-slate-600 dark:text-slate-400">dinego jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(parseAngka(dinego))}</span></p>)}
-                  <p className="text-slate-600 dark:text-slate-400">pinjaman maksimal cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(pinjaman)}</span></p>
-                  <p className="text-slate-600 dark:text-slate-400">pelunasan Rp <span className="font-semibold text-fif-600">{formatAngka(pelunasan)}</span></p>
-                  <p className="text-emerald-700 dark:text-emerald-400 font-bold text-base">terima Rp {formatAngka(terima)}</p>
+                  {dinego && (<p className="text-slate-600 dark:text-slate-400">Dinego Jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(parseAngka(dinego))}</span></p>)}
+                  <p className="text-slate-600 dark:text-slate-400">Pinjaman Maksimal Cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(pinjaman)}</span></p>
+                  <p className="text-slate-600 dark:text-slate-400">Pelunasan Rp <span className="font-semibold text-fif-600">{formatAngka(pelunasan)}</span></p>
+                  <p className="text-emerald-700 dark:text-emerald-400 font-bold text-base">Terima Rp {formatAngka(terima)}</p>
                 </div>
+                {(financeResult?.results ?? []).some((r) => visibleTenors.includes(r.tenor)) && (
+                  <div className="mt-3 space-y-0.5 text-sm">
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">Tenor Angsuran</p>
+                    {(financeResult?.results ?? []).filter((r) => visibleTenors.includes(r.tenor)).map((r, i) => (
+                      <p key={i} className="text-slate-600 dark:text-slate-400">{r.tenor} × Rp {formatAngka(r.angsuran)}</p>
+                    ))}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => {
                   const lines = [
                     `${dyn('no_contract') || '-'}`,
                     `${manual?.name ?? selected?.name ?? '-'}`,
-                    `Unit ${dyn('obj_desc')}${displayNopol ? ` ${displayNopol}` : ''} tahun ${dyn('tahun')}`,
-                    `angsuran kurang ${sisaAngsuran}×${formatAngka(angsuranPerBulan)} = Rp ${formatAngka(totalAngsuran)}`,
+                    `Unit ${dyn('obj_desc')}${displayNopol ? ` ${displayNopol}` : ''} Tahun ${dyn('tahun')}`,
+                    `Angsuran Kurang ${sisaAngsuran} × ${formatAngka(angsuranPerBulan)} = Rp ${formatAngka(totalAngsuran)}`,
                     '',
                   ];
-                  if (dinego) lines.push(`dinego jadi Rp ${formatAngka(parseAngka(dinego))}`);
-                  lines.push(`pinjaman maksimal cair Rp ${formatAngka(pinjaman)}`);
-                  lines.push(`pelunasan Rp ${formatAngka(pelunasan)}`);
-                  lines.push(`terima Rp ${formatAngka(terima)}`);
+                  if (dinego) lines.push(`Dinego Jadi Rp ${formatAngka(parseAngka(dinego))}`);
+                  lines.push(`Pinjaman Maksimal Cair Rp ${formatAngka(pinjaman)}`);
+                  lines.push(`Pelunasan Rp ${formatAngka(pelunasan)}`);
+                  lines.push(`Terima Rp ${formatAngka(terima)}`);
                   lines.push('');
-                  (financeResult?.results ?? []).forEach((r) => {
-                    if (visibleTenors.includes(r.tenor)) {
-                      lines.push(`${r.tenor}×Rp ${formatAngka(r.angsuran)}`);
-                    }
-                  });
+                  const tenors = (financeResult?.results ?? []).filter((r) => visibleTenors.includes(r.tenor));
+                  if (tenors.length) {
+                    lines.push('Tenor Angsuran');
+                    tenors.forEach((r) => lines.push(`${r.tenor} × Rp ${formatAngka(r.angsuran)}`));
+                  }
                   navigator.clipboard.writeText(lines.join('\r\n')).then(() => {
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
