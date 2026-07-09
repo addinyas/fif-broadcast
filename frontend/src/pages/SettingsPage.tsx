@@ -83,8 +83,8 @@ export function SettingsPage() {
     setClearing(true);
     try {
       const res = await profileService.clearCache();
-      const msg = res.details?.join(', ') || res.message;
-      toast('success', msg);
+      const count = res.details?.length ?? 0;
+      toast('success', count > 0 ? `${count} item berhasil dibersihkan` : 'Cache berhasil dibersihkan');
     } catch {
       toast('error', 'Gagal membersihkan cache');
     } finally {
