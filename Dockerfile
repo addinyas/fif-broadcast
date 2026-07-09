@@ -29,7 +29,7 @@ RUN npm ci
 COPY frontend .
 RUN npm run build
 
-FROM node:22-alpine AS worker-deps
+FROM node:22-bookworm-slim AS worker-deps
 
 WORKDIR /app
 COPY worker/package.json worker/package-lock.json ./
