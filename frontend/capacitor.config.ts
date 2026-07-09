@@ -5,11 +5,18 @@ const config: CapacitorConfig = {
   appName: 'FIF Broadcast',
   webDir: 'dist',
   server: {
+    url: 'https://dynamic-charm-production-8c29.up.railway.app',
     androidScheme: 'https',
-    cleartext: true,
+    cleartext: false,
   },
-  android: {
-    allowMixedContent: true,
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#0f172a',
+    },
+    PushNotifications: {
+      presentationOptions: ['alert', 'sound'],
+    },
   },
 };
 

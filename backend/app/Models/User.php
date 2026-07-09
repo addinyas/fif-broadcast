@@ -26,6 +26,7 @@ class User extends Authenticatable
         'npo_mce_id',
         'kios_name',
         'kios_id',
+        'fcm_token',
     ];
 
     protected $appends = [

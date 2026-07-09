@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from '../ui/Sidebar';
 import { BroadcastStatusBanner } from '../ui/BroadcastStatusBanner';
 import { MobileNavBar } from '../ui/MobileNavBar';
+import { AndroidBottomNav } from '../ui/AndroidBottomNav';
 import { useAuth } from '../../context/AuthContext';
+import { usePlatform } from '../../hooks/usePlatform';
+import { registerPushNotifications } from '../../services/pushService';
 
 const roleColorMap: Record<string, string> = {
   superadmin: 'bg-red-500/20 text-red-300',
@@ -20,7 +23,28 @@ const roleLabel: Record<string, string> = {
 
 export function MarketingLayout() {
   const { user } = useAuth();
+  const { isNative } = usePlatform();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    registerPushNotifications();
+  }, []);
+
+  if (isNative) {
+    return (
+      <div className="flex h-screen overflow-hidden bg-surface dark:bg-slate-900">
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <BroadcastStatusBanner />
+          <main className="flex-1 overflow-auto p-4 pb-24">
+            <div className="mx-auto max-w-lg animate-fade-in">
+              <Outlet />
+            </div>
+          </main>
+        </div>
+        <AndroidBottomNav />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface dark:bg-slate-900">

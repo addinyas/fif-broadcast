@@ -5,12 +5,39 @@ const { emitBroadcastStatus } = require('./socket-server');
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '5', 10);
 const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '15', 10);
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
+const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 
 let running = false;
 let intervalId = null;
 
 function randomDelay() {
   return Math.floor(Math.random() * (MAX_DELAY - MIN_DELAY + 1) + MIN_DELAY) * 1000;
+}
+
+async function sendPushNotification(userId, title, body) {
+  if (!FCM_SERVER_KEY) return;
+  let db;
+  try {
+    db = getWritableDb();
+    const user = db.prepare('SELECT fcm_token FROM users WHERE id = ?').get(userId);
+    if (!user?.fcm_token) return;
+    await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `key=${FCM_SERVER_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: user.fcm_token,
+        notification: { title, body },
+        priority: 'high',
+      }),
+    });
+  } catch (err) {
+    console.error(`[Push] Failed to send notification to user ${userId}:`, err.message);
+  } finally {
+    if (db) db.close();
+  }
 }
 
 async function processPending() {
@@ -43,6 +70,7 @@ async function processPending() {
     }
 
     console.log(`[Queue] Processing ${toProcess.length} pending broadcast(s)`);
+    const stats = {};
 
     for (const row of toProcess) {
       writeDb.prepare(`
@@ -53,11 +81,13 @@ async function processPending() {
       emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'processing' });
 
       try {
+        if (!stats[row.marketing_id]) stats[row.marketing_id] = { sent: 0, failed: 0 };
         const raw = row.phone_number.replace(/[^0-9]/g, '');
         const normalized = raw.startsWith('0') ? '62' + raw.slice(1) : raw;
         const jid = `${normalized}@s.whatsapp.net`;
         await sendMessage(row.marketing_id, jid, row.exact_message);
 
+        stats[row.marketing_id].sent++;
         writeDb.prepare(`
           UPDATE broadcast_histories
           SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now')
@@ -67,6 +97,7 @@ async function processPending() {
         emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'sent' });
         console.log(`[Queue] Sent #${row.id} (marketing ${row.marketing_id}) to ${row.phone_number}`);
       } catch (err) {
+        stats[row.marketing_id].failed++;
         const errMsg = err.message || 'Unknown error';
         writeDb.prepare(`
           UPDATE broadcast_histories
@@ -81,6 +112,10 @@ async function processPending() {
       const delay = randomDelay();
       console.log(`[Queue] Waiting ${delay / 1000}s (anti-ban)`);
       await new Promise((r) => setTimeout(r, delay));
+    }
+
+    for (const [mid, s] of Object.entries(stats)) {
+      sendPushNotification(parseInt(mid), 'Broadcast Selesai', `${s.sent} terkirim, ${s.failed} gagal`);
     }
   } catch (err) {
     console.error('[Queue] Error:', err.message);

@@ -20,6 +20,7 @@ Route::get('/auth/google/callback', [AuthController::class, 'googleCallback']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/fcm-token', [AuthController::class, 'updateFcmToken']);
 
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);

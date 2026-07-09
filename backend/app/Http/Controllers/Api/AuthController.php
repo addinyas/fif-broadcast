@@ -96,4 +96,19 @@ class AuthController extends Controller
     {
         return response()->json($request->user());
     }
+
+    public function updateFcmToken(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $request->user()->update(['fcm_token' => $request->token]);
+
+        return response()->json(['message' => 'FCM token updated']);
+    }
 }
