@@ -389,8 +389,7 @@ export function CalculatorPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>
                 <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{manual?.name ?? selected?.name ?? '-'}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} tahun {dyn('tahun')}</p>
-                {displayNopol && <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Nopol {displayNopol}</p>}
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol && `Nopol ${displayNopol}`} tahun {dyn('tahun')}</p>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
                     angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
@@ -406,8 +405,7 @@ export function CalculatorPage() {
                   const lines = [
                     `${dyn('no_contract') || '-'}`,
                     `${manual?.name ?? selected?.name ?? '-'}`,
-                    `Unit ${dyn('obj_desc')} tahun ${dyn('tahun')}`,
-                    displayNopol ? `Nopol ${displayNopol}` : '',
+                    `Unit ${dyn('obj_desc')}${displayNopol ? ` Nopol ${displayNopol}` : ''} tahun ${dyn('tahun')}`,
                     `angsuran kurang ${sisaAngsuran}×${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
                     '',
                   ];
