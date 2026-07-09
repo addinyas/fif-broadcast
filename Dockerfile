@@ -14,9 +14,8 @@ RUN docker-php-ext-install pdo pdo_sqlite gd zip
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app/backend
-COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction
 COPY backend .
+RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 RUN mkdir -p storage/framework/{cache,sessions,views} \
     storage/logs \
