@@ -230,6 +230,14 @@ export function CalculatorPage() {
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
+              <input value={dinego}
+                onChange={(e) => setDinego(e.target.value)}
+                placeholder="Rp (opsional)"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
           </div>
           <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); }}
             className="mt-3 text-[10px] text-amber-600 hover:text-amber-700 dark:text-amber-400 transition-colors"
