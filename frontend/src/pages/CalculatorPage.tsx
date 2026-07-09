@@ -33,20 +33,17 @@ export function CalculatorPage() {
   const customerTahun = parseInt(rawTahun) || 0;
   const isOldMotor = customerTahun > 0 && customerTahun < 2016;
 
-  const visibleTenors = (() => {
-    if (!isOldMotor) return tenors;
-    const filtered = tenors.filter(t => t <= 24);
-    return filtered.includes(6) ? filtered : [6, ...filtered];
-  })();
+  const financeTenors = isOldMotor && !tenors.includes(6) ? [6, ...tenors] : tenors;
+  const visibleTenors = isOldMotor ? financeTenors.filter(t => t <= 24) : tenors;
 
   const financeResult = useMemo(() => {
     if (pinjaman <= 0) return null;
     try {
-      return calculateAngsuran({ pinjaman, rate, tenors });
+      return calculateAngsuran({ pinjaman, rate, tenors: financeTenors });
     } catch {
       return null;
     }
-  }, [pinjaman, rate, tenors]);
+  }, [pinjaman, rate, financeTenors]);
 
   const searchCustomers = useCallback(async (q: string) => {
     if (!q.trim()) { setResults([]); return; }
@@ -306,14 +303,19 @@ export function CalculatorPage() {
                 <h4 className="mb-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tenor Angsuran</h4>
                 <div className="grid grid-cols-5 gap-2">
                   {visibleTenors.map((n, i) => {
-                    const idx = tenors.indexOf(n);
+                    const idx = financeTenors.indexOf(n);
                     const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                     return (
                       <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 py-2 text-center text-sm">
                         <input type="number" min={1} max={36} value={n}
                           onChange={(e) => {
                             const val = Math.max(1, Math.min(36, parseInt(e.target.value) || 1));
-                            setTenors((prev) => { const next = [...prev]; next[i] = val; return next; });
+                            setTenors((prev) => {
+                              const next = [...prev];
+                              const pos = prev.indexOf(n);
+                              if (pos !== -1) next[pos] = val;
+                              return next;
+                            });
                           }}
                           className="mb-1 w-full text-center text-sm font-bold outline-none bg-transparent text-fif-600 dark:text-fif-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
@@ -395,7 +397,7 @@ export function CalculatorPage() {
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Simulasi Tenor</p>
               <div className="flex flex-wrap gap-1.5">
                 {visibleTenors.map((n, i) => {
-                  const idx = tenors.indexOf(n);
+                  const idx = financeTenors.indexOf(n);
                   const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                   return (
                     <div key={i} className="rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 text-xs">
