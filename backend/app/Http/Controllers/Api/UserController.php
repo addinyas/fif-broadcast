@@ -51,10 +51,15 @@ class UserController extends Controller
 
             // Hapus broadcast histories dari customer yang diupload user ini
             $uploadedIds = DB::table('customers')->where('uploaded_by', $user->id)->pluck('id');
-            BroadcastHistory::whereIn('customer_id', $uploadedIds)->delete();
+            if ($uploadedIds->isNotEmpty()) {
+                BroadcastHistory::whereIn('customer_id', $uploadedIds)->delete();
+            }
 
             // Hapus customer yang diupload user ini
             Customer::where('uploaded_by', $user->id)->delete();
+
+            // Hapus referensi manual_sent_by di customer
+            Customer::where('manual_sent_by', $user->id)->update(['manual_sent_by' => null]);
 
             // Hapus user
             $user->delete();
