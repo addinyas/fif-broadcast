@@ -51,7 +51,7 @@ COPY --from=backend /app/backend /app/backend
 COPY --from=frontend-build /app/dist /app/frontend/dist
 COPY --from=worker-deps /app /app/worker
 
-RUN apt-get install -y nginx-light && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y nginx-light && rm -rf /var/lib/apt/lists/*
 
 COPY nginx.conf /etc/nginx/sites-enabled/default
 COPY start.sh /start.sh
