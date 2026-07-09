@@ -136,7 +136,8 @@ export function CalculatorPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Data tidak ditemukan</p>
             <button
               onClick={() => {
-                setManual({ name: search, no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '' });
+                const isNumeric = /^\d+$/.test(search);
+                setManual({ name: isNumeric ? '' : search, no_contract: isNumeric ? search : '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '' });
                 setSearch('');
                 setResults([]);
               }}
