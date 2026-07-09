@@ -16,7 +16,6 @@ export function UserManagementPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchUsers = useCallback(async () => {
-    setLoading(true);
     try {
       const { data } = await api.get('/admin/users');
       setUsers(data.data);
@@ -25,7 +24,11 @@ export function UserManagementPage() {
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUsers]);
 
   const handleDelete = async (user: User) => {
     try {
