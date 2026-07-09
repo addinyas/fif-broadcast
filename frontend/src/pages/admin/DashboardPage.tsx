@@ -31,10 +31,10 @@ export function DashboardPage() {
   const totalBroadcasted = dist?.by_marketing.reduce((acc, m) => acc + m.total_broadcasts, 0) ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Dashboard</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Overview FIF Broadcast system</p>
         </div>
       </div>
@@ -175,8 +175,8 @@ export function DashboardPage() {
         <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <th className="px-5 py-3.5">Marketing</th>
+              <tr className="border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800 dark:to-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                 <th className="px-5 py-3.5">Marketing</th>
                 <th className="px-5 py-3.5 text-center">Ditugaskan</th>
                 <th className="px-5 py-3.5 text-center">Total Broadcast</th>
                 <th className="px-5 py-3.5 text-center">
@@ -194,7 +194,7 @@ export function DashboardPage() {
               {dist?.by_marketing.map((item, idx) => {
                 const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
                 return (
-                  <tr key={item.marketing_id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/80">
+                  <tr key={item.marketing_id} className="transition-all duration-150 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div

@@ -42,7 +42,7 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-fif-950 to-slate-950 p-4">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-fif-950 to-slate-950 p-4 animate-fade-in">
       {/* Floating decorative blobs */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 animate-float rounded-full bg-fif-500/10 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 animate-float rounded-full bg-purple-500/10 blur-3xl" style={{ animationDelay: '-3s' }} />
@@ -56,7 +56,7 @@ export function LoginPage() {
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-fif-500 to-fif-700 shadow-lg shadow-fif-500/25 ring-1 ring-white/10">
             <img src="/logo.png" alt="FIF" className="h-12 w-12 object-contain drop-shadow-lg" />
           </div>
-          <h1 className="bg-gradient-to-r from-fif-200 via-fif-100 to-white bg-clip-text text-2xl font-bold text-transparent">Selamat Datang</h1>
+          <h1 className="bg-gradient-to-r from-white via-fif-100 to-fif-200 bg-clip-text text-2xl font-bold tracking-tight text-transparent drop-shadow-sm">Selamat Datang</h1>
           <p className="mt-1.5 text-sm text-slate-500">Federal International Finance</p>
         </div>
 

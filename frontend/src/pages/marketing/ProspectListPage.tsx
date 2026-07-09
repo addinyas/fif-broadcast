@@ -579,15 +579,15 @@ export function ProspectListPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Broadcast</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">Broadcast</h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Buat template dan kirim pesan ke customer</p>
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-100 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
+      <div className="rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50">
         <div className="border-b border-slate-50 px-5 py-3.5 dark:border-slate-700/30">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
@@ -653,7 +653,7 @@ export function ProspectListPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-100 bg-white px-5 py-3.5 dark:border-slate-700/50 dark:bg-slate-800/50">
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-5 py-3.5 shadow-sm backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/50">
         <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-slate-400" />
@@ -723,7 +723,7 @@ export function ProspectListPage() {
       </div>
 
       {sendingBatch && (
-        <div className="overflow-hidden rounded-lg border border-fif-100 bg-fif-50/80 dark:border-fif-800/50 dark:bg-fif-900/10">
+        <div className="overflow-hidden rounded-lg border border-fif-100 bg-gradient-to-r from-fif-50/90 to-fif-50/50 dark:border-fif-800/50 dark:from-fif-900/20 dark:to-fif-900/10">
           <div className="px-4 py-3">
             <div className="flex items-center gap-3">
               <Loader2 className="h-4 w-4 animate-spin text-fif-600 dark:text-fif-400" />
@@ -742,7 +742,7 @@ export function ProspectListPage() {
       )}
 
       {selectedIds.length > 0 && !sendingBatch && (
-        <div className="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-700/50 dark:bg-slate-800/50">
+        <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-slate-50/90 px-4 py-2.5 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
           <span className="text-sm text-slate-600 dark:text-slate-400">
             <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedIds.length}</span> customer dipilih
             {selectedIds.length > MAX_BATCH && (
@@ -811,7 +811,7 @@ export function ProspectListPage() {
                 onClick={() => { setPage(p); setSelectedIds([]); }}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all ${
                   p === page
-                    ? 'bg-fif-600 text-white shadow-sm'
+                    ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
                     : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                 }`}
               >

@@ -79,9 +79,9 @@ export function UserManagementPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">User Management</h1>
+        <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">User Management</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola user dan role</p>
       </div>
 
@@ -94,8 +94,8 @@ export function UserManagementPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  <th className="px-5 py-3.5">Nama</th>
+                <tr className="border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800 dark:to-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                   <th className="px-5 py-3.5">Nama</th>
                   <th className="px-5 py-3.5">Email</th>
                   <th className="px-5 py-3.5">Role</th>
                   <th className="px-5 py-3.5">WhatsApp</th>
@@ -105,7 +105,7 @@ export function UserManagementPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {users.map((u) => (
-                  <tr key={u.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/80">
+                  <tr key={u.id} className="transition-all duration-150 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
                     <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-200">{u.name}</td>
                     <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{u.email}</td>
                     <td className="px-5 py-3.5">

@@ -349,10 +349,10 @@ export function CustomerManagementPage() {
   const isRupiahField = (key: string) => key === 'otr' || key === 'plafon';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Customer Management</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Customer Management</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola data customer dan assignment</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -433,7 +433,7 @@ export function CustomerManagementPage() {
         </div>
 
         {isAdmin && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 px-3 py-2 shadow-sm backdrop-blur-xl">
             {allMarketingUsers.length > 0 && (
               <>
                 <Filter className="h-4 w-4 text-slate-400" />
@@ -535,9 +535,9 @@ export function CustomerManagementPage() {
                   <button
                     key={p}
                     onClick={() => { setPage(p); setSelectAllPages(false); }}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${
                       p === page
-                        ? 'bg-fif-600 text-white shadow-sm'
+                        ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
@@ -635,9 +635,9 @@ export function CustomerManagementPage() {
                   <button
                     key={p}
                     onClick={() => { setPage(p); setSelectAllPages(false); }}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${
                       p === page
-                        ? 'bg-fif-600 text-white shadow-sm'
+                        ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >

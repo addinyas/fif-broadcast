@@ -66,9 +66,9 @@ export function QRScannerPage() {
   const cfg = statusConfig[waStatus] || statusConfig.disconnected;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="mx-auto max-w-lg space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Connect WhatsApp</h1>
+        <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Connect WhatsApp</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hubungkan WhatsApp pribadi Anda untuk mengirim broadcast</p>
       </div>
 
@@ -80,7 +80,7 @@ export function QRScannerPage() {
           </CardTitle>
         </CardHeader>
           <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/80 px-4 py-3 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-800/80">
               <span className={`${waStatus === 'connected' ? 'text-emerald-500' : waStatus === 'awaiting_scan' ? 'text-amber-500' : waStatus === 'logged_out' ? 'text-red-500' : 'text-slate-400'}`}>
                 {cfg.icon}
               </span>

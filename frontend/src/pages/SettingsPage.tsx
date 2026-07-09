@@ -93,15 +93,15 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Pengaturan</h1>
+        <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Pengaturan</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           Kelola profil dan pengaturan akun Anda
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90">
         <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Foto Profil</h2>
         <div className="flex items-center gap-6">
           <div className="relative">
@@ -153,7 +153,7 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90">
         <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Informasi Profil</h2>
         <div className="space-y-5">
           <div>

@@ -103,10 +103,10 @@ export function CalculatorPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Kalkulator</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Kalkulator</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hitung angsuran dan simulasi pinjaman</p>
             </div>
       </div>
@@ -297,7 +297,7 @@ export function CalculatorPage() {
       )}
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border-l-4 border-l-blue-400 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:bg-slate-800/90">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Input</h3>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali) <span className="text-red-500">*</span></label>
@@ -350,7 +350,7 @@ export function CalculatorPage() {
               </div>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-xl border-l-4 border-l-emerald-400 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:bg-slate-800/90">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Hasil</h3>
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
@@ -416,7 +416,7 @@ export function CalculatorPage() {
             </div>
           </div>
 
-          <div ref={outputRef} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-5">
+          <div ref={outputRef} className="rounded-xl border border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-800/90">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>

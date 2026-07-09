@@ -58,9 +58,9 @@ export function PermissionManagementPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Role Permissions</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Role Permissions</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Memuat...</p>
         </div>
         <Card>
@@ -81,10 +81,10 @@ export function PermissionManagementPage() {
     : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-200">Role Permissions</h1>
+          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Role Permissions</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Atur fitur yang dapat diakses masing-masing role. Superadmin memiliki akses penuh.
           </p>
@@ -100,8 +100,8 @@ export function PermissionManagementPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                <th className="px-5 py-3.5">Fitur</th>
+              <tr className="border-b border-slate-200/80 dark:border-slate-700/80 bg-gradient-to-r from-slate-50 to-slate-100/80 dark:from-slate-800 dark:to-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                 <th className="px-5 py-3.5">Fitur</th>
                 {roles.map((role) => (
                   <th key={role} className="px-5 py-3.5 text-center">{role}</th>
                 ))}
@@ -109,23 +109,25 @@ export function PermissionManagementPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {features.map((feature) => (
-                <tr key={feature} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/80">
-                  <td className="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-300">
-                    {FEATURE_LABELS[feature] || feature}
-                  </td>
-                  {roles.map((role) => {
-                    const perm = permissions?.[role]?.find((p) => p.feature === feature);
-                    return (
-                      <td key={role} className="px-5 py-3.5 text-center">
-                        <label className="inline-flex cursor-pointer items-center">
-                          <input
-                            type="checkbox"
-                            checked={perm?.enabled ?? false}
-                            onChange={() => perm && toggle(role, perm.id)}
-                            className="h-5 w-5 rounded border-slate-300 dark:border-slate-600 text-fif-600 dark:text-fif-400 transition-colors focus:ring-fif-500/30 focus:ring-offset-1"
-                          />
-                        </label>
-                      </td>
+                <tr key={feature} className="transition-all duration-150 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
+                   <td className="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-300">
+                     {FEATURE_LABELS[feature] || feature}
+                   </td>
+                   {roles.map((role) => {
+                     const perm = permissions?.[role]?.find((p) => p.feature === feature);
+                     return (
+                       <td key={role} className="px-5 py-3.5 text-center">
+                         <label className="relative inline-flex h-6 w-11 cursor-pointer items-center">
+                           <input
+                             type="checkbox"
+                             checked={perm?.enabled ?? false}
+                             onChange={() => perm && toggle(role, perm.id)}
+                             className="peer sr-only"
+                           />
+                           <span className="absolute inset-0 rounded-full bg-slate-300 transition-colors peer-checked:bg-fif-500 dark:bg-slate-600 dark:peer-checked:bg-fif-400" />
+                           <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white transition-all peer-checked:translate-x-5 peer-checked:shadow-md" />
+                         </label>
+                       </td>
                     );
                   })}
                 </tr>

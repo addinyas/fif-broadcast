@@ -67,7 +67,7 @@ export function MarketingDashboardPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <Greeting />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -246,7 +246,7 @@ export function MarketingDashboardPage() {
           <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-400">
+                <tr className="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-slate-100/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700/80 dark:from-slate-800 dark:to-slate-800/80 dark:text-slate-400">
                   <th className="px-5 py-3.5">Pelanggan</th>
                   <th className="px-5 py-3.5">Status</th>
                   <th className="px-5 py-3.5">Waktu</th>
@@ -254,7 +254,7 @@ export function MarketingDashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {summary.recent.map((item) => (
-                  <tr key={item.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/50">
+                  <tr key={item.id} className="transition-all duration-150 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 even:bg-slate-50/50 dark:even:bg-slate-800/30">
                     <td className="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-300">{item.customer_name}</td>
                     <td className="px-5 py-3.5">
                       <Badge variant={statusVariant(item.status)}>{item.status}</Badge>
