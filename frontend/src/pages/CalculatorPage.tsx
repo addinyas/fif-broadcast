@@ -212,7 +212,7 @@ export function CalculatorPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp) <span className="text-red-500">*</span></label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran Kontrak Aktif / Bulan (Rp) <span className="text-red-500">*</span></label>
               <input value={formatAngka(manual.angsuran)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
@@ -312,7 +312,7 @@ export function CalculatorPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran Kontrak Aktif / Bulan <span className="text-red-500">*</span></label>
                 <input
                   value={angsuranPerBulan ? formatAngka(angsuranPerBulan) : ''}
                   onChange={(e) => setAngsuranPerBulan(parseAngka(e.target.value))}
