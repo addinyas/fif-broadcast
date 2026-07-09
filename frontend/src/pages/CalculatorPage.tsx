@@ -153,21 +153,21 @@ export function CalculatorPage() {
         <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10 p-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nama</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nama <span className="text-red-500">*</span></label>
               <input value={manual.name}
                 onChange={(e) => setManual({ ...manual, name: e.target.value })}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">No Kontrak</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">No Kontrak <span className="text-red-500">*</span></label>
               <input value={manual.no_contract}
                 onChange={(e) => setManual({ ...manual, no_contract: e.target.value })}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit <span className="text-red-500">*</span></label>
               <input value={manual.obj_desc}
                 onChange={(e) => setManual({ ...manual, obj_desc: e.target.value })}
                 placeholder="mis: Vario 125"
@@ -175,7 +175,7 @@ export function CalculatorPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Tahun</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Tahun <span className="text-red-500">*</span></label>
               <input value={manual.tahun}
                 onChange={(e) => setManual({ ...manual, tahun: e.target.value })}
                 placeholder="2020"
@@ -183,7 +183,7 @@ export function CalculatorPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp)</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp) <span className="text-red-500">*</span></label>
               <input value={manual.plafon}
                 onChange={(e) => {
                   setManual({ ...manual, plafon: e.target.value.replace(/\D/g, '') });
@@ -194,7 +194,7 @@ export function CalculatorPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp)</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp) <span className="text-red-500">*</span></label>
               <input value={manual.angsuran}
                 onChange={(e) => {
                   setManual({ ...manual, angsuran: e.target.value.replace(/\D/g, '') });
@@ -205,7 +205,7 @@ export function CalculatorPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali)</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali) <span className="text-red-500">*</span></label>
               <input type="number" min={0} value={manual.sisa_angsuran}
                 onChange={(e) => {
                   setManual({ ...manual, sisa_angsuran: e.target.value });
@@ -216,7 +216,7 @@ export function CalculatorPage() {
                 />
               </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol</label>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
               <input value={manual.nopol}
                 onChange={(e) => {
                   setManual({ ...manual, nopol: e.target.value });
@@ -267,7 +267,7 @@ export function CalculatorPage() {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Input</h3>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali)</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali) <span className="text-red-500">*</span></label>
                 <input type="number" min={0} value={sisaAngsuran || ''}
                   onChange={(e) => setSisaAngsuran(Math.max(0, parseInt(e.target.value) || 0))}
                   placeholder="0"
@@ -275,7 +275,7 @@ export function CalculatorPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan <span className="text-red-500">*</span></label>
                 <input
                   value={angsuranPerBulan ? formatRupiah(angsuranPerBulan) : ''}
                   onChange={(e) => setAngsuranPerBulan(parseRupiah(e.target.value))}
@@ -284,7 +284,7 @@ export function CalculatorPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Dinego Jadi</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
                 <input value={dinego}
                   onChange={(e) => setDinego(e.target.value)}
                   placeholder="Rp (opsional)"
@@ -292,7 +292,7 @@ export function CalculatorPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal Cair</label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal Cair <span className="text-red-500">*</span></label>
                 <input
                   value={pinjaman ? formatRupiah(pinjaman) : ''}
                   onChange={(e) => setPinjaman(parseRupiah(e.target.value))}
