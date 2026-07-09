@@ -6,6 +6,9 @@ touch /app/backend/database/database.sqlite
 
 # Laravel setup
 cd /app/backend
+
+# Ensure .env exists (variables come from Railway environment)
+touch /app/backend/.env
 php artisan key:generate --force
 php artisan migrate --force
 php artisan db:seed --force 2>/dev/null || true
