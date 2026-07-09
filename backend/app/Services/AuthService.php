@@ -77,8 +77,8 @@ class AuthService
     public function getMarketingUsers()
     {
         return User::where('role', 'marketing')
-            ->withCount('assignedCustomers')
             ->select('id', 'name', 'email')
+            ->withCount('assignedCustomers')
             ->get();
     }
 }
