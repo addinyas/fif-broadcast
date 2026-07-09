@@ -12,7 +12,6 @@ interface TabItem {
   to: string;
   label: string;
   icon: ReactNode;
-  feature?: string;
 }
 
 const tabs: TabItem[] = [
@@ -33,20 +32,21 @@ export function MobileNavBar() {
   }));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200 bg-white px-2 pb-safe dark:border-slate-700 dark:bg-slate-800 lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200/80 bg-white/90 px-2 pb-safe backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
       {resolvedTabs.map((tab) => {
         const isActive = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/');
         return (
           <NavLink
             key={tab.to}
             to={tab.to}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${
+            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-all duration-200 ${
               isActive
                 ? 'text-fif-600 dark:text-fif-400'
                 : 'text-slate-400 dark:text-slate-500'
             }`}
           >
-            <span className={`transition-colors ${isActive ? 'text-fif-600 dark:text-fif-400' : 'text-slate-400 dark:text-slate-500'}`}>
+            {isActive && <span className="absolute -top-px left-1/4 right-1/4 h-0.5 rounded-full bg-gradient-to-r from-fif-500 to-fif-400" />}
+            <span className={`transition-all duration-200 ${isActive ? 'scale-110' : ''}`}>
               {tab.icon}
             </span>
             <span className="text-[11px]">{tab.label}</span>

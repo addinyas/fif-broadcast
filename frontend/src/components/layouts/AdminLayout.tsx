@@ -50,15 +50,15 @@ export function AdminLayout() {
     <div className="flex h-screen overflow-hidden bg-surface dark:bg-slate-900">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800 lg:hidden">
+        <div className="flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition-all hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-700"
           >
             <Menu className="h-5 w-5" />
           </button>
           <img src="/logo.png" alt="FIF" className="h-8 w-8 object-contain" />
-          <span className="text-base font-bold text-slate-800 dark:text-slate-200">FIF</span>
+          <span className="text-base font-bold tracking-tight text-slate-800 dark:text-slate-200">FIF</span>
           <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
             {roleLabel[user?.role || ''] || user?.role}
           </span>

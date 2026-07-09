@@ -13,13 +13,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<Variant, string> = {
   primary:
-    'bg-fif-600 text-white hover:bg-fif-700 active:bg-fif-800 shadow-sm shadow-fif-200 dark:shadow-fif-900/30',
+    'bg-fif-600 text-white hover:bg-fif-700 active:bg-fif-800 active:scale-[0.97] shadow-sm shadow-fif-200 hover:shadow-md hover:shadow-fif-200/50 dark:shadow-fif-900/30 dark:hover:shadow-fif-900/50',
   secondary:
-    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:active:bg-slate-600',
+    'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 active:bg-slate-100 active:scale-[0.97] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:active:bg-slate-600',
   ghost:
-    'text-slate-600 hover:bg-slate-100 active:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800 dark:active:bg-slate-700',
+    'text-slate-600 hover:bg-slate-100 active:bg-slate-200 active:scale-[0.97] dark:text-slate-400 dark:hover:bg-slate-800 dark:active:bg-slate-700',
   danger:
-    'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 shadow-sm shadow-red-200 dark:shadow-red-900/30',
+    'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 active:scale-[0.97] shadow-sm shadow-red-200 hover:shadow-md hover:shadow-red-200/50 dark:shadow-red-900/30 dark:hover:shadow-red-900/50',
 };
 
 const sizeStyles: Record<Size, string> = {

@@ -6,6 +6,7 @@ interface BadgeProps {
   children: ReactNode;
   variant?: BadgeVariant;
   size?: 'sm' | 'md';
+  pulse?: boolean;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
@@ -18,15 +19,16 @@ const variantStyles: Record<BadgeVariant, string> = {
 };
 
 const sizeStyles = {
-  sm: 'px-2 py-0.5 text-xs',
-  md: 'px-2.5 py-1 text-xs',
+  sm: 'px-2 py-0.5 text-[11px] font-semibold',
+  md: 'px-2.5 py-1 text-xs font-semibold',
 };
 
-export function Badge({ children, variant = 'default', size = 'sm' }: BadgeProps) {
+export function Badge({ children, variant = 'default', size = 'sm', pulse = false }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center rounded-full font-medium ${variantStyles[variant]} ${sizeStyles[size]}`}
+      className={`inline-flex items-center rounded-full tracking-wide ${variantStyles[variant]} ${sizeStyles[size]} ${pulse ? 'animate-pulse-soft' : ''}`}
     >
+      {pulse && <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${variant === 'danger' ? 'bg-red-500 animate-pulse' : variant === 'warning' ? 'bg-amber-500 animate-pulse' : 'bg-current'}`} />}
       {children}
     </span>
   );
