@@ -28,7 +28,8 @@ WhatsApp broadcast system: Laravel 12 API backend, React 19 + Vite 8 frontend, N
 
 **Worker** (run from `worker/`):
 - `npm run start` / `npm run dev` — `node src/index.js`
-- `.env` controls: `DB_PATH`, `SOCKET_PORT` (3001), `SOCKET_PATH`, `POLL_INTERVAL_MS` (5000), `MIN_DELAY_SEC` (5), `MAX_DELAY_SEC` (15)
+- `.env` controls: `DB_PATH`, `SOCKET_PORT` (3001), `SOCKET_PATH`, `POLL_INTERVAL_MS` (5000), `MIN_DELAY_SEC` (5), `MAX_DELAY_SEC` (15), `MAX_CONNECTION_HOURS` (8)
+- **WA auto-disconnect**: After `MAX_CONNECTION_HOURS` (default 8), worker force-disconnects and clears auth to force QR re-scan. Stale connections cleaned on worker startup too.
 
 ## Architecture notes
 
@@ -36,6 +37,7 @@ WhatsApp broadcast system: Laravel 12 API backend, React 19 + Vite 8 frontend, N
 - **Default seed accounts**: `superadmin@crm.test`, `admin@crm.test`, `marketing@crm.test`, `marketing2@crm.test` — all password `password`.
 - **DB**: SQLite (`database/database.sqlite`). Worker reads/writes directly via `better-sqlite3` with WAL mode (not via API). Worker uses read-only singleton + per-query writable connections.
 - **Queue**: Database-driven (`QUEUE_CONNECTION=database`). Backend inserts `broadcast_histories`, worker polls every 5s, processes 5 per batch with 5–15s random delay between sends (anti-ban).
+- **Daily limit**: 200 sent messages per user per day, enforced in `BroadcastService::prepare()`. Reset otomatis jam 00:00.
 - **Real-time**: Worker runs its own Socket.IO server (port 3001). Frontend connects via socket.io-client (websocket + polling transports). Events: `broadcast:status` (processing/sent/failed), `wa:status` (awaiting_scan/connected/logged_out).
 - **Pattern**: Repository interfaces in `app/Interfaces/`, impls in `app/Repositories/`, bound in `RepositoryServiceProvider` (registered in `bootstrap/app.php`).
 - **Template variables**: `#nomor_contract`, `#nama`, `#motor_dan_tahun`, `#plat`, `#angsuran_kurang`, `#input_angsuran`, `#dinego_jadi`, `#pinjaman`, `#pelunasan`, `#terima`, `#tenor`, `#sisa_angsuran`.

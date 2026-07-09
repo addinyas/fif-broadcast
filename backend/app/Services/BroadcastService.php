@@ -15,6 +15,15 @@ class BroadcastService
 
     public function prepare(int $customerId, int $marketingId, string $templateBody, array $formValues): array
     {
+        $sentToday = BroadcastHistory::where('marketing_id', $marketingId)
+            ->where('status', 'sent')
+            ->where('created_at', '>=', now()->startOfDay())
+            ->count();
+
+        if ($sentToday >= 200) {
+            throw new \Exception('Batas broadcast 200 pesan per hari sudah tercapai');
+        }
+
         $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);
 
         $broadcast = $this->broadcastRepository->create([

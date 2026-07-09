@@ -8,6 +8,8 @@ const { emitWAStatus } = require('./socket-server');
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite');
 
+const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
+
 const connections = new Map();
 
 function getAuthDir(userId) {
@@ -81,7 +83,26 @@ async function createWAClientForUser(userId, onReady) {
       reconnectAttempts = 0;
       reconnecting = false;
       const entry = connections.get(userId);
-      if (entry) entry.connected = true;
+      if (entry) {
+        entry.connected = true;
+        entry.connectedAt = Date.now();
+
+        if (entry.disconnectTimer) clearTimeout(entry.disconnectTimer);
+        entry.disconnectTimer = setTimeout(() => {
+          console.log(`[WA] User ${userId} auto-disconnect after ${MAX_CONNECTION_MS / 3600000}h`);
+          const e = connections.get(userId);
+          if (e && e.sock) {
+            try { e.sock.end(undefined); } catch {}
+          }
+          connections.delete(userId);
+          const authDir = getAuthDir(userId);
+          if (fs.existsSync(authDir)) {
+            fs.rmSync(authDir, { recursive: true, force: true });
+          }
+          saveConnectionStatus(userId, 'logged_out', null);
+          emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected (8h timeout)' });
+        }, MAX_CONNECTION_MS);
+      }
       saveConnectionStatus(userId, 'connected', null);
       emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
       if (onReady) onReady(sock);
@@ -89,7 +110,13 @@ async function createWAClientForUser(userId, onReady) {
 
     if (connection === 'close') {
       const entry = connections.get(userId);
-      if (entry) entry.connected = false;
+      if (entry) {
+        entry.connected = false;
+        if (entry.disconnectTimer) {
+          clearTimeout(entry.disconnectTimer);
+          entry.disconnectTimer = null;
+        }
+      }
 
       const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
       console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${reconnectAttempts}`);
@@ -141,8 +168,14 @@ async function sendWAMessageForUser(userId, jid, text) {
 
 async function disconnectWAForUser(userId) {
   const entry = connections.get(userId);
-  if (entry && entry.sock) {
-    try { entry.sock.end(undefined); } catch {}
+  if (entry) {
+    if (entry.disconnectTimer) {
+      clearTimeout(entry.disconnectTimer);
+      entry.disconnectTimer = null;
+    }
+    if (entry.sock) {
+      try { entry.sock.end(undefined); } catch {}
+    }
   }
   connections.delete(userId);
   const authDir = getAuthDir(userId);
