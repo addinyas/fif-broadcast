@@ -90,7 +90,9 @@ class AssignmentController extends Controller
 
         foreach (['NMC' => 'nmc_count', 'REFI' => 'refi_count'] as $unit => $countField) {
             $count = (int) $request->$countField;
-            if ($count <= 0) continue;
+            if ($count <= 0) {
+                continue;
+            }
 
             $ids = Customer::where('assignment_status', 'unassigned')
                 ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = ?", [$unit])

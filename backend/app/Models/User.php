@@ -21,6 +21,14 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'role',
+        'gender',
+        'npo_mce_id',
+        'kios_name',
+        'kios_id',
+    ];
+
+    protected $appends = [
+        'avatar_url',
     ];
 
     protected $hidden = [
@@ -34,6 +42,11 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? url('storage/'.$this->avatar) : null;
     }
 
     public function uploadedCustomers(): HasMany

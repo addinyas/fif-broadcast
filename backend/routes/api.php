@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\GoogleSheetsController;
 use App\Http\Controllers\Api\PermissionController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WhatsappConnectionController;
@@ -14,16 +15,30 @@ use Illuminate\Support\Facades\Route;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/google/redirect', [AuthController::class, 'googleRedirect']);
-Route::post('/auth/google/callback', [AuthController::class, 'googleCallback']);
+Route::get('/auth/google/callback', [AuthController::class, 'googleCallback']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
 
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [ProfileController::class, 'show']);
+        Route::put('/', [ProfileController::class, 'update']);
+        Route::post('/avatar', [ProfileController::class, 'uploadAvatar']);
+        Route::delete('/avatar', [ProfileController::class, 'deleteAvatar']);
+        Route::post('/clear-cache', [ProfileController::class, 'clearCache']);
+    });
+
+    // registered before any customers/{id} routes to prevent collision
+    Route::get('customers/search-calculator', [CustomerController::class, 'searchCalculator']);
+
     // registered BEFORE any customers/{id} to prevent route collision
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:prospect_list')->group(function () {
             Route::get('customers/assigned-to-me', [CustomerController::class, 'assignedToMe']);
+            Route::post('customers/mark-sent/{id}', [CustomerController::class, 'markSent']);
+            Route::get('customers/sent-ids', [CustomerController::class, 'sentIds']);
+            Route::delete('customers/sent-marks', [CustomerController::class, 'clearSentMarks']);
         });
     });
 
@@ -44,8 +59,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('admin/marketing-users', [AssignmentController::class, 'marketingUsers']);
         });
 
-        Route::middleware('feature:template_management')->group(function () {
-        });
     });
 
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
@@ -77,7 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,marketing')->group(function () {
         Route::middleware('feature:template_management')->group(function () {
             Route::get('templates', [TemplateController::class, 'index']);
             Route::get('templates/{template}', [TemplateController::class, 'show']);
@@ -98,10 +111,13 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin')->group(function () {
+    Route::middleware('role:superadmin,UH')->group(function () {
         Route::get('admin/users', [UserController::class, 'index']);
         Route::patch('admin/users/{id}/role', [UserController::class, 'updateRole']);
         Route::delete('admin/users/{id}', [UserController::class, 'destroy']);
+    });
+
+    Route::middleware('role:superadmin')->group(function () {
         Route::put('admin/permissions', [PermissionController::class, 'update']);
     });
 });

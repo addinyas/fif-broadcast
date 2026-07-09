@@ -13,17 +13,20 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         return BroadcastHistory::create($data);
     }
 
-    public function getHistory(int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getHistory(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
-        $query = BroadcastHistory::where('marketing_id', $marketingId)
-            ->with('customer:id,name,phone_number');
+        $query = BroadcastHistory::with('customer:id,name,phone_number');
+
+        if ($marketingId !== null) {
+            $query->where('marketing_id', $marketingId);
+        }
 
         if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
-return $query->latest()->paginate($filters['per_page'] ?? 50);
-}
+        return $query->latest()->paginate($filters['per_page'] ?? 50);
+    }
 
     public function getStats(?int $marketingId = null): array
     {

@@ -45,15 +45,18 @@ class BroadcastController extends Controller
     public function history(Request $request): JsonResponse
     {
         $filters = $request->only(['status', 'per_page']);
+        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
+            ? null
+            : $request->user()->id;
 
         return response()->json(
-            $this->broadcastService->getHistory($request->user()->id, $filters)
+            $this->broadcastService->getHistory($marketingId, $filters)
         );
     }
 
     public function stats(Request $request): JsonResponse
     {
-        $marketingId = $request->user()->role === 'superadmin'
+        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
             ? null
             : $request->user()->id;
 
@@ -64,8 +67,12 @@ class BroadcastController extends Controller
 
     public function marketingSummary(Request $request): JsonResponse
     {
+        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
+            ? null
+            : $request->user()->id;
+
         return response()->json(
-            $this->broadcastService->marketingSummary($request->user()->id)
+            $this->broadcastService->marketingSummary($marketingId)
         );
     }
 }

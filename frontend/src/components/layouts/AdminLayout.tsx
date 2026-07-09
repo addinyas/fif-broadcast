@@ -4,8 +4,22 @@ import { Menu } from 'lucide-react';
 import { Sidebar } from '../ui/Sidebar';
 import { BroadcastStatusBanner } from '../ui/BroadcastStatusBanner';
 import { MobileNavBar } from '../ui/MobileNavBar';
+import { useAuth } from '../../context/AuthContext';
+
+const roleColorMap: Record<string, string> = {
+  superadmin: 'bg-red-500/20 text-red-300',
+  UH: 'bg-blue-500/20 text-blue-300',
+  marketing: 'bg-emerald-500/20 text-emerald-300',
+};
+
+const roleLabel: Record<string, string> = {
+  superadmin: 'superadmin',
+  UH: 'UH',
+  marketing: 'MCE',
+};
 
 export function AdminLayout() {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
@@ -19,10 +33,11 @@ export function AdminLayout() {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-fif-500 to-fif-700 text-sm font-bold text-white shadow">
-            F
-          </div>
+          <img src="/logo.png" alt="FIF" className="h-8 w-8 object-contain" />
           <span className="text-base font-bold text-slate-800 dark:text-slate-200">FIF</span>
+          <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
+            {roleLabel[user?.role || ''] || user?.role}
+          </span>
         </div>
         <BroadcastStatusBanner />
         <main className="flex-1 overflow-auto p-4 pb-20 lg:p-8 lg:pb-8">

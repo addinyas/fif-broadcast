@@ -7,7 +7,6 @@ import { AdminLayout } from './components/layouts/AdminLayout';
 import { MarketingLayout } from './components/layouts/MarketingLayout';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { CustomerManagementPage } from './pages/admin/CustomerManagementPage';
-import { TemplateManagementPage } from './pages/admin/TemplateManagementPage';
 import { UserManagementPage } from './pages/admin/UserManagementPage';
 import { PermissionManagementPage } from './pages/admin/PermissionManagementPage';
 import { MarketingDashboardPage } from './pages/marketing/MarketingDashboardPage';
@@ -15,6 +14,8 @@ import { ProspectListPage } from './pages/marketing/ProspectListPage';
 import { BroadcastFormPage } from './pages/marketing/BroadcastFormPage';
 import { BroadcastHistoryPage } from './pages/marketing/BroadcastHistoryPage';
 import { QRScannerPage } from './pages/marketing/QRScannerPage';
+import { CalculatorPage } from './pages/CalculatorPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { usePermissions } from './hooks/usePermissions';
 import { Skeleton } from './components/ui/Skeleton';
@@ -25,7 +26,7 @@ function LoadingScreen() {
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4 bg-surface">
       <div className="flex items-center gap-3">
-        <div className="h-8 w-8 animate-pulse rounded-lg bg-fif-600" />
+        <img src="/logo.png" alt="FIF" className="h-8 w-8 animate-pulse object-contain" />
         <span className="text-xl font-bold text-slate-800">FIF</span>
       </div>
       <div className="flex gap-2">
@@ -86,10 +87,12 @@ export default function App() {
             <Route path="broadcast" element={<RequireFeature feature="prospect_list"><ProspectListPage /></RequireFeature>} />
             <Route path="broadcast/:customerId" element={<RequireFeature feature="broadcast"><BroadcastFormPage /></RequireFeature>} />
             <Route path="customers" element={<RequireFeature feature="customer_management"><CustomerManagementPage /></RequireFeature>} />
-            <Route path="templates" element={<RequireFeature feature="template_management"><TemplateManagementPage /></RequireFeature>} />
             <Route path="connect" element={<RequireFeature feature="qr_scanner"><QRScannerPage /></RequireFeature>} />
-            <Route path="users" element={<ProtectedRoute roles={['superadmin']}><UserManagementPage /></ProtectedRoute>} />
+            <Route path="users" element={<ProtectedRoute roles={['superadmin', 'UH']}><UserManagementPage /></ProtectedRoute>} />
             <Route path="permissions" element={<ProtectedRoute roles={['superadmin']}><PermissionManagementPage /></ProtectedRoute>} />
+            <Route path="history" element={<RequireFeature feature="broadcast_history"><BroadcastHistoryPage /></RequireFeature>} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="calculator" element={<CalculatorPage />} />
           </Route>
 
           <Route path="/marketing" element={<ProtectedRoute roles={['marketing']}><MarketingLayout /></ProtectedRoute>}>
@@ -100,6 +103,8 @@ export default function App() {
             <Route path="broadcast/:customerId" element={<RequireFeature feature="broadcast"><BroadcastFormPage /></RequireFeature>} />
             <Route path="history" element={<RequireFeature feature="broadcast_history"><BroadcastHistoryPage /></RequireFeature>} />
             <Route path="connect" element={<RequireFeature feature="qr_scanner"><QRScannerPage /></RequireFeature>} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="calculator" element={<CalculatorPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />

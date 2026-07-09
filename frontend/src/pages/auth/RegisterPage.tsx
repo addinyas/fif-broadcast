@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, UserPlus } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Building2, Fingerprint, Store } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 
@@ -9,17 +9,31 @@ export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [gender, setGender] = useState('');
+  const [npoMceId, setNpoMceId] = useState('');
+  const [kiosName, setKiosName] = useState('');
+  const [kiosId, setKiosId] = useState('');
   const [error, setError] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setErrors({});
     setLoading(true);
     try {
-      await register(name, email, password);
+      await register({ name, email, password, gender, npo_mce_id: npoMceId, kios_name: kiosName, kios_id: kiosId });
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Register failed');
+      const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
+      if (axiosErr?.response?.data?.errors) {
+        const flat: Record<string, string> = {};
+        for (const [k, v] of Object.entries(axiosErr.response.data.errors)) {
+          flat[k] = (v as string[])[0];
+        }
+        setErrors(flat);
+      }
+      setError(axiosErr?.response?.data?.message || 'Register gagal');
     } finally {
       setLoading(false);
     }
@@ -32,9 +46,7 @@ export function RegisterPage() {
 
       <div className="relative w-full max-w-md animate-slide-up">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-fif-500 to-fif-700 shadow-lg shadow-fif-500/30 ring-2 ring-white/10">
-            <span className="text-2xl font-extrabold text-white">F</span>
-          </div>
+          <img src="/logo.png" alt="FIF" className="mx-auto mb-4 h-16 w-16 object-contain drop-shadow-lg" />
           <h1 className="text-2xl font-bold text-white">Buat Akun</h1>
           <p className="mt-1 text-sm text-slate-400">Daftar untuk memulai</p>
         </div>
@@ -60,6 +72,7 @@ export function RegisterPage() {
                   placeholder="Nama lengkap"
                 />
               </div>
+              {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -75,6 +88,7 @@ export function RegisterPage() {
                   placeholder="nama@email.com"
                 />
               </div>
+              {errors.email && <p className="text-xs text-red-400">{errors.email}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -91,6 +105,86 @@ export function RegisterPage() {
                   placeholder="Minimal 8 karakter"
                 />
               </div>
+              {errors.password && <p className="text-xs text-red-400">{errors.password}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-300">Jenis Kelamin</label>
+              <div className="flex gap-3">
+                <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300 transition-colors has-checked:border-fif-500 has-checked:bg-fif-500/10">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="L"
+                    checked={gender === 'L'}
+                    onChange={(e) => setGender(e.target.value)}
+                    required
+                    className="h-4 w-4 text-fif-500 accent-fif-500"
+                  />
+                  Laki-laki
+                </label>
+                <label className="flex flex-1 cursor-pointer items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300 transition-colors has-checked:border-fif-500 has-checked:bg-fif-500/10">
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="P"
+                    checked={gender === 'P'}
+                    onChange={(e) => setGender(e.target.value)}
+                    required
+                    className="h-4 w-4 text-fif-500 accent-fif-500"
+                  />
+                  Perempuan
+                </label>
+              </div>
+              {errors.gender && <p className="text-xs text-red-400">{errors.gender}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-300">ID NPO/MCE</label>
+              <div className="relative">
+                <Fingerprint className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={npoMceId}
+                  onChange={(e) => setNpoMceId(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                  placeholder="Masukkan ID NPO atau MCE"
+                />
+              </div>
+              {errors.npo_mce_id && <p className="text-xs text-red-400">{errors.npo_mce_id}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-300">Nama Kios</label>
+              <div className="relative">
+                <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={kiosName}
+                  onChange={(e) => setKiosName(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                  placeholder="Masukkan nama kios"
+                />
+              </div>
+              {errors.kios_name && <p className="text-xs text-red-400">{errors.kios_name}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-300">ID Kios</label>
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={kiosId}
+                  onChange={(e) => setKiosId(e.target.value)}
+                  required
+                  className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                  placeholder="Masukkan ID kios"
+                />
+              </div>
+              {errors.kios_id && <p className="text-xs text-red-400">{errors.kios_id}</p>}
             </div>
 
             <Button type="submit" loading={loading} className="w-full" size="lg">

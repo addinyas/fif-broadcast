@@ -26,7 +26,7 @@ export const customerService = {
     await api.delete(`/customers/${id}`);
   },
 
-  async bulkImport(customers: { name: string; phone_number: string }[]): Promise<{ imported: number; failed: unknown[] }> {
+  async bulkImport(customers: Record<string, unknown>[]): Promise<{ imported: number; failed: unknown[] }> {
     const { data } = await api.post('/customers/import', { customers });
     return data;
   },
@@ -109,5 +109,23 @@ export const customerService = {
       refi_count: refiCount,
     });
     return data;
+  },
+
+  async searchCalculator(q: string): Promise<Customer[]> {
+    const { data } = await api.get('/customers/search-calculator', { params: { q } });
+    return data;
+  },
+
+  async markSent(id: number): Promise<void> {
+    await api.post(`/customers/mark-sent/${id}`);
+  },
+
+  async getSentIds(): Promise<number[]> {
+    const { data } = await api.get('/customers/sent-ids');
+    return data.ids;
+  },
+
+  async clearSentMarks(): Promise<void> {
+    await api.delete('/customers/sent-marks');
   },
 };

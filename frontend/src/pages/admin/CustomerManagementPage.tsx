@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown } from 'lucide-react';
+import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
@@ -26,21 +26,23 @@ export function CustomerManagementPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ name: '', phone_number: '' });
-  const [importText, setImportText] = useState('');
+  const [manualRows, setManualRows] = useState<Record<string, string>[]>([{}]);
   const [importTab, setImportTab] = useState<ImportTab>('manual');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; failed: unknown[]; detected_columns?: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; failed: unknown[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAssign, setShowAssign] = useState(false);
   const [showAssignByUnit, setShowAssignByUnit] = useState(false);
+  const [showConfirmByUnit, setShowConfirmByUnit] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<MarketingUser[]>([]);
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | null>(null);
   const [assignCounts, setAssignCounts] = useState({ nmc: 0, refi: 0 });
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
+  const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [selectAllPages, setSelectAllPages] = useState(false);
   const [selectedMceIds, setSelectedMceIds] = useState<number[]>([]);
   const [allMarketingUsers, setAllMarketingUsers] = useState<MarketingUser[]>([]);
@@ -66,7 +68,7 @@ export function CustomerManagementPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: page.toString(), search, per_page: '250' };
+      const params: Record<string, string> = { page: page.toString(), search, per_page: '500' };
       if (!showAssigned) {
         params.assignment_status = 'unassigned';
       }
@@ -127,7 +129,7 @@ export function CustomerManagementPage() {
   };
 
   const resetImport = () => {
-    setImportText('');
+    setManualRows([{}]);
     setSpreadsheetUrl('');
     setImportFile(null);
     setImportResult(null);
@@ -139,13 +141,13 @@ export function CustomerManagementPage() {
     setImporting(true);
     setImportResult(null);
     try {
-      let result: { imported: number; failed: unknown[]; detected_columns?: string[] };
+      let result: { imported: number; failed: unknown[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] };
       if (importTab === 'manual') {
-        const lines = importText.trim().split('\n').filter(Boolean);
-        const customers = lines.map((line) => {
-          const [name, phone_number] = line.split(',');
-          return { name: name.trim(), phone_number: phone_number.trim() };
-        });
+        const customers = manualRows.map((row) => ({
+          name: row.name || row.nama || '',
+          phone_number: row.phone_number || row.no_whatsapp || row.phone || '',
+          dynamic_data: { ...row },
+        }));
         result = await customerService.bulkImport(customers);
       } else if (importTab === 'spreadsheet') {
         result = await customerService.importSpreadsheet(spreadsheetUrl);
@@ -154,12 +156,16 @@ export function CustomerManagementPage() {
         result = await customerService.importFile(importFile);
       }
       setImportResult(result);
-      const allImported = result.imported > 0 && result.failed.length === 0;
+      const hasSkipped = result.skipped && result.skipped.length > 0;
+      const allImported = result.imported > 0 && result.failed.length === 0 && !hasSkipped;
       if (result.imported > 0) {
         toast('success', `${result.imported} customer berhasil diimport`);
       }
       if (result.failed.length > 0) {
         toast('error', `${result.failed.length} baris gagal`);
+      }
+      if (hasSkipped) {
+        toast('warning', `${result.skipped!.length} data duplikat dilewati`);
       }
       fetchData();
       if (allImported) {
@@ -174,6 +180,12 @@ export function CustomerManagementPage() {
   };
 
   const dyn = (c: Customer, key: string) => (c.dynamic_data?.[key] ?? '') as string;
+
+  const formatRupiah = (val: string) => {
+    const nums = val.replace(/\D/g, '');
+    if (!nums) return '';
+    return nums.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  };
 
   const sharedColumns = [
     { key: 'no_contract', header: 'No Contract', render: (c: Customer) => dyn(c, 'no_contract') },
@@ -224,7 +236,7 @@ export function CustomerManagementPage() {
     { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => dyn(c, 'obj_desc') },
     { key: 'vcode', header: 'V Code', render: (c: Customer) => dyn(c, 'vcode') },
     { key: 'tahun', header: 'Tahun', render: (c: Customer) => dyn(c, 'tahun') },
-    { key: 'otr', header: 'OTR', render: (c: Customer) => dyn(c, 'otr') },
+    { key: 'otr', header: 'OTR', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
     {
       key: 'plafon', header: 'Plafon', render: (c: Customer) => {
         const coriVal = (dyn(c, 'cori') || '').toUpperCase();
@@ -235,7 +247,7 @@ export function CustomerManagementPage() {
 
         return (
           <span className={calculated && calculated !== original ? 'text-fif-600 font-semibold' : ''}>
-            {calculated || original || '-'}
+            {calculated ? formatRupiah(calculated) : formatRupiah(original) || '-'}
           </span>
         );
       }
@@ -334,6 +346,8 @@ export function CustomerManagementPage() {
     { key: 'kelurahan', label: 'Kelurahan' },
   ];
 
+  const isRupiahField = (key: string) => key === 'otr' || key === 'plafon';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -344,68 +358,49 @@ export function CustomerManagementPage() {
         <div className="flex flex-wrap gap-2">
           {isAdmin && (
             <>
-              <Button
-                variant="primary"
-                icon={<Plus className="h-4 w-4" />}
-                onClick={() => { setShowForm(true); setEditId(null); setForm({ name: '', phone_number: '' }); }}
-              >
-                Tambah
-              </Button>
               <Button variant="secondary" icon={<Upload className="h-4 w-4" />}
                 onClick={() => { setShowImport(true); resetImport(); }}>
                 Import
               </Button>
             </>
           )}
-          {selectedIds.length > 0 && (
+          {isAdmin && (
             <>
-              {isAdmin && (
-                <>
-                  <Button
-                    variant="secondary"
-                    icon={<UserCheck className="h-4 w-4" />}
-                    onClick={async () => {
-                      const users = await customerService.getMarketingUsers();
-                      setMarketingUsers(users);
-                      setSelectedMarketingId(null);
-                      setShowAssign(true);
-                    }}
-                  >
-                    Assign ({selectedIds.length})
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    icon={<Filter className="h-4 w-4" />}
-                    onClick={async () => {
-                      const users = await customerService.getMarketingUsers();
-                      setMarketingUsers(users);
-                      setSelectedMarketingId(null);
-                      setAssignCounts({ nmc: 0, refi: 0 });
-                      setShowAssignByUnit(true);
-                    }}
-                  >
-                    By Unit
-                  </Button>
-                </>
-              )}
-              {isAdmin && (
-                <Button
-                  variant="danger"
-                  icon={<Trash2 className="h-4 w-4" />}
-                  onClick={async () => {
-                    try {
-                      const res = await customerService.batchDelete(selectedIds);
-                      toast('success', res.message);
-                      setSelectedIds([]);
-                      fetchData();
-                    } catch (err: unknown) {
-                      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Gagal menghapus customer';
-                      toast('error', msg);
-                    }
-                  }}
+              <Button
+                variant="secondary"
+                icon={<UserCheck className="h-4 w-4" />}
+                disabled={selectedIds.length === 0}
+                onClick={async () => {
+                  const users = await customerService.getMarketingUsers();
+                  setMarketingUsers(users);
+                  setSelectedMarketingId(null);
+                  setShowAssign(true);
+                }}
+              >
+                Assign ({selectedIds.length})
+              </Button>
+              <Button
+                variant="secondary"
+                icon={<Filter className="h-4 w-4" />}
+                disabled={selectedIds.length === 0}
+                onClick={async () => {
+                  const users = await customerService.getMarketingUsers();
+                  setMarketingUsers(users);
+                  setSelectedMarketingId(null);
+                  setAssignCounts({ nmc: 0, refi: 0 });
+                  setShowAssignByUnit(true);
+                }}
+              >
+                By Unit
+              </Button>
+              {selectedIds.length > 0 && (
+                <button
+                  onClick={() => setShowBatchDeleteConfirm(true)}
+                  className="relative flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
-                  Hapus ({selectedIds.length})
-                </Button>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="-mr-0.5">{selectedIds.length}</span>
+                </button>
               )}
             </>
           )}
@@ -505,6 +500,63 @@ export function CustomerManagementPage() {
         )}
       </div>
 
+      {(function renderPagination() {
+        const maxVisible = 5;
+        const pages: (number | 'ellipsis')[] = [];
+        let start = Math.max(1, page - Math.floor(maxVisible / 2));
+        let end = Math.min(lastPage, start + maxVisible - 1);
+        if (end - start + 1 < maxVisible) {
+          start = Math.max(1, end - maxVisible + 1);
+        }
+        if (start > 1) {
+          pages.push(1);
+          if (start > 2) pages.push('ellipsis');
+        }
+        for (let i = start; i <= end; i++) pages.push(i);
+        if (end < lastPage) {
+          if (end < lastPage - 1) pages.push('ellipsis');
+          pages.push(lastPage);
+        }
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span>Halaman {page} dari {lastPage}</span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={page <= 1}
+                onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
+                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Prev
+              </button>
+              {pages.map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => { setPage(p); setSelectAllPages(false); }}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                      p === page
+                        ? 'bg-fif-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                disabled={page >= lastPage}
+                onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
+                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
       <DataTable
         columns={columns} data={customers} loading={loading}
         onEdit={isAdmin ? handleEdit : undefined} onDelete={isAdmin ? handleDelete : undefined}
@@ -536,72 +588,74 @@ export function CustomerManagementPage() {
           <button
             onClick={async () => {
               const res = await customerService.getAllIds();
-              const ids = (res.ids as number[]).slice(0, 250);
+              const ids = (res.ids as number[]).slice(0, 500);
               setSelectedIds(ids);
               setSelectAllPages(false);
             }}
             className="text-sm font-medium text-fif-600 dark:text-fif-400 hover:text-fif-700 dark:hover:text-fif-300 hover:underline"
           >
-            Pilih semua {Math.min(totalCustomers, 250)} customer
+            Pilih semua {Math.min(totalCustomers, 500)} customer
           </button>
           <span className="ml-1 text-sm text-slate-400 dark:text-slate-500">({selectedIds.length} dipilih)</span>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
-        <span>Halaman {page} dari {lastPage}</span>
-        <div className="flex items-center gap-1">
-          <button
-            disabled={page <= 1}
-            onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
-            className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Prev
-          </button>
-          {(() => {
-            const maxVisible = 5;
-            const pages: (number | 'ellipsis')[] = [];
-            let start = Math.max(1, page - Math.floor(maxVisible / 2));
-            let end = Math.min(lastPage, start + maxVisible - 1);
-            if (end - start + 1 < maxVisible) {
-              start = Math.max(1, end - maxVisible + 1);
-            }
-            if (start > 1) {
-              pages.push(1);
-              if (start > 2) pages.push('ellipsis');
-            }
-            for (let i = start; i <= end; i++) pages.push(i);
-            if (end < lastPage) {
-              if (end < lastPage - 1) pages.push('ellipsis');
-              pages.push(lastPage);
-            }
-            return pages.map((p, i) =>
-              p === 'ellipsis' ? (
-                <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
-              ) : (
-                <button
-                  key={p}
-                  onClick={() => { setPage(p); setSelectAllPages(false); }}
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-                    p === page
-                      ? 'bg-fif-600 text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {p}
-                </button>
-              )
-            );
-          })()}
-          <button
-            disabled={page >= lastPage}
-            onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
-            className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      {(function renderPagination() {
+        const maxVisible = 5;
+        const pages: (number | 'ellipsis')[] = [];
+        let start = Math.max(1, page - Math.floor(maxVisible / 2));
+        let end = Math.min(lastPage, start + maxVisible - 1);
+        if (end - start + 1 < maxVisible) {
+          start = Math.max(1, end - maxVisible + 1);
+        }
+        if (start > 1) {
+          pages.push(1);
+          if (start > 2) pages.push('ellipsis');
+        }
+        for (let i = start; i <= end; i++) pages.push(i);
+        if (end < lastPage) {
+          if (end < lastPage - 1) pages.push('ellipsis');
+          pages.push(lastPage);
+        }
+        return (
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span>Halaman {page} dari {lastPage}</span>
+            <div className="flex items-center gap-1">
+              <button
+                disabled={page <= 1}
+                onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
+                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Prev
+              </button>
+              {pages.map((p, i) =>
+                p === 'ellipsis' ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => { setPage(p); setSelectAllPages(false); }}
+                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
+                      p === page
+                        ? 'bg-fif-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+              <button
+                disabled={page >= lastPage}
+                onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
+                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editId ? 'Edit Customer' : 'Tambah Customer'}>
         <div className="space-y-4">
@@ -637,15 +691,46 @@ export function CustomerManagementPage() {
           </div>
 
           {importTab === 'manual' && (
-            <div className="space-y-3">
-              <p className="text-sm text-slate-500 dark:text-slate-400">Format: <code className="rounded bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 text-xs font-mono">nama,phone_number</code> (satu per baris)</p>
-              <textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                rows={6}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                placeholder={`Budi Santoso,08123456789\nSiti Aminah,08234567890`}
-              />
+            <div className="space-y-4">
+              {manualRows.map((row, i) => (
+                <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Customer {i + 1}</span>
+                    <button
+                      onClick={() => setManualRows((prev) => prev.filter((_, j) => j !== i))}
+                      className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-colors"
+                      title="Hapus"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {dynamicFields.map((f) => {
+                      const rupiah = isRupiahField(f.key);
+                      return (
+                        <div key={f.key}>
+                          <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">{f.label}</label>
+                          <input
+                            value={rupiah ? formatRupiah(row[f.key] || '') : (row[f.key] || '')}
+                            onChange={(e) => {
+                              const next = [...manualRows];
+                              next[i] = { ...next[i], [f.key]: rupiah ? e.target.value.replace(/\./g, '') : e.target.value };
+                              setManualRows(next);
+                            }}
+                            className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-xs outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setManualRows((prev) => [...prev, {}])}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 py-3 text-sm font-medium text-slate-500 dark:text-slate-400 transition-colors hover:border-fif-400 hover:text-fif-600 dark:hover:border-fif-500 dark:hover:text-fif-400"
+              >
+                + Tambah Customer
+              </button>
             </div>
           )}
 
@@ -689,12 +774,12 @@ export function CustomerManagementPage() {
 
           {importResult && (
             <div className={`rounded-xl border p-4 ${
-              importResult.failed.length === 0 && importResult.imported > 0
+              importResult.failed.length === 0 && importResult.imported > 0 && (!importResult.skipped || importResult.skipped.length === 0)
                 ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20'
                 : 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20'
             }`}>
               <div className="flex items-start gap-3">
-                {importResult.failed.length === 0 && importResult.imported > 0 ? (
+                {importResult.failed.length === 0 && importResult.imported > 0 && (!importResult.skipped || importResult.skipped.length === 0) ? (
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 ) : (
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
@@ -705,6 +790,33 @@ export function CustomerManagementPage() {
                       ? `${importResult.imported} customer berhasil diimport`
                       : 'Tidak ada data yang diimport'}
                   </p>
+                  {importResult.skipped && importResult.skipped.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                        {importResult.skipped.length} data duplikat dilewati (No Contract sudah terdaftar):
+                      </p>
+                      <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300">
+                              <th className="px-2 py-1 font-semibold">#</th>
+                              <th className="px-2 py-1 font-semibold">No Contract</th>
+                              <th className="px-2 py-1 font-semibold">Nama</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100 dark:divide-amber-800">
+                            {importResult.skipped.map((s, i) => (
+                              <tr key={i} className="text-amber-900 dark:text-amber-200">
+                                <td className="px-2 py-1 text-amber-600">{s.row}</td>
+                                <td className="px-2 py-1 font-mono">{s.no_contract}</td>
+                                <td className="px-2 py-1">{s.name}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                   {importResult.failed.length > 0 && (
                     <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{importResult.failed.length} baris gagal</p>
                   )}
@@ -728,13 +840,15 @@ export function CustomerManagementPage() {
             <Button variant="secondary" onClick={() => { setShowImport(false); resetImport(); }}>
               Tutup
             </Button>
-            <Button
-              onClick={handleImport}
-              disabled={importing || (importTab === 'manual' && !importText.trim()) || (importTab === 'spreadsheet' && !spreadsheetUrl.trim()) || (importTab === 'file' && !importFile)}
-              icon={importing ? undefined : <Download className="h-4 w-4" />}
-            >
-              {importing ? 'Mengimport...' : 'Import'}
-            </Button>
+            {!importResult && (
+              <Button
+                onClick={handleImport}
+                disabled={importing || (importTab === 'manual' && !manualRows.some((r) => Object.values(r).some(Boolean))) || (importTab === 'spreadsheet' && !spreadsheetUrl.trim()) || (importTab === 'file' && !importFile)}
+                icon={importing ? undefined : <Download className="h-4 w-4" />}
+              >
+                {importing ? 'Mengimport...' : 'Import'}
+              </Button>
+            )}
           </div>
         </div>
       </Modal>
@@ -770,6 +884,42 @@ export function CustomerManagementPage() {
               }}
             >
               Ya, Hapus Semua
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showBatchDeleteConfirm} onClose={() => setShowBatchDeleteConfirm(false)} title="Hapus Customer">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+            <div>
+              <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                {selectedIds.length} customer akan dihapus
+              </p>
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                Tindakan ini tidak bisa dibatalkan.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowBatchDeleteConfirm(false)}>Batal</Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                try {
+                  const res = await customerService.batchDelete(selectedIds);
+                  toast('success', res.message);
+                  setSelectedIds([]);
+                  setShowBatchDeleteConfirm(false);
+                  fetchData();
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Gagal menghapus customer';
+                  toast('error', msg);
+                }
+              }}
+            >
+              Ya, Hapus
             </Button>
           </div>
         </div>
@@ -835,7 +985,7 @@ export function CustomerManagementPage() {
               <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah NMC</label>
               <input
                 type="number" min={0}
-                value={assignCounts.nmc}
+                value={assignCounts.nmc || ''}
                 onChange={(e) => setAssignCounts((p) => ({ ...p, nmc: Math.max(0, parseInt(e.target.value) || 0) }))}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 placeholder="0"
@@ -845,7 +995,7 @@ export function CustomerManagementPage() {
               <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah REFI</label>
               <input
                 type="number" min={0}
-                value={assignCounts.refi}
+                value={assignCounts.refi || ''}
                 onChange={(e) => setAssignCounts((p) => ({ ...p, refi: Math.max(0, parseInt(e.target.value) || 0) }))}
                 className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 placeholder="0"
@@ -855,6 +1005,37 @@ export function CustomerManagementPage() {
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowAssignByUnit(false)}>Batal</Button>
             <Button
+              onClick={() => setShowConfirmByUnit(true)}
+              disabled={!selectedMarketingId || (assignCounts.nmc + assignCounts.refi) === 0}
+            >
+              Assign
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showConfirmByUnit} onClose={() => setShowConfirmByUnit(false)} title="Konfirmasi Assign by Unit">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                Assign ke {marketingUsers.find((u) => u.id === selectedMarketingId)?.name || 'Marketing'}
+              </p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+                NMC: <strong>{assignCounts.nmc}</strong>
+              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                REFI: <strong>{assignCounts.refi}</strong>
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                Total: <strong>{assignCounts.nmc + assignCounts.refi}</strong> customer
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowConfirmByUnit(false)}>Batal</Button>
+            <Button
               onClick={async () => {
                 if (!selectedMarketingId) return;
                 const total = assignCounts.nmc + assignCounts.refi;
@@ -862,15 +1043,16 @@ export function CustomerManagementPage() {
                 try {
                   const res = await customerService.assignByUnit(selectedMarketingId, assignCounts.nmc, assignCounts.refi);
                   toast('success', `${res.total} customer berhasil diassign`);
+                  setSelectedIds([]);
+                  setShowConfirmByUnit(false);
                   setShowAssignByUnit(false);
                   fetchData();
                 } catch {
                   toast('error', 'Gagal mengassign customer');
                 }
               }}
-              disabled={!selectedMarketingId || (assignCounts.nmc + assignCounts.refi) === 0}
             >
-              Assign
+              Ya, Assign
             </Button>
           </div>
         </div>
@@ -937,7 +1119,7 @@ export function CustomerManagementPage() {
                         return (
                           <tr key={field.key} className="even:bg-slate-50 dark:even:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-700/80">
                             <td className="px-4 py-2.5 font-medium text-slate-600 dark:text-slate-400">{field.label}</td>
-                            <td className="px-4 py-2.5 text-slate-800 dark:text-slate-200">{val as string}</td>
+                            <td className="px-4 py-2.5 text-slate-800 dark:text-slate-200">{isRupiahField(field.key) ? formatRupiah(val as string) : (val as string)}</td>
                           </tr>
                         );
                       })}

@@ -27,7 +27,7 @@ class BroadcastService
         return $broadcast->toArray();
     }
 
-    public function getHistory(int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getHistory(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
         return $this->broadcastRepository->getHistory($marketingId, $filters);
     }
@@ -37,21 +37,24 @@ class BroadcastService
         return $this->broadcastRepository->getStats($marketingId);
     }
 
-    public function marketingSummary(int $marketingId): array
+    public function marketingSummary(?int $marketingId): array
     {
-        $assignedCount = Customer::where('marketing_id', $marketingId)
-            ->where('assignment_status', 'assigned')
-            ->count();
+        $customerQuery = Customer::where('assignment_status', 'assigned');
+        $historyQuery = BroadcastHistory::query();
+        if ($marketingId !== null) {
+            $customerQuery->where('marketing_id', $marketingId);
+            $historyQuery->where('marketing_id', $marketingId);
+        }
+
+        $assignedCount = $customerQuery->count();
 
         $stats = $this->getStats($marketingId);
 
-        $lastBroadcast = BroadcastHistory::where('marketing_id', $marketingId)
-            ->with('customer:id,name')
+        $lastBroadcast = (clone $historyQuery)->with('customer:id,name')
             ->latest('created_at')
             ->first();
 
-        $recent = BroadcastHistory::where('marketing_id', $marketingId)
-            ->with('customer:id,name')
+        $recent = (clone $historyQuery)->with('customer:id,name')
             ->latest('created_at')
             ->limit(5)
             ->get()

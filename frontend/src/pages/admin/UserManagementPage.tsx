@@ -90,7 +90,7 @@ export function UserManagementPage() {
                     <td className="px-5 py-3.5 font-medium text-slate-800 dark:text-slate-200">{u.name}</td>
                     <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">{u.email}</td>
                     <td className="px-5 py-3.5">
-                      {u.role !== 'superadmin' ? (
+                      {u.role !== 'superadmin' && !(currentUser?.role === 'UH' && u.role === 'UH') ? (
                         <select
                           value={u.role}
                           onChange={(e) => handleRoleChange(u, e.target.value)}
@@ -107,7 +107,7 @@ export function UserManagementPage() {
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td className="px-5 py-3.5 text-right">
-                      {u.id !== currentUser?.id && u.role !== 'superadmin' && (
+                      {u.id !== currentUser?.id && u.role !== 'superadmin' && !(currentUser?.role === 'UH' && u.role === 'UH') && (
                         <Button
                           variant="ghost"
                           size="sm"

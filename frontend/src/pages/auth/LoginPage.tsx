@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -11,6 +11,19 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get('token');
+    const errorParam = params.get('error');
+
+    if (tokenParam) {
+      localStorage.setItem('token', tokenParam);
+      window.location.href = '/';
+    } else if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +38,8 @@ export function LoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
-    try {
-      const { url } = await authService.googleRedirect();
-      window.location.href = url;
-    } catch {
-      setError('Google login failed');
-    }
+  const handleGoogle = () => {
+    setError('Fitur login Google masih dalam pengembangan');
   };
 
   return (
@@ -41,11 +49,9 @@ export function LoginPage() {
 
       <div className="relative w-full max-w-md animate-slide-up">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-fif-500 to-fif-700 shadow-lg shadow-fif-500/30 ring-2 ring-white/10">
-            <span className="text-2xl font-extrabold text-white">F</span>
-          </div>
+          <img src="/logo.png" alt="FIF" className="mx-auto mb-4 h-16 w-16 object-contain drop-shadow-lg" />
           <h1 className="text-2xl font-bold text-white">Selamat Datang</h1>
-          <p className="mt-1 text-sm text-slate-400">Finance Installment Follow-up</p>
+          <p className="mt-1 text-sm text-slate-400">Federal International Finance</p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl">

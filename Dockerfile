@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.2-cli AS backend
 
 RUN apt-get update && apt-get install -y \
     git \
@@ -7,31 +7,52 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN docker-php-ext-install pdo pdo_sqlite
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /app
+WORKDIR /app/backend
+COPY backend/composer.json backend/composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction
+COPY backend .
 
-COPY backend backend/
-COPY worker worker/
+RUN mkdir -p storage/framework/{cache,sessions,views} \
+    storage/logs \
+    bootstrap/cache
+
+FROM node:22-alpine AS frontend-build
+
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend .
+RUN npm run build
+
+FROM node:22-alpine AS worker-deps
+
+WORKDIR /app
+COPY worker/package.json worker/package-lock.json ./
+RUN npm ci --omit=dev
+COPY worker/src ./src
+
+FROM php:8.2-cli
+
+RUN apt-get update && apt-get install -y \
+    libsqlite3-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN docker-php-ext-install pdo pdo_sqlite
+
+COPY --from=backend /app/backend /app/backend
+COPY --from=frontend-build /app/dist /app/frontend/dist
+COPY --from=worker-deps /app /app/worker
+
+RUN apt-get install -y nginx-light && rm -rf /var/lib/apt/lists/*
+
+COPY nginx.conf /etc/nginx/sites-enabled/default
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
-
-RUN cd backend && composer install --no-dev --optimize-autoloader
-
-RUN cd backend && php artisan key:generate
-
-RUN cd worker && npm ci --omit=dev
-
-RUN mkdir -p backend/storage/framework/{cache,sessions,views} \
-    backend/storage/logs \
-    backend/bootstrap/cache \
-    && touch backend/database/database.sqlite
 
 EXPOSE 8080 3001
 

@@ -7,8 +7,17 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (payload: {
+    name: string;
+    email: string;
+    password: string;
+    gender: string;
+    npo_mce_id: string;
+    kios_name: string;
+    kios_id: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (user: User) => void;
   isAdmin: boolean;
   isMarketing: boolean;
 }
@@ -39,12 +48,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(res.user);
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const res = await authService.register(name, email, password);
+  const register = async (payload: {
+    name: string;
+    email: string;
+    password: string;
+    gender: string;
+    npo_mce_id: string;
+    kios_name: string;
+    kios_id: string;
+  }) => {
+    const res = await authService.register(payload);
     localStorage.setItem('token', res.token);
     localStorage.setItem('user', JSON.stringify(res.user));
     setToken(res.token);
     setUser(res.user);
+  };
+
+  const updateUser = (updated: User) => {
+    localStorage.setItem('user', JSON.stringify(updated));
+    setUser(updated);
   };
 
   const logout = async () => {
@@ -59,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isMarketing = user?.role === 'marketing';
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, isAdmin, isMarketing }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, isAdmin, isMarketing }}>
       {children}
     </AuthContext.Provider>
   );

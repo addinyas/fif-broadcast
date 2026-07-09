@@ -76,10 +76,14 @@ export function ProspectListPage() {
   ]);
   const [adding, setAdding] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [sentClickedIds, setSentClickedIds] = useState<number[]>([]);
+  const [sentIds, setSentIds] = useState<number[]>([]);
+  const [refreshingSent, setRefreshingSent] = useState(false);
   const [bussUnitFilter, setBussUnitFilter] = useState('');
   const [showBussUnitDropdown, setShowBussUnitDropdown] = useState(false);
   const bussUnitRef = useRef<HTMLDivElement>(null);
+  const [sisaAngsuranFilter, setSisaAngsuranFilter] = useState('');
+  const [showSisaAngsuranDropdown, setShowSisaAngsuranDropdown] = useState(false);
+  const sisaAngsuranRef = useRef<HTMLDivElement>(null);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const handleNoContractChange = (val: string) => {
@@ -120,16 +124,17 @@ export function ProspectListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), buss_unit: bussUnitFilter });
+      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), buss_unit: bussUnitFilter, sisa_angsuran: sisaAngsuranFilter });
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
+      setSentIds(res.data.filter((c) => c.manual_sent_at).map((c) => c.id));
     } catch {
       setCustomers([]);
       setLastPage(1);
     } finally {
       setLoading(false);
     }
-  }, [page, search, bussUnitFilter]);
+  }, [page, search, bussUnitFilter, sisaAngsuranFilter]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -144,12 +149,15 @@ export function ProspectListPage() {
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
   useEffect(() => () => { if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current); }, []);
 
-  useEffect(() => { setPage(1); }, [bussUnitFilter]);
+  useEffect(() => { setPage(1); }, [bussUnitFilter, sisaAngsuranFilter]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (bussUnitRef.current && !bussUnitRef.current.contains(e.target as Node)) {
         setShowBussUnitDropdown(false);
+      }
+      if (sisaAngsuranRef.current && !sisaAngsuranRef.current.contains(e.target as Node)) {
+        setShowSisaAngsuranDropdown(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -228,6 +236,8 @@ export function ProspectListPage() {
       try {
         const message = interpolateMessage(customer);
         await broadcastService.prepare(customer.id, message, {});
+        await customerService.markSent(customer.id).catch(() => {});
+        setSentIds((prev) => prev.includes(customer.id) ? prev : [...prev, customer.id]);
         success++;
       } catch (e: unknown) {
         const resp = (e as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } })?.response?.data;
@@ -367,6 +377,18 @@ export function ProspectListPage() {
     return `https://wa.me/${normalized}?text=${encodeURIComponent(message)}`;
   };
 
+  const handleManualSend = async (c: Customer) => {
+    try {
+      await customerService.markSent(c.id);
+      setSentIds((prev) => prev.includes(c.id) ? prev : [...prev, c.id]);
+      toast('success', 'Tanda kirim tersimpan');
+    } catch (e) {
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || (e as Error)?.message || 'Gagal menyimpan tanda kirim';
+      toast('error', msg);
+    }
+    window.open(waLink(c), '_blank', 'noopener');
+  };
+
   const statusLabel = (s: string) => {
     const map: Record<string, string> = {
       pending: 'Tertunda',
@@ -389,24 +411,24 @@ export function ProspectListPage() {
 
   const columns = [
     { key: 'no_contract', header: 'No Contract', render: (c: Customer) => (
-      <span className="font-mono text-[10px] font-medium text-slate-700 dark:text-slate-300">{c.no_contract || dyn(c, 'no_contract')}</span>
+      <span className="font-mono text-xs font-medium text-slate-700 dark:text-slate-300">{c.no_contract || dyn(c, 'no_contract')}</span>
     ) },
     { key: 'nama', header: 'Nama', render: (c: Customer) => (
       <div className="flex items-center gap-1">
-        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fif-100 to-fif-200 text-[9px] font-bold text-fif-700 dark:from-fif-800 dark:to-fif-900 dark:text-fif-300">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fif-100 to-fif-200 text-xs font-bold text-fif-700 dark:from-fif-800 dark:to-fif-900 dark:text-fif-300">
           {(dyn(c, 'nama') || c.name).charAt(0).toUpperCase()}
         </div>
-        <span className="truncate text-[11px] font-medium text-slate-800 dark:text-slate-200">{dyn(c, 'nama') || c.name}</span>
+        <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{dyn(c, 'nama') || c.name}</span>
         {dyn(c, '_entry_source') === 'manual' && (
-          <span className="shrink-0 rounded bg-purple-100 px-1 py-[1px] text-[8px] font-semibold uppercase text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">M</span>
+          <span className="shrink-0 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">M</span>
         )}
       </div>
     ) },
     { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => (
-      <span className="block truncate text-[10px] text-slate-500 dark:text-slate-400">{dyn(c, 'obj_desc') || '-'}</span>
+      <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{dyn(c, 'obj_desc') || '-'}</span>
     ) },
     { key: 'tahun', header: 'Tahun', render: (c: Customer) => (
-      <span className="text-[11px] text-slate-600 dark:text-slate-400">{dyn(c, 'tahun') || '-'}</span>
+      <span className="text-sm text-slate-600 dark:text-slate-400">{dyn(c, 'tahun') || '-'}</span>
     ) },
     {
       key: 'buss_unit',
@@ -418,7 +440,7 @@ export function ProspectListPage() {
               onClick={() => setShowBussUnitDropdown((p) => !p)}
               className={`rounded p-0.5 transition-colors ${bussUnitFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
             >
-              <ChevronDown className={`h-3 w-3 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
             </button>
             {showBussUnitDropdown && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[110px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
@@ -432,14 +454,14 @@ export function ProspectListPage() {
                         setShowBussUnitDropdown(false);
                         setPage(1);
                       }}
-                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors ${
                         active
                           ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300'
                           : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
                       }`}
                     >
                       {val || 'Semua'}
-                      {active && <CheckCircle2 className="ml-auto h-3 w-3 text-fif-600" />}
+                      {active && <CheckCircle2 className="ml-auto h-4 w-4 text-fif-600" />}
                     </button>
                   );
                 })}
@@ -449,50 +471,105 @@ export function ProspectListPage() {
         </div>
       ),
       render: (c: Customer) => (
-      <span className="text-[11px] font-medium text-slate-600 dark:text-slate-400">{dyn(c, 'buss_unit') || '-'}</span>
+      <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{dyn(c, 'buss_unit') || '-'}</span>
     ) },
     { key: 'plafon', header: 'Plafon', render: (c: Customer) => (
-      <span className="font-mono text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(dyn(c, 'plafon'))}</span>
+      <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(dyn(c, 'plafon'))}</span>
     ) },
-    { key: 'sisa_angsuran', header: 'Sisa Angsuran', render: (c: Customer) => (
-      <span className="font-mono text-[11px] font-semibold text-amber-600 dark:text-amber-400">{dyn(c, 'sisa_angsuran') || '-'}</span>
+    {
+      key: 'sisa_angsuran',
+      header: (
+        <div className="relative inline-flex items-center gap-1">
+          <span>Sisa Angsuran</span>
+          <div ref={sisaAngsuranRef} className="relative">
+            <button
+              onClick={() => setShowSisaAngsuranDropdown((p) => !p)}
+              className={`rounded p-0.5 transition-colors ${sisaAngsuranFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform ${showSisaAngsuranDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showSisaAngsuranDropdown && (
+              <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[130px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
+                {['', '1-5', '6-10', '11-15'].map((val) => {
+                  const active = val ? sisaAngsuranFilter === val : !sisaAngsuranFilter;
+                  return (
+                    <button
+                      key={val}
+                      onClick={() => {
+                        setSisaAngsuranFilter(val);
+                        setShowSisaAngsuranDropdown(false);
+                        setPage(1);
+                      }}
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors ${
+                        active
+                          ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300'
+                          : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {val || 'Semua'}
+                      {active && <CheckCircle2 className="ml-auto h-4 w-4 text-fif-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ),
+      render: (c: Customer) => (
+      <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-400">{dyn(c, 'sisa_angsuran') || '-'}</span>
     ) },
     {
       key: 'status', header: 'Status', render: (c: Customer) => {
         const latest = c.broadcast_histories?.[0];
-        if (!latest) return <span className="text-[10px] text-slate-400 dark:text-slate-500">&mdash;</span>;
+        if (!latest) return <span className="text-xs text-slate-400 dark:text-slate-500">&mdash;</span>;
         return <Badge variant={statusVariant(latest.status)} size="sm">{statusLabel(latest.status)}</Badge>;
       }
     },
     {
-      key: 'aksi', header: 'Aksi', render: (c: Customer) => {
-        const marked = sentClickedIds.includes(c.id);
+      key: 'aksi', header: 'Aksi',
+      headerRight: (
+        <button
+          onClick={async () => {
+            setRefreshingSent(true);
+            try {
+              await customerService.clearSentMarks();
+              fetchData();
+            } catch { /* silent */ }
+            setRefreshingSent(false);
+          }}
+          disabled={refreshingSent}
+          className="ml-1 rounded p-0.5 text-slate-400 transition-colors hover:text-fif-600 disabled:opacity-40 dark:hover:text-fif-400"
+          title="Reset tanda kirim"
+        >
+          <RotateCw className={`h-4 w-4 ${refreshingSent ? 'animate-spin' : ''}`} />
+        </button>
+      ),
+      render: (c: Customer) => {
+        const marked = sentIds.includes(c.id);
         return (
-          <div className="flex items-center justify-center gap-0.5">
+          <div className="flex items-center justify-center gap-1">
             {marked ? (
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500 text-white" title="Sudah dikirim">
-                <Send className="h-3 w-3" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500 text-white" title="Sudah dikirim">
+                <Send className="h-4 w-4" />
               </span>
             ) : (
-              <a
-                href={waLink(c)}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setSentClickedIds((prev) => prev.includes(c.id) ? prev : [...prev, c.id])}
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 transition-all hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
+              <button
+                onClick={() => handleManualSend(c)}
+                className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 transition-all hover:bg-emerald-100 hover:text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/30"
                 title="Buka WhatsApp"
               >
-                <Send className="h-3 w-3" />
-              </a>
+                <Send className="h-4 w-4" />
+              </button>
             )}
             {dyn(c, '_entry_source') === 'manual' && (
               <button
                 onClick={() => handleDeleteManual(c)}
                 disabled={deletingId === c.id}
-                className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 disabled:opacity-40 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-all hover:bg-red-50 hover:text-red-500 disabled:opacity-40 dark:hover:bg-red-900/20 dark:hover:text-red-400"
                 title="Hapus"
               >
-                {deletingId === c.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                {deletingId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               </button>
             )}
           </div>
@@ -514,7 +591,7 @@ export function ProspectListPage() {
         <div className="border-b border-slate-50 px-5 py-3.5 dark:border-slate-700/30">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
-              <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Tersimpan</label>
+              <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Tersimpan</label>
               <select
                 value={selectedTemplateId ?? ''}
                 onChange={(e) => { const v = e.target.value; if (v) { const id = parseInt(v); setSelectedTemplateId(id); loadTemplate(id); } else { setSelectedTemplateId(null); } }}
@@ -530,7 +607,7 @@ export function ProspectListPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                icon={<Save className="h-3.5 w-3.5" />}
+                icon={<Save className="h-4 w-4" />}
                 onClick={() => { setSaveTitle(''); setSaveModal(true); }}
                 disabled={!templateBody.trim()}
               >
@@ -540,7 +617,7 @@ export function ProspectListPage() {
                 <Button
                   variant="danger"
                   size="sm"
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  icon={<Trash2 className="h-4 w-4" />}
                   onClick={handleDeleteTemplate}
                   loading={deletingTemplate}
                 >
@@ -551,7 +628,7 @@ export function ProspectListPage() {
           </div>
         </div>
         <div className="p-5">
-          <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Pesan</label>
+          <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Pesan</label>
           <textarea
             ref={textareaRef}
             value={templateBody}
@@ -561,13 +638,13 @@ export function ProspectListPage() {
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>
+            <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>
             {VARIABLE_BUTTONS.map((v) => (
               <button
                 key={v.key}
                 type="button"
                 onClick={() => insertVariable(v.key)}
-                className="rounded-md border border-slate-200 bg-white px-2 py-1 font-mono text-[11px] font-medium text-slate-500 shadow-sm transition-all hover:border-fif-300 hover:bg-fif-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-fif-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400"
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs font-medium text-slate-500 shadow-sm transition-all hover:border-fif-300 hover:bg-fif-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-fif-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400"
               >
                 {v.label}
               </button>
@@ -624,15 +701,7 @@ export function ProspectListPage() {
             className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-800 dark:placeholder:text-slate-500"
           />
         </div>
-        {sentClickedIds.length > 0 && (
-          <button
-            onClick={() => setSentClickedIds([])}
-            className="group flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-500 transition-all hover:bg-emerald-500 hover:text-white dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-600"
-            title={`Reset tanda kirim (${sentClickedIds.length} ditandai)`}
-          >
-            <RotateCw className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-180" />
-          </button>
-        )}
+
         <button
           onClick={() => {
             setNewNoContract('');
@@ -646,9 +715,9 @@ export function ProspectListPage() {
             ]);
             setAddModal(true);
           }}
-          className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
+          className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
         >
-          <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90" />
+          <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
           Tambah Customer
         </button>
       </div>
@@ -683,7 +752,7 @@ export function ProspectListPage() {
           <Button
             variant="primary"
             size="sm"
-            icon={<Send className="h-3.5 w-3.5" />}
+            icon={<Send className="h-4 w-4" />}
             onClick={handleBatchSend}
             disabled={selectedIds.length > MAX_BATCH || selectedIds.length === 0}
           >
@@ -696,7 +765,7 @@ export function ProspectListPage() {
         columns={columns} data={customers} loading={loading}
         showCheckbox
         selectedIds={selectedIds}
-        markedIds={sentClickedIds}
+        markedIds={sentIds}
         onSelect={(id) => setSelectedIds((prev) =>
           prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         )}
@@ -728,19 +797,19 @@ export function ProspectListPage() {
           <button
             disabled={page <= 1 || sendingBatch}
             onClick={() => { setPage(page - 1); setSelectedIds([]); }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &lt;
           </button>
           {getPageRange(page, lastPage).map((p, i) =>
             p === 'ellipsis' ? (
-              <span key={`e${i}`} className="flex h-8 w-8 items-center justify-center text-xs text-slate-400">...</span>
+              <span key={`e${i}`} className="flex h-9 w-9 items-center justify-center text-sm text-slate-400">...</span>
             ) : (
               <button
                 key={p}
                 disabled={sendingBatch}
                 onClick={() => { setPage(p); setSelectedIds([]); }}
-                className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${
+                className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all ${
                   p === page
                     ? 'bg-fif-600 text-white shadow-sm'
                     : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
@@ -753,7 +822,7 @@ export function ProspectListPage() {
           <button
             disabled={page >= lastPage || sendingBatch}
             onClick={() => { setPage(page + 1); setSelectedIds([]); }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &gt;
           </button>
@@ -790,7 +859,7 @@ export function ProspectListPage() {
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Data Tambahan</label>
-              <Button variant="ghost" size="sm" icon={<Plus className="h-3.5 w-3.5" />} onClick={addDynamicRow}>
+              <Button variant="ghost" size="sm" icon={<Plus className="h-4 w-4" />} onClick={addDynamicRow}>
                 Tambah Field
               </Button>
             </div>

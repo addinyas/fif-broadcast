@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
+
+class ProfileController extends Controller
+{
+    public function show(Request $request): JsonResponse
+    {
+        return response()->json(['data' => $request->user()->only([
+            'id', 'name', 'email', 'avatar', 'avatar_url', 'role',
+            'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+        ])]);
+    }
+
+    public function update(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'sometimes|string|max:255',
+            'gender' => 'sometimes|nullable|in:L,P',
+            'npo_mce_id' => 'sometimes|nullable|string|max:100',
+            'kios_name' => 'sometimes|nullable|string|max:255',
+            'kios_id' => 'sometimes|nullable|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+        $data = $request->only(['name', 'gender', 'npo_mce_id', 'kios_name', 'kios_id']);
+        $data = array_filter($data, fn ($v) => $v !== null);
+
+        if (! empty($data)) {
+            $user->update($data);
+        }
+
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            'data' => $user->fresh()->only([
+                'id', 'name', 'email', 'avatar', 'avatar_url', 'role',
+                'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+            ]),
+        ]);
+    }
+
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+
+        $user->update(['avatar' => $path]);
+
+        return response()->json([
+            'message' => 'Avatar uploaded successfully',
+            'avatar_url' => url('storage/'.$path),
+        ]);
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->avatar) {
+            Storage::disk('public')->delete($user->avatar);
+            $user->update(['avatar' => null]);
+        }
+
+        return response()->json(['message' => 'Avatar removed successfully']);
+    }
+
+    public function clearCache(Request $request): JsonResponse
+    {
+        $messages = [];
+        $errors = [];
+
+        if (function_exists('exec')) {
+            $artisan = base_path('artisan');
+
+            $commands = [
+                'cache:clear',
+                'config:clear',
+                'view:clear',
+                'route:clear',
+            ];
+
+            foreach ($commands as $cmd) {
+                exec("php \"{$artisan}\" {$cmd} 2>&1", $output, $exitCode);
+                if ($exitCode === 0) {
+                    $messages[] = "{$cmd} berhasil";
+                } else {
+                    $errors[] = "{$cmd} gagal: ".implode(', ', $output);
+                }
+            }
+        }
+
+        $paths = [
+            storage_path('framework/cache/data'),
+            storage_path('framework/views'),
+        ];
+
+        foreach ($paths as $path) {
+            if (is_dir($path)) {
+                $this->rmdirRecursive($path);
+                $messages[] = basename(dirname($path)).'/'.basename($path).' dibersihkan';
+            }
+        }
+
+        $logFile = storage_path('logs/laravel.log');
+        if (file_exists($logFile)) {
+            file_put_contents($logFile, '');
+            $messages[] = 'Log file dibersihkan';
+        }
+
+        $authInfoPath = dirname(__DIR__, 4).'/worker/auth_info';
+        if (is_dir($authInfoPath)) {
+            $this->rmdirRecursive($authInfoPath);
+            $messages[] = 'Worker auth_info dibersihkan';
+        }
+
+        return response()->json([
+            'message' => 'Cache berhasil dibersihkan',
+            'details' => $messages,
+            'errors' => $errors,
+        ]);
+    }
+
+    private function rmdirRecursive(string $dir): void
+    {
+        $items = array_diff(scandir($dir), ['.', '..']);
+        foreach ($items as $item) {
+            $path = $dir.DIRECTORY_SEPARATOR.$item;
+            is_dir($path) ? $this->rmdirRecursive($path) : unlink($path);
+        }
+        rmdir($dir);
+    }
+}

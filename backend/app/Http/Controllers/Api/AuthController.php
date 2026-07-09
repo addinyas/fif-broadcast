@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -20,6 +21,10 @@ class AuthController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
+            'gender' => 'required|in:L,P',
+            'npo_mce_id' => 'required|string|max:100',
+            'kios_name' => 'required|string|max:255',
+            'kios_id' => 'required|string|max:100',
             'role' => 'sometimes|in:superadmin,UH,marketing',
         ]);
 
@@ -67,22 +72,16 @@ class AuthController extends Controller
         }
     }
 
-    public function googleCallback(Request $request): JsonResponse
+    public function googleCallback(Request $request): RedirectResponse
     {
-        $validator = Validator::make($request->all(), [
-            'code' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        $frontendUrl = config('app.frontend_url');
 
         try {
             $result = $this->authService->googleCallback();
 
-            return response()->json($result);
+            return redirect("{$frontendUrl}/login?token={$result['token']}");
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 401);
+            return redirect("{$frontendUrl}/login?error=" . urlencode($e->getMessage()));
         }
     }
 

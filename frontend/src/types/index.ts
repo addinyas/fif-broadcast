@@ -5,7 +5,12 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
+  avatar_url?: string;
   role: UserRole;
+  gender?: string | null;
+  npo_mce_id?: string | null;
+  kios_name?: string | null;
+  kios_id?: string | null;
   created_at?: string;
 }
 
@@ -23,6 +28,7 @@ export interface Customer {
   marketing_id: number | null;
   assignment_status: 'unassigned' | 'assigned';
   dynamic_data: Record<string, string> | null;
+  manual_sent_at: string | null;
   created_at: string;
   updated_at: string;
   uploader?: User;

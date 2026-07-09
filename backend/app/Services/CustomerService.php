@@ -48,7 +48,7 @@ class CustomerService
         return $this->customerRepository->unassign($customerId);
     }
 
-    public function getAssignedToMarketing(int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
         return $this->customerRepository->getAssignedToMarketing($marketingId, $filters);
     }
@@ -174,7 +174,7 @@ class CustomerService
         $byMarketing = $report['by_marketing'];
         $marketingIds = $byMarketing->pluck('marketing_id')->toArray();
 
-        if (!empty($marketingIds)) {
+        if (! empty($marketingIds)) {
             $stats = BroadcastHistory::whereIn('marketing_id', $marketingIds)
                 ->selectRaw("
                     marketing_id,

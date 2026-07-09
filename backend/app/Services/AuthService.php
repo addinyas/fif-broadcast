@@ -16,6 +16,10 @@ class AuthService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'gender' => $data['gender'],
+            'npo_mce_id' => $data['npo_mce_id'],
+            'kios_name' => $data['kios_name'],
+            'kios_id' => $data['kios_id'],
             'role' => $data['role'] ?? 'marketing',
         ]);
 

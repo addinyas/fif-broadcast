@@ -20,7 +20,7 @@ interface CustomerRepositoryInterface
 
     public function unassign(int $customerId);
 
-    public function getAssignedToMarketing(int $marketingId, array $filters = []): LengthAwarePaginator;
+    public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator;
 
     public function bulkImport(array $customers, int $uploadedBy): array;
 

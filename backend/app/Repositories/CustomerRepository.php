@@ -93,16 +93,26 @@ class CustomerRepository implements CustomerRepositoryInterface
         return $customer->fresh();
     }
 
-    public function getAssignedToMarketing(int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
-        $query = Customer::where('marketing_id', $marketingId)
-            ->where('assignment_status', 'assigned')
-            ->with(['broadcastHistories' => function ($q) {
-                $q->latest();
-            }]);
+        $query = Customer::with(['broadcastHistories' => function ($q) {
+            $q->latest();
+        }]);
+
+        if ($marketingId !== null) {
+            $query->where('marketing_id', $marketingId)
+                  ->where('assignment_status', 'assigned');
+        }
 
         if (! empty($filters['buss_unit'])) {
             $query->where('dynamic_data->buss_unit', $filters['buss_unit']);
+        }
+
+        if (! empty($filters['sisa_angsuran'])) {
+            $range = explode('-', $filters['sisa_angsuran']);
+            if (count($range) === 2) {
+                $query->whereRaw("CAST(JSON_EXTRACT(dynamic_data, '$.sisa_angsuran') AS INTEGER) BETWEEN ? AND ?", [(int) $range[0], (int) $range[1]]);
+            }
         }
 
         if (! empty($filters['search'])) {
@@ -122,6 +132,29 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         $imported = 0;
         $failed = [];
+        $skipped = [];
+
+        $incomingNoContracts = [];
+        foreach ($customers as $index => $data) {
+            $dynamicData = $data['dynamic_data'] ?? null;
+            if (is_string($dynamicData)) {
+                $dynamicData = json_decode($dynamicData, true);
+            }
+            $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
+            if ($noContract) {
+                $incomingNoContracts[$noContract] = $index;
+            }
+        }
+
+        $existingNoContracts = [];
+        if (! empty($incomingNoContracts)) {
+            $existingNoContracts = Customer::whereIn('no_contract', array_keys($incomingNoContracts))
+                ->pluck('no_contract')
+                ->toArray();
+            $existingNoContracts = array_flip($existingNoContracts);
+        }
+
+        $processedNoContracts = [];
 
         DB::beginTransaction();
         try {
@@ -132,6 +165,25 @@ class CustomerRepository implements CustomerRepositoryInterface
                         $dynamicData = json_decode($dynamicData, true);
                     }
                     $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
+
+                    if ($noContract) {
+                        if (isset($existingNoContracts[$noContract]) || isset($processedNoContracts[$noContract])) {
+                            $name = $data['name'] ?? '';
+                            $reason = isset($existingNoContracts[$noContract])
+                                ? "No Contract '$noContract' sudah terdaftar"
+                                : "No Contract '$noContract' duplikat dalam 1 file (baris ke-".($processedNoContracts[$noContract] + 1).')';
+                            $skipped[] = [
+                                'row' => $index + 1,
+                                'no_contract' => $noContract,
+                                'name' => $name,
+                                'reason' => $reason,
+                            ];
+
+                            continue;
+                        }
+                        $processedNoContracts[$noContract] = $index;
+                    }
+
                     Customer::create([
                         'no_contract' => $noContract,
                         'name' => $data['name'] ?? '',
@@ -148,10 +200,10 @@ class CustomerRepository implements CustomerRepositoryInterface
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Database error: '.$e->getMessage()]]];
+            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Database error: '.$e->getMessage()]], 'skipped' => []];
         }
 
-        return ['imported' => $imported, 'failed' => $failed];
+        return ['imported' => $imported, 'failed' => $failed, 'skipped' => $skipped];
     }
 
     public function deleteAll(): int

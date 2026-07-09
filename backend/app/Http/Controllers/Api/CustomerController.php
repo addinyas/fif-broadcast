@@ -38,7 +38,7 @@ class CustomerController extends Controller
 
         if (! $customer) {
             // fallback ke dynamic_data untuk data lama
-            $customer = Customer::where('dynamic_data', 'like', '%"no_contract":"' . addslashes($noContract) . '"%')->orWhere('dynamic_data', 'like', "%'no_contract':'{$noContract}'%")->first();
+            $customer = Customer::where('dynamic_data', 'like', '%"no_contract":"'.addslashes($noContract).'"%')->orWhere('dynamic_data', 'like', "%'no_contract':'{$noContract}'%")->first();
         }
 
         if (! $customer) {
@@ -67,6 +67,12 @@ class CustomerController extends Controller
         $dynamicData = $data['dynamic_data'] ?? [];
         if (empty($data['no_contract']) && ! empty($dynamicData['no_contract'])) {
             $data['no_contract'] = $dynamicData['no_contract'];
+        }
+
+        // cek duplikat no_contract
+        $noContract = $data['no_contract'] ?? null;
+        if ($noContract && Customer::where('no_contract', $noContract)->exists()) {
+            return response()->json(['message' => "No Contract '$noContract' sudah terdaftar"], 409);
         }
 
         $customer = $this->customerService->create($data);
@@ -263,8 +269,11 @@ class CustomerController extends Controller
 
     public function assignedToMe(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'per_page', 'buss_unit']);
-        $customers = $this->customerService->getAssignedToMarketing($request->user()->id, $filters);
+        $filters = $request->only(['search', 'per_page', 'buss_unit', 'sisa_angsuran']);
+        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
+            ? null
+            : $request->user()->id;
+        $customers = $this->customerService->getAssignedToMarketing($marketingId, $filters);
 
         return response()->json($customers);
     }
@@ -320,5 +329,83 @@ class CustomerController extends Controller
         $this->customerService->delete($id);
 
         return response()->json(['message' => 'Customer berhasil dihapus']);
+    }
+
+    public function markSent(Request $request, int $id): JsonResponse
+    {
+        $query = Customer::where('id', $id);
+        if (! in_array($request->user()->role, ['superadmin', 'UH'], true)) {
+            $query->where('marketing_id', $request->user()->id);
+        }
+
+        $customer = $query->first();
+
+        if (! $customer) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+
+        $customer->manual_sent_at = now();
+        $customer->manual_sent_by = $request->user()->id;
+        $customer->save();
+
+        return response()->json(['message' => 'Marked as sent']);
+    }
+
+    public function sentIds(Request $request): JsonResponse
+    {
+        $query = Customer::whereNotNull('manual_sent_at');
+        if (! in_array($request->user()->role, ['superadmin', 'UH'], true)) {
+            $query->where('marketing_id', $request->user()->id);
+        }
+        $ids = $query->pluck('id');
+
+        return response()->json(['ids' => $ids]);
+    }
+
+    public function clearSentMarks(Request $request): JsonResponse
+    {
+        $query = Customer::whereNotNull('manual_sent_at');
+        if (in_array($request->user()->role, ['superadmin', 'UH'], true)) {
+            $query->where('manual_sent_by', $request->user()->id);
+        } else {
+            $query->where('marketing_id', $request->user()->id);
+        }
+        $query->update(['manual_sent_at' => null, 'manual_sent_by' => null]);
+
+        return response()->json(['message' => 'Sent marks cleared']);
+    }
+
+    public function searchCalculator(Request $request): JsonResponse
+    {
+        $q = $request->query('q', '');
+        if (strlen(trim($q)) < 2) {
+            return response()->json([]);
+        }
+
+        $customers = Customer::where(function ($query) use ($q) {
+            $query->where('no_contract', $q)
+                ->orWhere('no_contract', 'like', "%{$q}%")
+                ->orWhere('name', 'like', "%{$q}%");
+        })
+            ->limit(20)
+            ->get(['id', 'name', 'no_contract', 'dynamic_data']);
+
+        // sort: exact no_contract match first
+        $customers = $customers->sortByDesc(function ($c) use ($q) {
+            $score = 0;
+            if ($c->no_contract === $q) {
+                $score += 100;
+            }
+            if (str_starts_with($c->no_contract ?? '', $q)) {
+                $score += 50;
+            }
+            if (str_starts_with($c->name, $q)) {
+                $score += 25;
+            }
+
+            return $score;
+        })->values();
+
+        return response()->json($customers);
     }
 }

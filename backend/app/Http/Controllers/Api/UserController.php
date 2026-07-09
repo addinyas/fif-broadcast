@@ -23,12 +23,16 @@ class UserController extends Controller
         return response()->json(['data' => $users]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $user = User::findOrFail($id);
 
         if ($user->role === 'superadmin') {
             return response()->json(['message' => 'Tidak bisa menghapus superadmin'], 403);
+        }
+
+        if ($request->user()->role === 'UH' && $user->role === 'UH') {
+            return response()->json(['message' => 'UH tidak bisa menghapus sesama UH'], 403);
         }
 
         DB::transaction(function () use ($user) {
@@ -46,12 +50,11 @@ class UserController extends Controller
             Template::where('created_by', $user->id)->delete();
 
             // Hapus broadcast histories dari customer yang diupload user ini
-            // (include soft-deleted customers karena model pakai SoftDeletes)
             $uploadedIds = DB::table('customers')->where('uploaded_by', $user->id)->pluck('id');
             BroadcastHistory::whereIn('customer_id', $uploadedIds)->delete();
 
-            // Hapus customer yang diupload user ini (hard delete, karena model pakai SoftDeletes)
-            DB::table('customers')->where('uploaded_by', $user->id)->delete();
+            // Hapus customer yang diupload user ini
+            Customer::where('uploaded_by', $user->id)->delete();
 
             // Hapus user
             $user->delete();
@@ -74,6 +77,10 @@ class UserController extends Controller
 
         if ($user->role === 'superadmin') {
             return response()->json(['message' => 'Cannot change role of a superadmin'], 403);
+        }
+
+        if ($request->user()->role === 'UH' && $user->role === 'UH') {
+            return response()->json(['message' => 'UH tidak bisa mengubah role sesama UH'], 403);
         }
 
         $user->update(['role' => $request->role]);

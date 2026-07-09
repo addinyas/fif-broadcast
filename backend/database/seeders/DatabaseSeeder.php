@@ -10,6 +10,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(RolePermissionSeeder::class);
+
         $users = [
             ['name' => 'Super Admin', 'email' => 'superadmin@crm.test', 'role' => 'superadmin'],
             ['name' => 'Admin User', 'email' => 'admin@crm.test', 'role' => 'UH'],

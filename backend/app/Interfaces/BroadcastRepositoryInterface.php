@@ -8,7 +8,7 @@ interface BroadcastRepositoryInterface
 {
     public function create(array $data);
 
-    public function getHistory(int $marketingId, array $filters = []): LengthAwarePaginator;
+    public function getHistory(?int $marketingId, array $filters = []): LengthAwarePaginator;
 
     public function getStats(?int $marketingId = null): array;
 

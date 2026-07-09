@@ -13,6 +13,7 @@ class TemplateRepository implements TemplateRepositoryInterface
         if ($user && $user->role === 'marketing') {
             $query->where('created_by', $user->id);
         }
+
         return $query->latest()->get();
     }
 
