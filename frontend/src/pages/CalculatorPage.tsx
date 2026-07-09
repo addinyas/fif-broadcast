@@ -72,13 +72,18 @@ export function CalculatorPage() {
   const pelunasan = dinego ? parseInt(dinego.replace(/\D/g, '')) || 0 : totalAngsuran;
   const terima = Math.max(0, pinjaman - pelunasan);
 
-  const formatRupiah = (val: number | string) => {
+  const formatAngka = (val: number | string) => {
     const nums = typeof val === 'string' ? val.replace(/\D/g, '') : String(val);
     if (!nums) return '';
     return nums.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  const parseRupiah = (val: string) => parseInt(val.replace(/\D/g, '')) || 0;
+  const formatAlphaNum = (val: string) => {
+    const upper = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return upper.replace(/([A-Z])(\d)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2');
+  };
+
+  const parseAngka = (val: string) => parseInt(val.replace(/\D/g, '')) || 0;
 
   const selectCustomer = (c: Customer) => {
     setSelected(c);
@@ -86,11 +91,11 @@ export function CalculatorPage() {
     setSearch('');
     setResults([]);
     const plafon = String(c.dynamic_data?.plafon ?? '0');
-    setPinjaman(parseRupiah(plafon));
+    setPinjaman(parseAngka(plafon));
     const sisa = String(c.dynamic_data?.sisa_angsuran ?? '0');
     setSisaAngsuran(parseInt(sisa) || 0);
     const angsuran = String(c.dynamic_data?.angsuran ?? c.dynamic_data?.angsuran_per_bulan ?? '0');
-    setAngsuranPerBulan(parseRupiah(angsuran));
+    setAngsuranPerBulan(parseAngka(angsuran));
     setDinego('');
   };
 
@@ -169,9 +174,13 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit <span className="text-red-500">*</span></label>
-              <input value={manual.obj_desc}
-                onChange={(e) => setManual({ ...manual, obj_desc: e.target.value })}
-                placeholder="mis: Vario 125"
+              <input value={formatAlphaNum(manual.obj_desc)}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  const formatted = formatAlphaNum(raw);
+                  setManual({ ...manual, obj_desc: formatted });
+                }}
+                placeholder="mis: VARIO 160 CBS"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
@@ -189,7 +198,7 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp) <span className="text-red-500">*</span></label>
-              <input value={formatRupiah(manual.plafon)}
+              <input value={formatAngka(manual.plafon)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
                   setManual({ ...manual, plafon: raw });
@@ -201,7 +210,7 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp) <span className="text-red-500">*</span></label>
-              <input value={formatRupiah(manual.angsuran)}
+              <input value={formatAngka(manual.angsuran)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
                   setManual({ ...manual, angsuran: raw });
@@ -228,18 +237,20 @@ export function CalculatorPage() {
               </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
-              <input value={manual.nopol}
+              <input value={formatAlphaNum(manual.nopol)}
                 onChange={(e) => {
-                  setManual({ ...manual, nopol: e.target.value });
-                  setNopol(e.target.value);
+                  const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  const formatted = formatAlphaNum(raw);
+                  setManual({ ...manual, nopol: formatted });
+                  setNopol(formatted);
                 }}
-                placeholder="mis: B 1234 ABC"
+                placeholder="mis: AB 6116 JN"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
-              <input value={formatRupiah(dinego)}
+              <input value={formatAngka(dinego)}
                 onChange={(e) => setDinego(e.target.value.replace(/\D/g, ''))}
                 placeholder="Rp (opsional)"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -300,15 +311,15 @@ export function CalculatorPage() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan <span className="text-red-500">*</span></label>
                 <input
-                  value={angsuranPerBulan ? formatRupiah(angsuranPerBulan) : ''}
-                  onChange={(e) => setAngsuranPerBulan(parseRupiah(e.target.value))}
+                  value={angsuranPerBulan ? formatAngka(angsuranPerBulan) : ''}
+                  onChange={(e) => setAngsuranPerBulan(parseAngka(e.target.value))}
                   placeholder="0"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
-                <input value={formatRupiah(dinego)}
+                <input value={formatAngka(dinego)}
                   onChange={(e) => setDinego(e.target.value.replace(/\D/g, ''))}
                   placeholder="Rp (opsional)"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -317,17 +328,20 @@ export function CalculatorPage() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal Cair <span className="text-red-500">*</span></label>
                 <input
-                  value={pinjaman ? formatRupiah(pinjaman) : ''}
-                  onChange={(e) => setPinjaman(parseRupiah(e.target.value))}
+                  value={pinjaman ? formatAngka(pinjaman) : ''}
+                  onChange={(e) => setPinjaman(parseAngka(e.target.value))}
                   placeholder="0"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
-                <input value={nopol}
-                  onChange={(e) => setNopol(e.target.value)}
-                  placeholder="mis: B 1234 ABC"
+                <input value={formatAlphaNum(nopol)}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                    setNopol(formatAlphaNum(raw));
+                  }}
+                  placeholder="mis: AB 6116 JN"
                   className="w-full rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 />
               </div>
@@ -338,15 +352,15 @@ export function CalculatorPage() {
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Angsuran Kurang</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Pelunasan</span>
-                  <span className="font-semibold text-fif-600">Rp {formatRupiah(pelunasan)}</span>
+                  <span className="font-semibold text-fif-600">Rp {formatAngka(pelunasan)}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3">
                   <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm">Terima</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 text-base">Rp {formatRupiah(terima)}</span>
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300 text-base">Rp {formatAngka(terima)}</span>
                 </div>
               </div>
 
@@ -370,7 +384,7 @@ export function CalculatorPage() {
                           }}
                           className="mb-1 w-full text-center text-sm font-bold outline-none bg-transparent text-fif-600 dark:text-fif-400 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
-                        <p className="text-[10px] text-slate-500">Rp {formatRupiah(monthly)}</p>
+                        <p className="text-[10px] text-slate-500">Rp {formatAngka(monthly)}</p>
                       </div>
                     );
                   })}
@@ -407,12 +421,12 @@ export function CalculatorPage() {
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol} tahun {dyn('tahun')}</p>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
-                    angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
+                    angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
                   </p>
-                  {dinego && (<p className="text-slate-600 dark:text-slate-400">dinego jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatRupiah(parseRupiah(dinego))}</span></p>)}
-                  <p className="text-slate-600 dark:text-slate-400">pinjaman maksimal cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatRupiah(pinjaman)}</span></p>
-                  <p className="text-slate-600 dark:text-slate-400">pelunasan Rp <span className="font-semibold text-fif-600">{formatRupiah(pelunasan)}</span></p>
-                  <p className="text-emerald-700 dark:text-emerald-400 font-bold text-base">terima Rp {formatRupiah(terima)}</p>
+                  {dinego && (<p className="text-slate-600 dark:text-slate-400">dinego jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(parseAngka(dinego))}</span></p>)}
+                  <p className="text-slate-600 dark:text-slate-400">pinjaman maksimal cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(pinjaman)}</span></p>
+                  <p className="text-slate-600 dark:text-slate-400">pelunasan Rp <span className="font-semibold text-fif-600">{formatAngka(pelunasan)}</span></p>
+                  <p className="text-emerald-700 dark:text-emerald-400 font-bold text-base">terima Rp {formatAngka(terima)}</p>
                 </div>
               </div>
               <button
@@ -421,17 +435,17 @@ export function CalculatorPage() {
                     `${dyn('no_contract') || '-'}`,
                     `${manual?.name ?? selected?.name ?? '-'}`,
                     `Unit ${dyn('obj_desc')}${displayNopol ? ` ${displayNopol}` : ''} tahun ${dyn('tahun')}`,
-                    `angsuran kurang ${sisaAngsuran}×${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
+                    `angsuran kurang ${sisaAngsuran}×${formatAngka(angsuranPerBulan)} = Rp ${formatAngka(totalAngsuran)}`,
                     '',
                   ];
-                  if (dinego) lines.push(`dinego jadi Rp ${formatRupiah(parseRupiah(dinego))}`);
-                  lines.push(`pinjaman maksimal cair Rp ${formatRupiah(pinjaman)}`);
-                  lines.push(`pelunasan Rp ${formatRupiah(pelunasan)}`);
-                  lines.push(`terima Rp ${formatRupiah(terima)}`);
+                  if (dinego) lines.push(`dinego jadi Rp ${formatAngka(parseAngka(dinego))}`);
+                  lines.push(`pinjaman maksimal cair Rp ${formatAngka(pinjaman)}`);
+                  lines.push(`pelunasan Rp ${formatAngka(pelunasan)}`);
+                  lines.push(`terima Rp ${formatAngka(terima)}`);
                   lines.push('');
                   (financeResult?.results ?? []).forEach((r) => {
                     if (visibleTenors.includes(r.tenor)) {
-                      lines.push(`${r.tenor}×Rp ${formatRupiah(r.angsuran)}`);
+                      lines.push(`${r.tenor}×Rp ${formatAngka(r.angsuran)}`);
                     }
                   });
                   navigator.clipboard.writeText(lines.join('\r\n')).then(() => {
@@ -453,7 +467,7 @@ export function CalculatorPage() {
                   return (
                     <div key={i} className="rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 text-xs">
                       <span className="text-slate-500 dark:text-slate-400">{n}×</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">Rp {formatRupiah(monthly)}</span>
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">Rp {formatAngka(monthly)}</span>
                     </div>
                   );
                 })}
