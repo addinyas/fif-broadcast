@@ -215,7 +215,7 @@ export function CalculatorPage() {
               >
                 <option value="">Pilih</option>
                 {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>{n} x</option>
+                  <option key={n} value={n}>{n}×</option>
                 ))}
               </select>
               </div>
@@ -278,7 +278,7 @@ export function CalculatorPage() {
                 >
                   <option value="">Pilih</option>
                   {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
-                    <option key={n} value={n}>{n} x</option>
+                    <option key={n} value={n}>{n}×</option>
                   ))}
                 </select>
               </div>
@@ -323,7 +323,7 @@ export function CalculatorPage() {
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Angsuran Kurang</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} x {formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Pelunasan</span>
@@ -393,7 +393,7 @@ export function CalculatorPage() {
                 {displayNopol && <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Nopol {displayNopol}</p>}
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
-                    angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} x {formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
+                    angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
                   </p>
                   {dinego && (<p className="text-slate-600 dark:text-slate-400">dinego jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatRupiah(parseRupiah(dinego))}</span></p>)}
                   <p className="text-slate-600 dark:text-slate-400">pinjaman maksimal cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatRupiah(pinjaman)}</span></p>
@@ -408,7 +408,7 @@ export function CalculatorPage() {
                     `${manual?.name ?? selected?.name ?? '-'}`,
                     `Unit ${dyn('obj_desc')} tahun ${dyn('tahun')}`,
                     displayNopol ? `Nopol ${displayNopol}` : '',
-                    `angsuran kurang ${sisaAngsuran} x ${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
+                    `angsuran kurang ${sisaAngsuran}×${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
                     '',
                   ];
                   if (dinego) lines.push(`dinego jadi Rp ${formatRupiah(parseRupiah(dinego))}`);
@@ -418,7 +418,7 @@ export function CalculatorPage() {
                   lines.push('');
                   (financeResult?.results ?? []).forEach((r) => {
                     if (visibleTenors.includes(r.tenor)) {
-                      lines.push(`${r.tenor} x Rp ${formatRupiah(r.angsuran)}`);
+                      lines.push(`${r.tenor}×Rp ${formatRupiah(r.angsuran)}`);
                     }
                   });
                   navigator.clipboard.writeText(lines.join('\r\n')).then(() => {
@@ -439,7 +439,7 @@ export function CalculatorPage() {
                   const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                   return (
                     <div key={i} className="rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 text-xs">
-                      <span className="text-slate-500 dark:text-slate-400">{n} x </span>
+                      <span className="text-slate-500 dark:text-slate-400">{n}×</span>
                       <span className="font-semibold text-slate-800 dark:text-slate-200">Rp {formatRupiah(monthly)}</span>
                     </div>
                   );
