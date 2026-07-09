@@ -50,6 +50,8 @@ RUN docker-php-ext-install pdo pdo_sqlite gd zip
 COPY --from=backend /app/backend /app/backend
 COPY --from=frontend-build /app/dist /app/frontend/dist
 COPY --from=worker-deps /app /app/worker
+COPY --from=frontend-build /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend-build /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN apt-get update && apt-get install -y nginx-light && rm -rf /var/lib/apt/lists/*
 
