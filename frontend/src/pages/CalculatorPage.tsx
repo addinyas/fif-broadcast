@@ -79,8 +79,11 @@ export function CalculatorPage() {
   };
 
   const formatAlphaNum = (val: string) => {
-    const upper = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    return upper.replace(/([A-Z])(\d)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2');
+    const upper = val.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
+    return upper
+      .replace(/([A-Z])(\d)/g, '$1 $2')
+      .replace(/(\d)([A-Z])/g, '$1 $2')
+      .replace(/\s+/g, ' ');
   };
 
   const parseAngka = (val: string) => parseInt(val.replace(/\D/g, '')) || 0;
@@ -176,7 +179,7 @@ export function CalculatorPage() {
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit <span className="text-red-500">*</span></label>
               <input value={formatAlphaNum(manual.obj_desc)}
                 onChange={(e) => {
-                  const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
                   const formatted = formatAlphaNum(raw);
                   setManual({ ...manual, obj_desc: formatted });
                 }}
@@ -239,7 +242,7 @@ export function CalculatorPage() {
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
               <input value={formatAlphaNum(manual.nopol)}
                 onChange={(e) => {
-                  const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
                   const formatted = formatAlphaNum(raw);
                   setManual({ ...manual, nopol: formatted });
                   setNopol(formatted);
@@ -338,7 +341,7 @@ export function CalculatorPage() {
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
                 <input value={formatAlphaNum(nopol)}
                   onChange={(e) => {
-                    const raw = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                  const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
                     setNopol(formatAlphaNum(raw));
                   }}
                   placeholder="mis: AB 6116 JN"
