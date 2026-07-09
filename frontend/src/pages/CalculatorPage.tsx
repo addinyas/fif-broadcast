@@ -52,7 +52,7 @@ export function CalculatorPage() {
   }, [search, searchCustomers]);
 
   const dyn = (key: string) => {
-    if (manual) return (manual as Record<string, string>)[key] ?? '';
+    if (manual) return (manual as unknown as Record<string, string>)[key] ?? '';
     return (selected?.dynamic_data?.[key] ?? '') as string;
   };
 
