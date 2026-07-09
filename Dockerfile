@@ -5,10 +5,11 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libsqlite3-dev \
     libgd-dev \
+    libzip-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install pdo pdo_sqlite gd
+RUN docker-php-ext-install pdo pdo_sqlite gd zip
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -41,10 +42,11 @@ FROM php:8.2-cli
 RUN apt-get update && apt-get install -y \
     libsqlite3-dev \
     libgd-dev \
+    libzip-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN docker-php-ext-install pdo pdo_sqlite gd
+RUN docker-php-ext-install pdo pdo_sqlite gd zip
 
 COPY --from=backend /app/backend /app/backend
 COPY --from=frontend-build /app/dist /app/frontend/dist
