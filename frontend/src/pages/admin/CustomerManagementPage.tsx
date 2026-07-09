@@ -935,7 +935,7 @@ export function CustomerManagementPage() {
           >
             <option value="">-- Pilih Marketing --</option>
             {marketingUsers.map((u) => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              <option key={u.id} value={u.id}>{u.name} ({u.email}) — {u.assigned_customers_count ?? 0} data</option>
             ))}
           </select>
           {marketingUsers.length === 0 && (
@@ -974,7 +974,7 @@ export function CustomerManagementPage() {
           >
             <option value="">-- Pilih Marketing --</option>
             {marketingUsers.map((u) => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+              <option key={u.id} value={u.id}>{u.name} ({u.email}) — {u.assigned_customers_count ?? 0} data</option>
             ))}
           </select>
           {marketingUsers.length === 0 && (
