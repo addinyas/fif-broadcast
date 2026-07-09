@@ -17,8 +17,17 @@ class UserController extends Controller
     public function index(): JsonResponse
     {
         $users = User::select('id', 'name', 'email', 'role', 'created_at')
+            ->with('whatsappConnection:user_id,status')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'created_at' => $user->created_at,
+                'whatsapp_connection' => $user->whatsappConnection?->status ?? 'disconnected',
+            ]);
 
         return response()->json(['data' => $users]);
     }

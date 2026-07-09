@@ -12,6 +12,7 @@ export interface User {
   kios_name?: string | null;
   kios_id?: string | null;
   created_at?: string;
+  whatsapp_connection?: string;
 }
 
 export interface AuthResponse {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Wifi, WifiOff, Smartphone, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/ui/Card';
@@ -60,6 +60,21 @@ export function UserManagementPage() {
     return <Badge variant={variants[role] || 'default'}>{role}</Badge>;
   };
 
+  const waStatusBadge = (status?: string) => {
+    const config: Record<string, { variant: 'success' | 'warning' | 'danger' | 'default' | 'purple'; icon: React.ReactNode; label: string }> = {
+      connected: { variant: 'success', icon: <Wifi className="h-3 w-3" />, label: 'Terhubung' },
+      awaiting_scan: { variant: 'warning', icon: <Smartphone className="h-3 w-3" />, label: 'Menunggu scan' },
+      logged_out: { variant: 'danger', icon: <WifiOff className="h-3 w-3" />, label: 'Terputus' },
+      disconnected: { variant: 'default', icon: <AlertTriangle className="h-3 w-3" />, label: 'Belum connect' },
+    };
+    const c = config[status ?? 'disconnected'] || config.disconnected;
+    return (
+      <Badge variant={c.variant} size="sm">
+        <span className="flex items-center gap-1">{c.icon}{c.label}</span>
+      </Badge>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -80,6 +95,7 @@ export function UserManagementPage() {
                   <th className="px-5 py-3.5">Nama</th>
                   <th className="px-5 py-3.5">Email</th>
                   <th className="px-5 py-3.5">Role</th>
+                  <th className="px-5 py-3.5">WhatsApp</th>
                   <th className="px-5 py-3.5">Dibuat</th>
                   <th className="px-5 py-3.5 text-right">Aksi</th>
                 </tr>
@@ -103,6 +119,7 @@ export function UserManagementPage() {
                         roleBadge(u.role)
                       )}
                     </td>
+                    <td className="px-5 py-3.5">{waStatusBadge(u.whatsapp_connection)}</td>
                     <td className="px-5 py-3.5 text-slate-500 dark:text-slate-400">
                       {u.created_at ? new Date(u.created_at).toLocaleDateString('id-ID') : '-'}
                     </td>
@@ -123,7 +140,7 @@ export function UserManagementPage() {
                 ))}
                 {users.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-5 py-8 text-center text-slate-500 dark:text-slate-400">Tidak ada user</td>
+                    <td colSpan={6} className="px-5 py-8 text-center text-slate-500 dark:text-slate-400">Tidak ada user</td>
                   </tr>
                 )}
               </tbody>
