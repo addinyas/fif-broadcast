@@ -29,18 +29,15 @@ export function CalculatorPage() {
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
-  const customerTahun = useMemo(() => {
-    const raw = manual ? manual.tahun : (selected?.dynamic_data?.tahun as string) || '';
-    return parseInt(raw) || 0;
-  }, [manual, selected]);
+  const rawTahun = manual ? manual.tahun : (selected?.dynamic_data?.tahun as string) || '';
+  const customerTahun = parseInt(rawTahun) || 0;
+  const isOldMotor = customerTahun > 0 && customerTahun < 2016;
 
-  const visibleTenors = useMemo(() => {
-    if (customerTahun > 0 && customerTahun < 2016) {
-      const filtered = tenors.filter(t => t <= 24);
-      return filtered.includes(6) ? filtered : [6, ...filtered];
-    }
-    return tenors;
-  }, [tenors, customerTahun]);
+  const visibleTenors = (() => {
+    if (!isOldMotor) return tenors;
+    const filtered = tenors.filter(t => t <= 24);
+    return filtered.includes(6) ? filtered : [6, ...filtered];
+  })();
 
   const financeResult = useMemo(() => {
     if (pinjaman <= 0) return null;
@@ -325,8 +322,8 @@ export function CalculatorPage() {
                     );
                   })}
                 </div>
-                {customerTahun > 0 && customerTahun < 2016 && (
-                  <p className="mt-1.5 text-[10px] text-amber-500 font-medium">Tahun motor {'<'} 2016, tenor 6x tersedia dan maksimal 24 bulan</p>
+                {isOldMotor && (
+                  <p className="mt-1.5 text-[10px] text-amber-500 font-medium">Tahun motor {'<'} 2016, tenor 6x tersedia & maksimal 24x</p>
                 )}
                 <p className="mt-1.5 text-[10px] text-slate-400 italic">Klik angka tenor untuk mengubah</p>
               </div>
