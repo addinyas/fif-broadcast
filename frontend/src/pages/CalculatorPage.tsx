@@ -185,10 +185,11 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp) <span className="text-red-500">*</span></label>
-              <input value={manual.plafon}
+              <input value={formatRupiah(manual.plafon)}
                 onChange={(e) => {
-                  setManual({ ...manual, plafon: e.target.value.replace(/\D/g, '') });
-                  setPinjaman(parseInt(e.target.value.replace(/\D/g, '')) || 0);
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setManual({ ...manual, plafon: raw });
+                  setPinjaman(parseInt(raw) || 0);
                 }}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -196,10 +197,11 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp) <span className="text-red-500">*</span></label>
-              <input value={manual.angsuran}
+              <input value={formatRupiah(manual.angsuran)}
                 onChange={(e) => {
-                  setManual({ ...manual, angsuran: e.target.value.replace(/\D/g, '') });
-                  setAngsuranPerBulan(parseInt(e.target.value.replace(/\D/g, '')) || 0);
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setManual({ ...manual, angsuran: raw });
+                  setAngsuranPerBulan(parseInt(raw) || 0);
                 }}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -233,7 +235,7 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
-              <input value={dinego}
+              <input value={formatRupiah(dinego)}
                 onChange={(e) => setDinego(e.target.value.replace(/\D/g, ''))}
                 placeholder="Rp (opsional)"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -302,7 +304,7 @@ export function CalculatorPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
-                <input value={dinego}
+                <input value={formatRupiah(dinego)}
                   onChange={(e) => setDinego(e.target.value.replace(/\D/g, ''))}
                   placeholder="Rp (opsional)"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
