@@ -29,6 +29,8 @@ export function CalculatorPage() {
 
   const [nopol, setNopol] = useState('');
 
+  const displayNopol = nopol || manual?.nopol || '';
+
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
@@ -216,7 +218,10 @@ export function CalculatorPage() {
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol</label>
               <input value={manual.nopol}
-                onChange={(e) => setManual({ ...manual, nopol: e.target.value })}
+                onChange={(e) => {
+                  setManual({ ...manual, nopol: e.target.value });
+                  setNopol(e.target.value);
+                }}
                 placeholder="mis: B 1234 ABC"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
@@ -247,7 +252,7 @@ export function CalculatorPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">Nopol</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{nopol || '-'}</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200">{displayNopol || '-'}</p>
             </div>
           </div>
           <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); }}
@@ -377,7 +382,7 @@ export function CalculatorPage() {
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>
                 <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{manual?.name ?? selected?.name ?? '-'}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} tahun {dyn('tahun')}</p>
-                {nopol && <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Nopol {nopol}</p>}
+                {displayNopol && <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Nopol {displayNopol}</p>}
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
                     angsuran kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} x {formatRupiah(angsuranPerBulan)} = Rp {formatRupiah(totalAngsuran)}</span>
@@ -394,7 +399,7 @@ export function CalculatorPage() {
                     `${dyn('no_contract') || '-'}`,
                     `${manual?.name ?? selected?.name ?? '-'}`,
                     `Unit ${dyn('obj_desc')} tahun ${dyn('tahun')}`,
-                    nopol ? `Nopol ${nopol}` : '',
+                    displayNopol ? `Nopol ${displayNopol}` : '',
                     `angsuran kurang ${sisaAngsuran} x ${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
                     '',
                   ];
