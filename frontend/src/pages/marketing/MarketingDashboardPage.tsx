@@ -4,6 +4,7 @@ import { broadcastService } from '../../services/broadcastService';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
 import type { MarketingSummary } from '../../types';
 
@@ -43,10 +44,14 @@ function Greeting() {
 }
 
 export function MarketingDashboardPage() {
+  const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MarketingSummary | null>(null);
 
   useEffect(() => {
-    broadcastService.getMarketingSummary().then(setSummary);
+    setLoading(true);
+    broadcastService.getMarketingSummary()
+      .then(setSummary)
+      .finally(() => setLoading(false));
   }, []);
 
   const completionPct = summary && summary.assigned_count > 0
@@ -66,57 +71,79 @@ export function MarketingDashboardPage() {
       <Greeting />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard
-          title="Ditugaskan"
-          value={summary?.assigned_count ?? '-'}
-          icon={<UserCheck className="h-5 w-5" />}
-          color="purple"
-        />
-        <StatCard
-          title="Sudah Broadcast"
-          value={summary?.broadcast.total ?? '-'}
-          icon={<Send className="h-5 w-5" />}
-          color="emerald"
-        />
-        <StatCard
-          title="Belum Broadcast"
-          value={summary?.not_broadcast_count ?? '-'}
-          icon={<Clock className="h-5 w-5" />}
-          color="amber"
-        />
-        <StatCard
-          title="Terkirim"
-          value={summary?.broadcast.sent ?? '-'}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          color="blue"
-        />
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Ditugaskan"
+              value={summary?.assigned_count ?? '-'}
+              icon={<UserCheck className="h-5 w-5" />}
+              color="purple"
+            />
+            <StatCard
+              title="Sudah Broadcast"
+              value={summary?.broadcast.total ?? '-'}
+              icon={<Send className="h-5 w-5" />}
+              color="emerald"
+            />
+            <StatCard
+              title="Belum Broadcast"
+              value={summary?.not_broadcast_count ?? '-'}
+              icon={<Clock className="h-5 w-5" />}
+              color="amber"
+            />
+            <StatCard
+              title="Terkirim"
+              value={summary?.broadcast.sent ?? '-'}
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              color="blue"
+            />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard
-          title="Pending"
-          value={summary?.broadcast.pending ?? '-'}
-          icon={<Clock className="h-5 w-5" />}
-          color="yellow"
-        />
-        <StatCard
-          title="Processing"
-          value={summary?.broadcast.processing ?? '-'}
-          icon={<Loader2 className="h-5 w-5" />}
-          color="blue"
-        />
-        <StatCard
-          title="Sukses"
-          value={summary?.broadcast.sent ?? '-'}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          color="emerald"
-        />
-        <StatCard
-          title="Gagal"
-          value={summary?.broadcast.failed ?? '-'}
-          icon={<XCircle className="h-5 w-5" />}
-          color="red"
-        />
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Pending"
+              value={summary?.broadcast.pending ?? '-'}
+              icon={<Clock className="h-5 w-5" />}
+              color="yellow"
+            />
+            <StatCard
+              title="Processing"
+              value={summary?.broadcast.processing ?? '-'}
+              icon={<Loader2 className="h-5 w-5" />}
+              color="blue"
+            />
+            <StatCard
+              title="Sukses"
+              value={summary?.broadcast.sent ?? '-'}
+              icon={<CheckCircle2 className="h-5 w-5" />}
+              color="emerald"
+            />
+            <StatCard
+              title="Gagal"
+              value={summary?.broadcast.failed ?? '-'}
+              icon={<XCircle className="h-5 w-5" />}
+              color="red"
+            />
+          </>
+        )}
       </div>
 
       <Card>
@@ -126,6 +153,15 @@ export function MarketingDashboardPage() {
             Progress Broadcast
           </CardTitle>
         </CardHeader>
+        {loading ? (
+          <div className="space-y-4 p-5">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-3 w-full" />
+          </div>
+        ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-slate-700 dark:text-slate-300">{completionPct}% terselesaikan</span>
@@ -140,6 +176,7 @@ export function MarketingDashboardPage() {
             />
           </div>
         </div>
+        )}
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -193,9 +230,9 @@ export function MarketingDashboardPage() {
             <div className="rounded-xl bg-purple-50 p-4 text-center dark:bg-purple-900/20">
               <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{summary?.not_broadcast_count ?? 0}</p>
               <p className="text-xs font-medium text-purple-600/70 dark:text-purple-400/70">Belum dikerjakan</p>
-            </div>
           </div>
-        </Card>
+        </div>
+      </Card>
       </div>
 
       <Card>

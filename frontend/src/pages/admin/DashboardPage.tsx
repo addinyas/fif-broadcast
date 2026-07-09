@@ -4,18 +4,26 @@ import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
+import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
 import type { BroadcastStats, DistributionReport } from '../../types';
 
 const MARKETING_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444'];
 
 export function DashboardPage() {
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<BroadcastStats | null>(null);
   const [dist, setDist] = useState<DistributionReport | null>(null);
 
   useEffect(() => {
-    broadcastService.getStats().then(setStats);
-    customerService.getDistribution().then(setDist);
+    setLoading(true);
+    Promise.all([
+      broadcastService.getStats(),
+      customerService.getDistribution(),
+    ]).then(([s, d]) => {
+      setStats(s);
+      setDist(d);
+    }).finally(() => setLoading(false));
   }, []);
 
   const maxAssigned = Math.max(1, ...(dist?.by_marketing.map((m) => m.total) ?? [1]));
@@ -32,17 +40,39 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Total Customer" value={dist?.total_customers ?? '-'} icon={<Users className="h-5 w-5" />} color="blue" />
-        <StatCard title="Assigned" value={dist?.assigned ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" />
-        <StatCard title="Unassigned" value={dist?.unassigned ?? '-'} icon={<UserX className="h-5 w-5" />} color="amber" />
-        <StatCard title="Total Broadcast" value={stats?.total ?? '-'} icon={<Send className="h-5 w-5" />} color="green" />
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard title="Total Customer" value={dist?.total_customers ?? '-'} icon={<Users className="h-5 w-5" />} color="blue" />
+            <StatCard title="Assigned" value={dist?.assigned ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" />
+            <StatCard title="Unassigned" value={dist?.unassigned ?? '-'} icon={<UserX className="h-5 w-5" />} color="amber" />
+            <StatCard title="Total Broadcast" value={stats?.total ?? '-'} icon={<Send className="h-5 w-5" />} color="green" />
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard title="Pending" value={stats?.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" />
-        <StatCard title="Processing" value={stats?.processing ?? '-'} icon={<Loader2 className="h-5 w-5" />} color="blue" />
-        <StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" />
-        <StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" />
+        {loading ? (
+          <>
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard title="Pending" value={stats?.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" />
+            <StatCard title="Processing" value={stats?.processing ?? '-'} icon={<Loader2 className="h-5 w-5" />} color="blue" />
+            <StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" />
+            <StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" />
+          </>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -53,31 +83,45 @@ export function DashboardPage() {
               Distribution per Marketing
             </CardTitle>
           </CardHeader>
-          <div className="space-y-4">
-            {dist?.by_marketing.map((item, idx) => {
-              const pct = Math.round((item.total / maxAssigned) * 100);
-              const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
-              return (
-                <div key={item.marketing_id} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-slate-700 dark:text-slate-300">
-                      {item.marketing?.name || `User #${item.marketing_id}`}
-                    </span>
-                    <span className="text-slate-500 dark:text-slate-400">{item.total} customer</span>
+          {loading ? (
+            <div className="space-y-4 p-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-16" />
                   </div>
-                  <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${pct}%`, backgroundColor: color }}
-                    />
-                  </div>
+                  <Skeleton className="h-2.5 w-full" />
                 </div>
-              );
-            })}
-            {(!dist?.by_marketing || dist.by_marketing.length === 0) && (
-              <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada distribusi</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              {dist?.by_marketing.map((item, idx) => {
+                const pct = Math.round((item.total / maxAssigned) * 100);
+                const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
+                return (
+                  <div key={item.marketing_id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-slate-700 dark:text-slate-300">
+                        {item.marketing?.name || `User #${item.marketing_id}`}
+                      </span>
+                      <span className="text-slate-500 dark:text-slate-400">{item.total} customer</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: color }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {(!dist?.by_marketing || dist.by_marketing.length === 0) && (
+                <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada distribusi</p>
+              )}
+            </>
+          )}
         </Card>
 
         <Card>
@@ -87,6 +131,16 @@ export function DashboardPage() {
               Ringkasan Distribution
             </CardTitle>
           </CardHeader>
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3 p-5">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="rounded-xl bg-slate-50 p-4 text-center dark:bg-slate-800/50">
+                  <Skeleton className="mx-auto mb-2 h-7 w-16" />
+                  <Skeleton className="mx-auto h-3 w-20" />
+                </div>
+              ))}
+            </div>
+          ) : (
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-blue-50 p-4 text-center dark:bg-blue-900/20">
               <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dist?.assigned ?? 0}</p>
@@ -107,6 +161,7 @@ export function DashboardPage() {
               <p className="text-xs font-medium text-purple-600/70 dark:text-purple-400/70">Marketing Aktif</p>
             </div>
           </div>
+          )}
         </Card>
       </div>
 
