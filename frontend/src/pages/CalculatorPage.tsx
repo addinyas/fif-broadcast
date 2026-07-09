@@ -206,14 +206,18 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali) <span className="text-red-500">*</span></label>
-              <input type="number" min={0} value={manual.sisa_angsuran}
+              <select value={manual.sisa_angsuran}
                 onChange={(e) => {
                   setManual({ ...manual, sisa_angsuran: e.target.value });
-                  setSisaAngsuran(Math.max(0, parseInt(e.target.value) || 0));
+                  setSisaAngsuran(parseInt(e.target.value) || 0);
                 }}
-                placeholder="0"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                />
+              >
+                <option value="">Pilih</option>
+                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>{n} x</option>
+                ))}
+              </select>
               </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
@@ -268,11 +272,15 @@ export function CalculatorPage() {
               <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Input</h3>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali) <span className="text-red-500">*</span></label>
-                <input type="number" min={0} value={sisaAngsuran || ''}
-                  onChange={(e) => setSisaAngsuran(Math.max(0, parseInt(e.target.value) || 0))}
-                  placeholder="0"
+                <select value={sisaAngsuran || ''}
+                  onChange={(e) => setSisaAngsuran(parseInt(e.target.value) || 0)}
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                />
+                >
+                  <option value="">Pilih</option>
+                  {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>{n} x</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan <span className="text-red-500">*</span></label>
