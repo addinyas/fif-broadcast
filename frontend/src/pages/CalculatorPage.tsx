@@ -379,7 +379,9 @@ export function CalculatorPage() {
                   lines.push(`terima Rp ${formatRupiah(terima)}`);
                   lines.push('');
                   (financeResult?.results ?? []).forEach((r) => {
-                    lines.push(`${r.tenor} x Rp ${formatRupiah(r.angsuran)}`);
+                    if (visibleTenors.includes(r.tenor)) {
+                      lines.push(`${r.tenor} x Rp ${formatRupiah(r.angsuran)}`);
+                    }
                   });
                   navigator.clipboard.writeText(lines.join('\r\n')).then(() => {
                     setCopied(true);
