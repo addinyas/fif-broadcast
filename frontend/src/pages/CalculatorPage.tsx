@@ -1,13 +1,24 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Search, Copy, Check } from 'lucide-react';
+import { Search, Copy, Check, PenLine } from 'lucide-react';
 import { customerService } from '../services/customerService';
 import { calculateAngsuran } from '../finance/financeEngine';
 import type { Customer } from '../types';
+
+interface ManualCustomer {
+  name: string;
+  no_contract: string;
+  obj_desc: string;
+  tahun: string;
+  plafon: string;
+  angsuran: string;
+  sisa_angsuran: string;
+}
 
 export function CalculatorPage() {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
   const [selected, setSelected] = useState<Customer | null>(null);
+  const [manual, setManual] = useState<ManualCustomer | null>(null);
   const [sisaAngsuran, setSisaAngsuran] = useState(0);
   const [angsuranPerBulan, setAngsuranPerBulan] = useState(0);
   const [dinego, setDinego] = useState('');
@@ -40,7 +51,10 @@ export function CalculatorPage() {
     return () => clearTimeout(timer);
   }, [search, searchCustomers]);
 
-  const dyn = (key: string) => (selected?.dynamic_data?.[key] ?? '') as string;
+  const dyn = (key: string) => {
+    if (manual) return (manual as Record<string, string>)[key] ?? '';
+    return (selected?.dynamic_data?.[key] ?? '') as string;
+  };
 
   const totalAngsuran = sisaAngsuran * angsuranPerBulan;
   const pelunasan = dinego ? parseInt(dinego.replace(/\D/g, '')) || 0 : totalAngsuran;
@@ -56,6 +70,7 @@ export function CalculatorPage() {
 
   const selectCustomer = (c: Customer) => {
     setSelected(c);
+    setManual(null);
     setSearch('');
     setResults([]);
     const plafon = String(c.dynamic_data?.plafon ?? '0');
@@ -106,10 +121,96 @@ export function CalculatorPage() {
         )}
         {search.trim().length >= 2 && results.length === 0 && (
           <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-lg">
-            <p className="text-xs text-slate-500 dark:text-slate-400">Data tidak ditemukan</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Data tidak ditemukan</p>
+            <button
+              onClick={() => {
+                setManual({ name: search, no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '' });
+                setSearch('');
+                setResults([]);
+              }}
+              className="flex items-center gap-2 rounded-lg bg-fif-50 dark:bg-fif-900/20 px-3 py-2 text-xs font-medium text-fif-600 dark:text-fif-400 hover:bg-fif-100 dark:hover:bg-fif-900/40 transition-colors"
+            >
+              <PenLine className="h-3.5 w-3.5" />
+              Input Manual
+            </button>
           </div>
         )}
       </div>
+
+      {manual && (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10 p-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nama</label>
+              <input value={manual.name}
+                onChange={(e) => setManual({ ...manual, name: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">No Kontrak</label>
+              <input value={manual.no_contract}
+                onChange={(e) => setManual({ ...manual, no_contract: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit</label>
+              <input value={manual.obj_desc}
+                onChange={(e) => setManual({ ...manual, obj_desc: e.target.value })}
+                placeholder="mis: Vario 125"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Tahun</label>
+              <input value={manual.tahun}
+                onChange={(e) => setManual({ ...manual, tahun: e.target.value })}
+                placeholder="2020"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp)</label>
+              <input value={manual.plafon}
+                onChange={(e) => {
+                  setManual({ ...manual, plafon: e.target.value.replace(/\D/g, '') });
+                  setPinjaman(parseInt(e.target.value.replace(/\D/g, '')) || 0);
+                }}
+                placeholder="0"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Angsuran / Bulan (Rp)</label>
+              <input value={manual.angsuran}
+                onChange={(e) => {
+                  setManual({ ...manual, angsuran: e.target.value.replace(/\D/g, '') });
+                  setAngsuranPerBulan(parseInt(e.target.value.replace(/\D/g, '')) || 0);
+                }}
+                placeholder="0"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Sisa Angsuran (kali)</label>
+              <input type="number" min={0} value={manual.sisa_angsuran}
+                onChange={(e) => {
+                  setManual({ ...manual, sisa_angsuran: e.target.value });
+                  setSisaAngsuran(Math.max(0, parseInt(e.target.value) || 0));
+                }}
+                placeholder="0"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+          </div>
+          <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); }}
+            className="mt-3 text-[10px] text-amber-600 hover:text-amber-700 dark:text-amber-400 transition-colors"
+          >
+            Hapus data manual
+          </button>
+        </div>
+      )}
 
       {selected && (
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
@@ -127,7 +228,7 @@ export function CalculatorPage() {
               <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('obj_desc')} tahun {dyn('tahun')}</p>
             </div>
           </div>
-          <button onClick={() => { setSelected(null); setPinjaman(0); }}
+          <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); }}
             className="mt-2 text-[10px] text-fif-600 hover:text-fif-700 dark:text-fif-400 transition-colors"
           >
             Ganti customer
@@ -235,7 +336,7 @@ export function CalculatorPage() {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>
-                <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{selected?.name ?? '-'}</p>
+                <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{manual?.name ?? selected?.name ?? '-'}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} tahun {dyn('tahun')}</p>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
@@ -251,7 +352,7 @@ export function CalculatorPage() {
                 onClick={() => {
                   const lines = [
                     `${dyn('no_contract') || '-'}`,
-                    `${selected?.name ?? '-'}`,
+                    `${manual?.name ?? selected?.name ?? '-'}`,
                     `Unit ${dyn('obj_desc')} tahun ${dyn('tahun')}`,
                     `angsuran kurang ${sisaAngsuran} x ${formatRupiah(angsuranPerBulan)} = Rp ${formatRupiah(totalAngsuran)}`,
                     '',
