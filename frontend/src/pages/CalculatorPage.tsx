@@ -29,6 +29,18 @@ export function CalculatorPage() {
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  const customerTahun = useMemo(() => {
+    const raw = manual ? manual.tahun : (selected?.dynamic_data?.tahun as string) || '';
+    return parseInt(raw) || 0;
+  }, [manual, selected]);
+
+  const visibleTenors = useMemo(() => {
+    if (customerTahun > 0 && customerTahun < 2016) {
+      return tenors.filter(t => t <= 24);
+    }
+    return tenors;
+  }, [tenors, customerTahun]);
+
   const financeResult = useMemo(() => {
     if (pinjaman <= 0) return null;
     try {
@@ -295,8 +307,9 @@ export function CalculatorPage() {
               <div>
                 <h4 className="mb-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tenor Angsuran</h4>
                 <div className="grid grid-cols-5 gap-2">
-                  {tenors.map((n, i) => {
-                    const monthly = financeResult?.results[i]?.angsuran ?? 0;
+                  {visibleTenors.map((n, i) => {
+                    const idx = tenors.indexOf(n);
+                    const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                     return (
                       <div key={i} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-1 py-2 text-center text-sm">
                         <input type="number" min={1} max={36} value={n}
@@ -311,6 +324,9 @@ export function CalculatorPage() {
                     );
                   })}
                 </div>
+                {customerTahun > 0 && customerTahun < 2016 && (
+                  <p className="mt-1.5 text-[10px] text-amber-500 font-medium">Tahun motor {'<'} 2016, tenor maksimal 24 bulan</p>
+                )}
                 <p className="mt-1.5 text-[10px] text-slate-400 italic">Klik angka tenor untuk mengubah</p>
               </div>
               <div className="flex justify-center mt-2">
@@ -378,8 +394,9 @@ export function CalculatorPage() {
             <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700">
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">Simulasi Tenor</p>
               <div className="flex flex-wrap gap-1.5">
-                {tenors.map((n, i) => {
-                  const monthly = financeResult?.results[i]?.angsuran ?? 0;
+                {visibleTenors.map((n, i) => {
+                  const idx = tenors.indexOf(n);
+                  const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                   return (
                     <div key={i} className="rounded-lg bg-slate-50 dark:bg-slate-700/50 px-3 py-1.5 text-xs">
                       <span className="text-slate-500 dark:text-slate-400">{n} x </span>
