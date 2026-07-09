@@ -36,7 +36,8 @@ export function CalculatorPage() {
 
   const visibleTenors = useMemo(() => {
     if (customerTahun > 0 && customerTahun < 2016) {
-      return tenors.filter(t => t <= 24);
+      const filtered = tenors.filter(t => t <= 24);
+      return filtered.includes(6) ? filtered : [6, ...filtered];
     }
     return tenors;
   }, [tenors, customerTahun]);
@@ -325,7 +326,7 @@ export function CalculatorPage() {
                   })}
                 </div>
                 {customerTahun > 0 && customerTahun < 2016 && (
-                  <p className="mt-1.5 text-[10px] text-amber-500 font-medium">Tahun motor {'<'} 2016, tenor maksimal 24 bulan</p>
+                  <p className="mt-1.5 text-[10px] text-amber-500 font-medium">Tahun motor {'<'} 2016, tenor 6x tersedia dan maksimal 24 bulan</p>
                 )}
                 <p className="mt-1.5 text-[10px] text-slate-400 italic">Klik angka tenor untuk mengubah</p>
               </div>
