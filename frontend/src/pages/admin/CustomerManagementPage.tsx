@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import type { Customer } from '../../types';
-interface MarketingUser { id: number; name: string; email: string; }
+interface MarketingUser { id: number; name: string; email: string; assigned_customers_count?: number; }
 type ImportTab = 'manual' | 'spreadsheet' | 'file';
 
 export function CustomerManagementPage() {
