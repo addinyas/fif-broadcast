@@ -177,11 +177,15 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Tahun <span className="text-red-500">*</span></label>
-              <input value={manual.tahun}
+              <select value={manual.tahun}
                 onChange={(e) => setManual({ ...manual, tahun: e.target.value })}
-                placeholder="2020"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-              />
+              >
+                <option value="">Pilih</option>
+                {Array.from({ length: 2027 - 2010 + 1 }, (_, i) => 2010 + i).map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp) <span className="text-red-500">*</span></label>
