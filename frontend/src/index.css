@@ -25,6 +25,7 @@
   --animate-shimmer: shimmer 2s infinite linear;
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+  --animate-spin-slow: spin-slow 8s linear infinite;
 }
 
 @variant dark (&:where(.dark, .dark *));
@@ -62,6 +63,11 @@
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-20px); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @keyframes pulse-soft {
