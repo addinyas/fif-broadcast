@@ -26,8 +26,6 @@ export function UserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(fetchUsers, 30000);
-    return () => clearInterval(interval);
   }, [fetchUsers]);
 
   const handleDelete = async (user: User) => {

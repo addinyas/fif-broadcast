@@ -13,6 +13,8 @@ interface ManualCustomer {
   angsuran: string;
   sisa_angsuran: string;
   nopol: string;
+  cori: string;
+  vcode: string;
 }
 
 export function CalculatorPage() {
@@ -23,6 +25,7 @@ export function CalculatorPage() {
   const [sisaAngsuran, setSisaAngsuran] = useState(0);
   const [angsuranPerBulan, setAngsuranPerBulan] = useState(0);
   const [dinego, setDinego] = useState('');
+  const [denda, setDenda] = useState('');
   const [pinjaman, setPinjaman] = useState(0);
   const [rate, setRate] = useState(44);
   const [tenors, setTenors] = useState([12, 18, 24, 30, 36]);
@@ -68,9 +71,15 @@ export function CalculatorPage() {
     return (selected?.dynamic_data?.[key] ?? '') as string;
   };
 
+  const parseAngka = (val: string) => parseInt(val.replace(/\D/g, '')) || 0;
+
   const totalAngsuran = sisaAngsuran * angsuranPerBulan;
-  const pelunasan = dinego ? parseInt(dinego.replace(/\D/g, '')) || 0 : totalAngsuran;
+  const dendaVal = parseAngka(denda);
+  const pelunasanBase = dinego ? parseInt(dinego.replace(/\D/g, '')) || 0 : totalAngsuran;
+  const pelunasan = pelunasanBase + dendaVal;
   const terima = Math.max(0, pinjaman - pelunasan);
+
+  const hasRequiredInput = sisaAngsuran > 0 && angsuranPerBulan > 0 && pinjaman > 0 && nopol.trim() !== '';
 
   const formatAngka = (val: number | string) => {
     const nums = typeof val === 'string' ? val.replace(/\D/g, '') : String(val);
@@ -79,14 +88,8 @@ export function CalculatorPage() {
   };
 
   const formatAlphaNum = (val: string) => {
-    const upper = val.toUpperCase().replace(/[^A-Z0-9 ]/g, '');
-    return upper
-      .replace(/([A-Z])(\d)/g, '$1 $2')
-      .replace(/(\d)([A-Z])/g, '$1 $2')
-      .replace(/\s+/g, ' ');
+    return val.toUpperCase().replace(/[^A-Z0-9]/g, '');
   };
-
-  const parseAngka = (val: string) => parseInt(val.replace(/\D/g, '')) || 0;
 
   const selectCustomer = (c: Customer) => {
     setSelected(c);
@@ -100,6 +103,7 @@ export function CalculatorPage() {
     const angsuran = String(c.dynamic_data?.angsuran ?? c.dynamic_data?.angsuran_per_bulan ?? '0');
     setAngsuranPerBulan(parseAngka(angsuran));
     setDinego('');
+    setDenda('');
   };
 
   return (
@@ -145,7 +149,7 @@ export function CalculatorPage() {
             <button
               onClick={() => {
                 const isNumeric = /^\d+$/.test(search);
-                setManual({ name: isNumeric ? '' : search, no_contract: isNumeric ? search : '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '' });
+                setManual({ name: isNumeric ? '' : search, no_contract: isNumeric ? search : '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
                 setSearch('');
                 setResults([]);
               }}
@@ -252,6 +256,26 @@ export function CalculatorPage() {
               />
             </div>
             <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">CORI</label>
+              <select value={manual.cori}
+                onChange={(e) => setManual({ ...manual, cori: e.target.value })}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              >
+                <option value="">Pilih</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="GOOD">GOOD</option>
+                <option value="GOOD LOYAL">GOOD LOYAL</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Vcode</label>
+              <input value={manual.vcode}
+                onChange={(e) => setManual({ ...manual, vcode: e.target.value.toUpperCase() })}
+                placeholder="Vcode"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
+            <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Pelunasan Nego</label>
               <input value={formatAngka(dinego)}
                 onChange={(e) => setDinego(e.target.value.replace(/\D/g, ''))}
@@ -259,8 +283,16 @@ export function CalculatorPage() {
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
+            <div>
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Denda</label>
+              <input value={formatAngka(denda)}
+                onChange={(e) => setDenda(e.target.value.replace(/\D/g, ''))}
+                placeholder="Rp (opsional)"
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              />
+            </div>
           </div>
-          <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); setDinego(''); }}
+          <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); setDinego(''); setDenda(''); }}
             className="mt-3 text-[10px] text-amber-600 hover:text-amber-700 dark:text-amber-400 transition-colors"
           >
             Hapus data manual
@@ -287,8 +319,16 @@ export function CalculatorPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">Nopol</p>
               <p className="font-semibold text-slate-800 dark:text-slate-200">{displayNopol || '-'}</p>
             </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">CORI</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('cori') || 'BELUM ADA'}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Vcode</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('vcode') || 'BELUM ADA'}</p>
+            </div>
           </div>
-          <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); }}
+          <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setDenda(''); }}
             className="mt-2 text-[10px] text-fif-600 hover:text-fif-700 dark:text-fif-400 transition-colors"
           >
             Ganti customer
@@ -329,7 +369,15 @@ export function CalculatorPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal Cair <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Denda</label>
+                <input value={formatAngka(denda)}
+                  onChange={(e) => setDenda(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Rp (opsional)"
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal <span className="text-red-500">*</span></label>
                 <input
                   value={pinjaman ? formatAngka(pinjaman) : ''}
                   onChange={(e) => setPinjaman(parseAngka(e.target.value))}
@@ -357,6 +405,12 @@ export function CalculatorPage() {
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Angsuran Kurang</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
                 </div>
+                {dendaVal > 0 && (
+                <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
+                  <span className="text-slate-500 dark:text-slate-400 text-xs">Denda</span>
+                  <span className="font-semibold text-red-500">Rp {formatAngka(dendaVal)}</span>
+                </div>
+                )}
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Pelunasan</span>
                   <span className="font-semibold text-fif-600">Rp {formatAngka(pelunasan)}</span>
@@ -416,18 +470,19 @@ export function CalculatorPage() {
             </div>
           </div>
 
+          {hasRequiredInput ? (
           <div ref={outputRef} className="rounded-xl border border-slate-200/80 bg-white/90 p-5 shadow-sm backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-800/90">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate">{dyn('no_contract')}</p>
                 <p className="text-base font-medium text-slate-700 dark:text-slate-300 truncate">{manual?.name ?? selected?.name ?? '-'}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol} Tahun {dyn('tahun')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Unit {dyn('obj_desc')} {displayNopol} thn {dyn('tahun')}</p>
                 <div className="space-y-0.5 text-sm">
                   <p className="text-slate-600 dark:text-slate-400">
-                    Angsuran Kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} × {formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
+                    Angsuran Kurang <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran} × {formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}{dendaVal > 0 ? <span className="text-red-500"> + Rp {formatAngka(dendaVal)}</span> : ''}</span>
                   </p>
                   {dinego && (<p className="text-slate-600 dark:text-slate-400">Dinego Jadi Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(parseAngka(dinego))}</span></p>)}
-                  <p className="text-slate-600 dark:text-slate-400">Pinjaman Maksimal Cair Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(pinjaman)}</span></p>
+                  <p className="text-slate-600 dark:text-slate-400">Pinjaman Maksimal Rp <span className="font-semibold text-slate-800 dark:text-slate-200">{formatAngka(pinjaman)}</span></p>
                   <p className="text-slate-600 dark:text-slate-400">Pelunasan Rp <span className="font-semibold text-fif-600">{formatAngka(pelunasan)}</span></p>
                   <p className="text-emerald-700 dark:text-emerald-400 font-bold text-base">Terima Rp {formatAngka(terima)}</p>
                 </div>
@@ -445,12 +500,12 @@ export function CalculatorPage() {
                   const lines = [
                     `${dyn('no_contract') || '-'}`,
                     `${manual?.name ?? selected?.name ?? '-'}`,
-                    `Unit ${dyn('obj_desc')}${displayNopol ? ` ${displayNopol}` : ''} Tahun ${dyn('tahun')}`,
-                    `Angsuran Kurang ${sisaAngsuran} × ${formatAngka(angsuranPerBulan)} = Rp ${formatAngka(totalAngsuran)}`,
+                    `Unit ${dyn('obj_desc')}${displayNopol ? ` ${displayNopol}` : ''} thn ${dyn('tahun')}`,
+                    `Angsuran Kurang ${sisaAngsuran} × ${formatAngka(angsuranPerBulan)} = Rp ${formatAngka(totalAngsuran)}${dendaVal > 0 ? ` + Rp ${formatAngka(dendaVal)}` : ''}`,
                     '',
                   ];
                   if (dinego) lines.push(`Dinego Jadi Rp ${formatAngka(parseAngka(dinego))}`);
-                  lines.push(`Pinjaman Maksimal Cair Rp ${formatAngka(pinjaman)}`);
+                  lines.push(`Pinjaman Maksimal Rp ${formatAngka(pinjaman)}`);
                   lines.push(`Pelunasan Rp ${formatAngka(pelunasan)}`);
                   lines.push(`Terima Rp ${formatAngka(terima)}`);
                   lines.push('');
@@ -485,6 +540,11 @@ export function CalculatorPage() {
               </div>
             </div>
           </div>
+          ) : (
+          <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30 p-8 text-center shadow-sm">
+            <p className="text-sm text-slate-400 dark:text-slate-500 italic">Isi semua field wajib di tabel Input untuk melihat rincian</p>
+          </div>
+          )}
     </div>
   );
 }

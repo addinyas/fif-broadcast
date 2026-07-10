@@ -161,9 +161,46 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 - `BroadcastStatusBanner.tsx`: `socket.disconnect()` → `socket.off()` — tidak disconnect tiap ganti halaman
 - `UserManagementPage.tsx`: hapus `setInterval(fetchUsers, 30000)` — tidak polling tiap 30 detik
 - `CalculatorPage.tsx`: tambah input **Denda** (opsional) — ditambahkan ke pelunasan, ditampilkan inline di "Angsuran Kurang" sebagai `+ Rp ...`
+- `CalculatorPage.tsx`: output copy-to-clipboard tanpa enter antara Pinjaman/Pelunasan/Terima
+- `CalculatorPage.tsx`: nopol tanpa spasi (`AB 5678 EAF` → `AB5678EAF`)
+- `CalculatorPage.tsx`: `Tahun` → `thn`, `Pinjaman Maksimal Cair` → `Pinjaman Maksimal`
+- `CalculatorPage.tsx`: tambah tampilan **CORI** dan **Vcode** di output card & copy-to-clipboard (read-only dari `dynamic_data`)
+- `CalculatorPage.tsx`: tambah field CORI (dropdown) & Vcode (input) di form manual input
+- `CalculatorPage.tsx`: rincian output hanya muncul jika semua field wajib terisi (Pelunasan Nego & Denda opsional)
 
 ### Next steps when resuming
 1. Push local changes → `git push origin main`
 2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
 3. Test import spreadsheet (9114 rows) — SQLite harusnya tidak error lagi
 4. Test website feels faster (code splitting, PHP-FPM, per_page 50)
+
+## Push & Deploy Workflow
+
+### Sebelum Push ke GitHub
+1. Cek status: `git status` dan `git diff`
+2. Tambah file: `git add <file>`
+3. **Wajib commit message yang jelas**, format Conventional Commits:
+   - `feat: <fitur baru>`
+   - `fix: <bug fix>`
+   - `refactor: <perubahan struktur>`
+   - `chore: <maintenance>`
+4. Push: `git push origin main`
+
+### Sebelum Deploy ke VPS
+1. Pastikan sudah di-push ke GitHub
+2. Jalankan: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
+3. **Wajib update AGENTS.md** — tambahkan rincian di "Session History"
+
+### Format Rincian di Session History
+```markdown
+### YYYY-MM-DD — <Judul Singkat>
+
+**Sudah di-push ✅**
+- `<File>`: <deskripsi perubahan>
+
+**Belum di-push ⏸️**
+- `<File>`: <deskripsi perubahan>
+
+### Next steps
+1. <langkah selanjutnya>
+```

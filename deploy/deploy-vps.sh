@@ -73,14 +73,16 @@ server {
     }
 
     location /api {
-        proxy_pass http://127.0.0.1:8000/api;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_connect_timeout 300s;
+        try_files \$uri /api/index.php?\$query_string;
+    }
+
+    location = /api/index.php {
+        include fastcgi_params;
+        fastcgi_pass unix:/run/php-fpm/www.sock;
+        fastcgi_param SCRIPT_FILENAME /var/www/fif/backend/public/index.php;
+        fastcgi_read_timeout 300s;
+        fastcgi_send_timeout 300s;
+        fastcgi_connect_timeout 300s;
     }
 
     location /socket.io/ {
@@ -110,27 +112,13 @@ if [ -n "$PHP_INI" ]; then
 fi
 
 # --- Systemd services (always fresh) ---
-cat > /etc/systemd/system/fif-backend.service <<EOF
-[Unit]
-Description=FIF Laravel Backend
-After=network.target
-
-[Service]
-Type=simple
-WorkingDirectory=/var/www/fif/backend
-ExecStart=/usr/bin/php artisan serve --host=127.0.0.1 --port=8000
-Restart=always
-RestartSec=5
-User=root
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Note: Backend served via PHP-FPM (already running), not php artisan serve
+# fif-backend.service is intentionally removed — use PHP-FPM instead
 
 cat > /etc/systemd/system/fif-queue.service <<EOF
 [Unit]
 Description=FIF Laravel Queue
-After=network.target fif-backend.service
+After=network.target
 
 [Service]
 Type=simple
@@ -147,7 +135,7 @@ EOF
 cat > /etc/systemd/system/fif-worker.service <<EOF
 [Unit]
 Description=FIF WhatsApp Worker
-After=network.target fif-backend.service
+After=network.target fif-queue.service
 
 [Service]
 Type=simple
@@ -164,10 +152,12 @@ EOF
 
 chown -R root:root "$APP_DIR"
 chmod -R 775 "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
+systemctl stop fif-backend 2>/dev/null || true
+systemctl disable fif-backend 2>/dev/null || true
 nginx -t
 systemctl daemon-reload
-systemctl enable --now nginx php-fpm fif-backend fif-queue fif-worker
-systemctl restart nginx fif-backend fif-queue fif-worker
-systemctl --no-pager --full status fif-backend fif-queue fif-worker
+systemctl enable --now nginx php-fpm fif-queue fif-worker
+systemctl restart nginx fif-queue fif-worker
+systemctl --no-pager --full status fif-queue fif-worker
 
 echo "=== Deploy complete ==="

@@ -13,12 +13,14 @@ export function BroadcastStatusBanner() {
     socket.auth = { token };
     socket.connect();
 
-    socket.on('broadcast:status', (msg: { customer_id: number; status: string }) => {
+    const handler = (msg: { customer_id: number; status: string }) => {
       setStatus({ message: `Broadcast ${msg.status}`, status: msg.status === 'sent' ? 'success' : msg.status === 'failed' ? 'error' : 'info' });
       setTimeout(() => setStatus(null), 5000);
-    });
+    };
 
-    return () => { socket.disconnect(); };
+    socket.on('broadcast:status', handler);
+
+    return () => { socket.off('broadcast:status', handler); };
   }, [token]);
 
   if (!status) return null;

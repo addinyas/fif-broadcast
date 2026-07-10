@@ -68,7 +68,7 @@ export function CustomerManagementPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: page.toString(), search, per_page: '500' };
+      const params: Record<string, string> = { page: page.toString(), search, per_page: '50' };
       if (!showAssigned) {
         params.assignment_status = 'unassigned';
       }
