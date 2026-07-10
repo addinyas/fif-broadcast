@@ -24,7 +24,8 @@ npm install
 npm run build
 
 cd "$APP_DIR/worker"
-dnf install -y python3 make gcc-c++ 2>/dev/null || yum install -y python3 make gcc-c++ 2>/dev/null || true
+dnf install -y python3 make gcc-c++ gcc-toolset-12-gcc-c++ 2>/dev/null || yum install -y python3 make gcc-c++ gcc-toolset-12-gcc-c++ 2>/dev/null || true
+source /opt/rh/gcc-toolset-12/enable 2>/dev/null || true
 npm install
 
 cat > /etc/nginx/conf.d/fif.conf <<EOF
