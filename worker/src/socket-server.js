@@ -97,4 +97,10 @@ function emitBroadcastStatus(userId, data) {
   }
 }
 
-module.exports = { createSocketServer, emitWAStatus, emitBroadcastStatus };
+function emitPendingStuck(userId, data) {
+  if (io) {
+    io.to(`user:${userId}`).emit('broadcast:pending_stuck', data);
+  }
+}
+
+module.exports = { createSocketServer, emitWAStatus, emitBroadcastStatus, emitPendingStuck };

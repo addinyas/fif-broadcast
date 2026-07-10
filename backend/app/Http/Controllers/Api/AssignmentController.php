@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\User;
 use App\Services\AuthService;
 use App\Services\CustomerService;
 use Illuminate\Http\JsonResponse;
@@ -112,5 +113,35 @@ class AssignmentController extends Controller
         }
 
         return response()->json(['assigned' => $assigned, 'total' => count($assigned)]);
+    }
+
+    public function autoCalculate(): JsonResponse
+    {
+        $totalNmc = Customer::where('assignment_status', 'unassigned')
+            ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = 'NMC'")
+            ->count();
+
+        $totalRefi = Customer::where('assignment_status', 'unassigned')
+            ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = 'REFI'")
+            ->count();
+
+        $unassignedMarketingCount = User::where('role', 'marketing')
+            ->whereDoesntHave('assignedCustomers')
+            ->count();
+
+        $nmcPerMarketing = $unassignedMarketingCount > 0
+            ? (int) ceil($totalNmc / $unassignedMarketingCount)
+            : 0;
+        $refiPerMarketing = $unassignedMarketingCount > 0
+            ? (int) ceil($totalRefi / $unassignedMarketingCount)
+            : 0;
+
+        return response()->json([
+            'total_nmc' => $totalNmc,
+            'total_refi' => $totalRefi,
+            'unassigned_marketing_count' => $unassignedMarketingCount,
+            'nmc_per_marketing' => $nmcPerMarketing,
+            'refi_per_marketing' => $refiPerMarketing,
+        ]);
     }
 }

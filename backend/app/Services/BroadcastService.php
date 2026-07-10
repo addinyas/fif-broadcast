@@ -20,8 +20,8 @@ class BroadcastService
             ->where('created_at', '>=', now()->startOfDay())
             ->count();
 
-        if ($sentToday >= 200) {
-            throw new \Exception('Batas broadcast 200 pesan per hari sudah tercapai');
+        if ($sentToday >= 150) {
+            throw new \Exception('Batas broadcast 150 pesan per hari sudah tercapai');
         }
 
         $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);

@@ -1,10 +1,12 @@
 const { getWritableDb } = require('./db');
 const { sendMessage, isConnected, getConnectedUsers } = require('./wa-manager');
-const { emitBroadcastStatus } = require('./socket-server');
+const { emitBroadcastStatus, emitPendingStuck } = require('./socket-server');
 
-const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '5', 10);
-const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '15', 10);
+const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
+const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '180', 10);
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
+const MAX_RETRY = 3;
+const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 
 let running = false;
@@ -54,18 +56,27 @@ async function processPending() {
       SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, c.phone_number
       FROM broadcast_histories bh
       JOIN customers c ON c.id = bh.customer_id
-      WHERE bh.status = 'pending'
-      ORDER BY RANDOM()
-      LIMIT 5
+      WHERE bh.status = 'pending' AND bh.id IN (
+        SELECT id FROM broadcast_histories WHERE status = 'pending' ORDER BY RANDOM() LIMIT 5
+      )
     `).all();
 
     if (pending.length === 0) return;
 
     const connectedUsers = getConnectedUsers();
     const toProcess = pending.filter((row) => connectedUsers.includes(row.marketing_id));
+    const stuckPending = pending.filter((row) => !connectedUsers.includes(row.marketing_id));
 
     if (toProcess.length === 0) {
       console.log('[Queue] No connected WA clients for pending broadcasts');
+      for (const row of stuckPending) {
+        const count = writeDb.prepare(
+          "SELECT COUNT(*) as cnt FROM broadcast_histories WHERE marketing_id = ? AND status = 'pending'"
+        ).get(row.marketing_id);
+        if (count.cnt > PENDING_STUCK_THRESHOLD) {
+          emitPendingStuck(row.marketing_id, { pending_count: count.cnt });
+        }
+      }
       return;
     }
 
@@ -97,16 +108,29 @@ async function processPending() {
         emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'sent' });
         console.log(`[Queue] Sent #${row.id} (marketing ${row.marketing_id}) to ${row.phone_number}`);
       } catch (err) {
-        stats[row.marketing_id].failed++;
         const errMsg = err.message || 'Unknown error';
-        writeDb.prepare(`
-          UPDATE broadcast_histories
-          SET status = 'failed', error_log = ?, updated_at = datetime('now')
-          WHERE id = ?
-        `).run(errMsg, row.id);
+        const currentRetry = row.retry_count || 0;
 
-        emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'failed', error: errMsg });
-        console.error(`[Queue] Failed #${row.id}: ${errMsg}`);
+        if (currentRetry < MAX_RETRY) {
+          writeDb.prepare(`
+            UPDATE broadcast_histories
+            SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now')
+            WHERE id = ?
+          `).run(currentRetry + 1, errMsg, row.id);
+
+          console.warn(`[Queue] Failed #${row.id} (retry ${currentRetry + 1}/${MAX_RETRY}): ${errMsg}`);
+        } else {
+          if (!stats[row.marketing_id]) stats[row.marketing_id] = { sent: 0, failed: 0 };
+          stats[row.marketing_id].failed++;
+          writeDb.prepare(`
+            UPDATE broadcast_histories
+            SET status = 'failed', error_log = ?, updated_at = datetime('now')
+            WHERE id = ?
+          `).run(errMsg, row.id);
+
+          emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'failed', error: errMsg });
+          console.error(`[Queue] Failed #${row.id} (max retries): ${errMsg}`);
+        }
       }
 
       const delay = randomDelay();
@@ -115,7 +139,9 @@ async function processPending() {
     }
 
     for (const [mid, s] of Object.entries(stats)) {
-      sendPushNotification(parseInt(mid), 'Broadcast Selesai', `${s.sent} terkirim, ${s.failed} gagal`);
+      if (s.sent > 0 || s.failed > 0) {
+        sendPushNotification(parseInt(mid), 'Broadcast Selesai', `${s.sent} terkirim, ${s.failed} gagal`);
+      }
     }
   } catch (err) {
     console.error('[Queue] Error:', err.message);
@@ -127,7 +153,7 @@ async function processPending() {
 function startQueue() {
   if (running) return;
   running = true;
-  console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms)`);
+  console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, delay ${MIN_DELAY}-${MAX_DELAY}s)`);
   intervalId = setInterval(processPending, POLL_INTERVAL);
 }
 

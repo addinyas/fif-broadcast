@@ -28,7 +28,7 @@ WhatsApp broadcast system: Laravel 12 API backend, React 19 + Vite 8 frontend, N
 
 **Worker** (run from `worker/`):
 - `npm run start` / `npm run dev` — `node src/index.js`
-- `.env` controls: `DB_PATH`, `SOCKET_PORT` (3001), `SOCKET_PATH`, `POLL_INTERVAL_MS` (5000), `MIN_DELAY_SEC` (5), `MAX_DELAY_SEC` (15), `MAX_CONNECTION_HOURS` (8)
+- `.env` controls: `DB_PATH`, `SOCKET_PORT` (3001), `SOCKET_PATH`, `POLL_INTERVAL_MS` (5000), `MIN_DELAY_SEC` (60), `MAX_DELAY_SEC` (180), `MAX_CONNECTION_HOURS` (8)
 - **WA auto-disconnect**: After `MAX_CONNECTION_HOURS` (default 8), worker force-disconnects and clears auth to force QR re-scan. Stale connections cleaned on worker startup too.
 
 ## Architecture notes
@@ -36,9 +36,10 @@ WhatsApp broadcast system: Laravel 12 API backend, React 19 + Vite 8 frontend, N
 - **Auth**: Sanctum token + Google OAuth (Socialite). Roles on `users.role`: `superadmin`, `UH`, `marketing`. Role middleware `CheckRole` registered as `role` alias in `bootstrap/app.php`.
 - **Default seed accounts**: `superadmin@crm.test`, `admin@crm.test`, `marketing@crm.test`, `marketing2@crm.test` — all password `password`.
 - **DB**: SQLite (`database/database.sqlite`). Worker reads/writes directly via `better-sqlite3` with WAL mode (not via API). Worker uses read-only singleton + per-query writable connections.
-- **Queue**: Database-driven (`QUEUE_CONNECTION=database`). Backend inserts `broadcast_histories`, worker polls every 5s, processes 5 per batch with 5–15s random delay between sends (anti-ban).
-- **Daily limit**: 200 sent messages per user per day, enforced in `BroadcastService::prepare()`. Reset otomatis jam 00:00.
-- **Real-time**: Worker runs its own Socket.IO server (port 3001). Frontend connects via socket.io-client (websocket + polling transports). Events: `broadcast:status` (processing/sent/failed), `wa:status` (awaiting_scan/connected/logged_out).
+- **Queue**: Database-driven (`QUEUE_CONNECTION=database`). Backend inserts `broadcast_histories`, worker polls every 5s, processes 5 per batch with 60–180s random delay between sends (anti-ban).
+- **Daily limit**: 150 sent messages per user per day, enforced in `BroadcastService::prepare()`. Reset otomatis jam 00:00.
+- **Retry**: Worker retries failed messages up to 3x (`retry_count` column). Transient failures recover automatically.
+- **Real-time**: Worker runs its own Socket.IO server (port 3001). Frontend connects via socket.io-client (websocket + polling transports). Events: `broadcast:status` (processing/sent/failed), `wa:status` (awaiting_scan/connected/logged_out), `broadcast:pending_stuck` (pending > 5 with no connection).
 - **Pattern**: Repository interfaces in `app/Interfaces/`, impls in `app/Repositories/`, bound in `RepositoryServiceProvider` (registered in `bootstrap/app.php`).
 - **Template variables**: `#nomor_contract`, `#nama`, `#motor_dan_tahun`, `#plat`, `#angsuran_kurang`, `#input_angsuran`, `#dinego_jadi`, `#pinjaman`, `#pelunasan`, `#terima`, `#tenor`, `#sisa_angsuran`.
 - **WA Client**: Baileys `makeWASocket` with `useMultiFileAuthState` in `auth_info/`, exponential backoff reconnect (2^attempt, capped 30s). QR code dikirim ke frontend via Socket.IO (`wa:status` event) dan ditampilkan di halaman `/admin/connect` atau `/marketing/connect`.
@@ -65,7 +66,7 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 | `backend/app/Services/` | `AuthService`, `BroadcastService`, `CustomerService`, `TemplateService`, `GoogleSheetsService`, `PermissionService` |
 | `backend/app/Http/Controllers/Api/` | `AuthController`, `BroadcastController`, `CustomerController`, `TemplateController`, `AssignmentController`, `GoogleSheetsController`, `PermissionController` |
 | `backend/app/Http/Middleware/` | `CheckRole` (role:), `CheckFeature` (feature:) |
-| `backend/app/Models/` | `User`, `Customer`, `Template`, `BroadcastHistory`, `RolePermission` |
+| `backend/app/Models/` | `User`, `Customer`, `Template`, `BroadcastHistory`, `RolePermission`, `WhatsappConnection` |
 | `frontend/src/services/` | `api.ts` (axios), `authService`, `broadcastService`, `customerService`, `templateService`, `socketService`, `permissionService` |
 | `frontend/src/hooks/` | `usePermissions.ts` |
 | `frontend/src/pages/admin/` | `DashboardPage`, `CustomerManagementPage`, `TemplateManagementPage`, `UserManagementPage`, `PermissionManagementPage` |
@@ -173,6 +174,64 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
 3. Test import spreadsheet (9114 rows) — SQLite harusnya tidak error lagi
 4. Test website feels faster (code splitting, PHP-FPM, per_page 50)
+
+### 2026-07-11 — Broadcast reliability fix + connection safety + NotificationBell progress
+
+**Root causes fixed:**
+1. Frontend delay 30-120s removed (INSERT-only delay, no impact on actual send rate)
+2. Worker delay changed 5-15s → 60-180s (anti-ban: user confirmed 35-93s still got banned)
+3. `onWhatsApp()` check removed (rate-limit trigger, causes mass failures)
+4. Retry mechanism added (max 3x, transient failures recover)
+5. SQLite busy_timeout + WAL checkpoint (reduce SQLITE_BUSY errors)
+6. Optimized `ORDER BY RANDOM()` query (faster for large datasets)
+7. Completed `interpolateMessage()` (all template variables now replaced)
+8. Daily limit 200 → 150 (more conservative)
+9. Connection safety: auto-stop on disconnect, pending_stuck event, warning banner
+10. NotificationBell: aggregate counter (X terkirim, Y gagal, Z pending)
+11. Progress bar: now shows worker-side progress (not INSERT progress)
+
+**Files changed:**
+- `worker/.env`: MIN_DELAY_SEC=60, MAX_DELAY_SEC=180
+- `worker/src/wa-client.js`: removed onWhatsApp check
+- `worker/src/db.js`: added busy_timeout=5000, wal_autocheckpoint=1000
+- `worker/src/queue-consumer.js`: retry mechanism, optimized query, emit pending_stuck
+- `backend/database/migrations/2026_07_11_000001_add_retry_count_to_broadcast_histories.php`: new
+- `backend/app/Services/BroadcastService.php`: daily limit 150
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: remove delay UI, update progress bar, complete interpolateMessage, auto-stop on disconnect
+- `frontend/src/components/ui/NotificationBell.tsx`: aggregate counter
+- `frontend/src/components/ui/BroadcastStatusBanner.tsx`: disconnect warning banner
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
+3. Jalankan migration: `php artisan migrate` (kolom `retry_count`)
+4. Restart worker di VPS setelah deploy
+
+### Troubleshooting: WhatsApp Ban / Blokir
+
+**Pertanyaan kunci saat uji lapangan — ditanyakan ke user:**
+> "Dari 10 pesan yang dikirim, berapa yang merespon?"
+
+| Respons | Arti | Aksi |
+|---------|------|------|
+| 7-10 merespon | Pesan terkirim & terbaca, delay aman | Tidak perlu ubah apapun |
+| 4-6 merespon | Pesan terkirim tapi ada yang terkena spam filter | Pertimbangkan naikkan delay (120-300s) |
+| 1-3 merespon | Pesan terkirim tapi banyak masuk spam/restricted | Naikkan delay signifikan (180-600s), kurangi volume harian |
+| 0 merespon & ada yang "gagal" di notif | Pesan TIDAK terkirim / account restricted | Stop broadcast, ganti nomor WA, naikkan delay ke 300-900s |
+| 0 merespon & semua "terkirim" | Pesan terkirim tapi tidak terbaca (bukan blokir) | Bukan masalah delay — cek konten pesan, timing kirim (jam berapa) |
+
+**Jika masih kena blokir meskipun delay 60-180s:**
+1. Cek: apakah semua pesan statusnya "terkirim" atau ada yang "gagal"?
+2. Jika semua terkirim → delay sudah cukup, blokir mungkin dari nomor WA yang sudah lama tidak aktif atau konten pesan
+3. Jika banyak gagal → naikkan delay lagi: `MIN_DELAY_SEC=180`, `MAX_DELAY_SEC=600`
+4. Pertimbangkan: kirim di jam kerja (09:00-17:00), hindari malam/minggu
+5. Pertimbangkan: variasi pesan (tambah randomisasi teks per customer)
+
+**Anti-ban strategy reference:**
+- Delay saat ini: 60-180 detik (3-4 pesan/jam)
+- Daily limit: 150 pesan/hari
+- Batch pause: worker otomatis delay antar pesan
+- Jika perlu lebih aman: naikkan ke 120-300 detik (2-3 pesan/jam, ~70-100/hari)
 
 ## Push & Deploy Workflow
 

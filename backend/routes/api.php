@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('assignments/assign-by-unit', [AssignmentController::class, 'assignByUnit']);
             Route::post('assignments/unassign', [AssignmentController::class, 'unassign']);
             Route::get('assignments/distribution', [AssignmentController::class, 'distribution']);
+            Route::get('assignments/auto-calculate', [AssignmentController::class, 'autoCalculate']);
             Route::get('admin/marketing-users', [AssignmentController::class, 'marketingUsers']);
         });
 

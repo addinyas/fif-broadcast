@@ -156,12 +156,6 @@ async function sendWAMessageForUser(userId, jid, text) {
   if (!entry.connected) throw new Error('WA connection not open for user');
 
   const sock = entry.sock;
-  const number = jid.replace(/@s\.whatsapp\.net$/, '');
-  const [check] = await sock.onWhatsApp(number);
-  if (!check?.exists) {
-    throw new Error('Nomor tidak terdaftar di WhatsApp');
-  }
-
   const result = await sock.sendMessage(jid, { text });
   return result;
 }
