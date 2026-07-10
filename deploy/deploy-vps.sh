@@ -28,10 +28,11 @@ dnf install -y python3 make gcc-c++ gcc-toolset-12-gcc-c++ 2>/dev/null || yum in
 source /opt/rh/gcc-toolset-12/enable 2>/dev/null || true
 npm install
 
+rm -f /etc/nginx/conf.d/default.conf
 cat > /etc/nginx/conf.d/fif.conf <<EOF
 server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    listen 80 default_server;
+    server_name $DOMAIN www.$DOMAIN _;
 
     root /var/www/fif/frontend/dist;
     index index.html;
