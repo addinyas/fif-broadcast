@@ -231,9 +231,10 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 - PHP-FPM runs as `apache` user, needs write access to `database/`, `storage/`, `bootstrap/cache/`
 
 ### Next steps when resuming
-1. Test website in browser: `http://fif-broadcast.net`
-2. Test login, customer list, broadcast form
-3. Scan QR code for WhatsApp connection
+1. Test website in browser: `https://fif-broadcast.net`
+2. Login with `superadmin@crm.test` / `password`
+3. Scan QR code for WhatsApp connection (halaman `/admin/connect` atau `/marketing/connect`)
+4. Uji lapangan broadcast — tanya "Dari 10 pesan, berapa yang merespon?"
 
 ### Troubleshooting: WhatsApp Ban / Blokir
 
