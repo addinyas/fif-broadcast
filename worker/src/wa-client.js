@@ -174,28 +174,34 @@ async function disconnectWAForUser(userId) {
       entry.disconnectTimer = null;
     }
     if (entry.sock) {
-      try { entry.sock.end(undefined); } catch {}
+      try {
+        // Prevent reconnect loop by detaching listeners before ending
+        entry.sock.ev.removeAllListeners('connection.update');
+        entry.sock.end(undefined);
+      } catch (e) {
+        console.error(`[WA] Error ending socket for user ${userId}:`, e.message);
+      }
     }
   }
   connections.delete(userId);
+
   const authDir = getAuthDir(userId);
   if (fs.existsSync(authDir)) {
-    fs.rmSync(authDir, { recursive: true, force: true });
+    try {
+      fs.rmSync(authDir, { recursive: true, force: true });
+      console.log(`[WA] Cleared auth session for user ${userId}`);
+    } catch (e) {
+      console.error(`[WA] Failed to clear auth session for user ${userId}:`, e.message);
+    }
   }
+
   saveConnectionStatus(userId, 'logged_out', null);
   emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
 }
 
-function clearAuthForUser(userId) {
-  const authDir = getAuthDir(userId);
-  if (fs.existsSync(authDir)) {
-    fs.rmSync(authDir, { recursive: true, force: true });
-  }
-}
-
 function isConnectedForUser(userId) {
   const entry = connections.get(userId);
-  return entry ? entry.connected : false;
+  return entry ? !!entry.connected : false;
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, clearAuthForUser, isConnectedForUser };
+module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser };

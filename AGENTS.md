@@ -84,3 +84,5 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 - `verbatimModuleSyntax` is on — use `import type` for type-only imports.
 - TailwindCSS v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js` needed.
 - No `.env` file needed (Vite proxy handles `/api` routing). Socket URL from `VITE_SOCKET_URL` env var, defaults to `http://localhost:3001`.
+
+## Deployment History

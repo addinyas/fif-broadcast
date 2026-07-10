@@ -1,0 +1,49 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            APP_DIR="/var/www/fif"
+            cd $APP_DIR
+            
+            echo "1. Pulling latest code..."
+            git pull origin main --ff-only
+
+            echo "2. Installing backend dependencies..."
+            cd $APP_DIR/backend
+            composer install --no-dev --optimize-autoloader
+            php artisan migrate --force
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "3. Installing frontend dependencies and building..."
+            cd $APP_DIR/frontend
+            npm install
+            npm run build
+
+            echo "4. Installing worker dependencies..."
+            cd $APP_DIR/worker
+            npm install
+
+            echo "5. Restarting services..."
+            sudo systemctl restart fif-backend fif-queue fif-worker nginx
+            
+            echo "Deployment finished successfully!"
