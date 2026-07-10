@@ -104,17 +104,20 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 
 | Service | Command | Port |
 |---------|---------|------|
-| `fif-backend` | `php artisan serve --host=127.0.0.1 --port=8000` | 8000 |
 | `fif-queue` | `php artisan queue:listen --tries=1 --timeout=0` | - |
 | `fif-worker` | `npm run start` (from `worker/`) | 3001 (Socket.IO) |
 
+> **Note:** `fif-backend.service` dihapus. Backend dilayani langsung oleh **PHP-FPM** (unix socket `/run/php-fpm/www.sock`), bukan `php artisan serve`. PHP-FPM sudah terinstall & running dengan 5 worker processes.
+
 ### Nginx
 
-Reverse proxy at `/var/www/fif/nginx.conf` / `/etc/nginx/conf.d/fif.conf`:
-- `/api` -> `127.0.0.1:8000` (timeout 300s)
+Reverse proxy di `/etc/nginx/conf.d/fif.conf`:
+- `/api` -> **PHP-FPM `fastcgi_pass unix:/run/php-fpm/www.sock`** (timeout 300s)
 - `/socket.io/` -> `127.0.0.1:3001` (WebSocket, timeout 86400s)
 - `/storage` -> `backend/public/storage`
 - `client_max_body_size 20M`
+
+PHP-FPM menggantikan `php artisan serve` — handle **5 concurrent requests** (sebelumnya 1).
 
 ### Deploy Script
 
@@ -135,10 +138,32 @@ Script ini **smart** — hanya rebuild bagian yang berubah:
 | Tidak ada perubahan | Exit 0 (tidak ngapa-ngapain) |
 
 Nginx config, PHP upload limits, dan systemd services selalu ditulis ulang (fast).
-Semua service di-restart setiap deploy via `systemctl restart nginx fif-backend fif-queue fif-worker`.
+Semua service di-restart setiap deploy via `systemctl restart nginx fif-queue fif-worker`.
+`fif-backend.service` dihentikan & dinonaktifkan (tidak dipakai lagi).
 
 ### Auto-deploy
 
 Belum ada CI/CD. Deploy masih manual via SSH + script.
 
-## Deployment History
+## Session History
+
+### 2026-07-10 — SQLite fix + smart deploy + performance + kalkulator denda
+
+**Pushed to GitHub ✅**
+- `CustomerRepository.php`: chunk `no_contract` duplicate check (batches of 500) — fix SQLite 999-variable limit
+- `deploy/deploy-vps.sh`: smart deploy (skip build jika tidak ada perubahan), switch `php artisan serve` → PHP-FPM, hapus `fif-backend.service`
+- `AGENTS.md`: added Deployment section (VPS info, systemd, nginx, auto-deploy)
+
+**Local only (not pushed) ⏸️**
+- `CustomerManagementPage`: `per_page: 500 → 50` — ringankan payload & render
+- `App.tsx`: code splitting via `React.lazy()` — bundle split: vendor (182KB), app (122KB), per-page (1-35KB), socket (41KB)
+- `vite.config.ts`: `manualChunks` function — pisahkan vendor, socket, ui ke chunk terpisah
+- `BroadcastStatusBanner.tsx`: `socket.disconnect()` → `socket.off()` — tidak disconnect tiap ganti halaman
+- `UserManagementPage.tsx`: hapus `setInterval(fetchUsers, 30000)` — tidak polling tiap 30 detik
+- `CalculatorPage.tsx`: tambah input **Denda** (opsional) — ditambahkan ke pelunasan, ditampilkan inline di "Angsuran Kurang" sebagai `+ Rp ...`
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
+3. Test import spreadsheet (9114 rows) — SQLite harusnya tidak error lagi
+4. Test website feels faster (code splitting, PHP-FPM, per_page 50)
