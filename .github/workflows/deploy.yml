@@ -42,6 +42,7 @@ jobs:
 
             echo "4. Installing worker dependencies..."
             cd $APP_DIR/worker
+            dnf install -y python3 make gcc-c++ 2>/dev/null || yum install -y python3 make gcc-c++ 2>/dev/null || true
             npm install
 
             echo "5. Restarting services..."
