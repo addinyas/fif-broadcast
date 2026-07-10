@@ -85,4 +85,60 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 - TailwindCSS v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js` needed.
 - No `.env` file needed (Vite proxy handles `/api` routing). Socket URL from `VITE_SOCKET_URL` env var, defaults to `http://localhost:3001`.
 
+## Deployment
+
+### VPS Details
+
+| Info | Value |
+|------|-------|
+| **Provider** | Rumahweb |
+| **IP** | `202.10.42.237` |
+| **Hostname** | `vps.fif-broadcast.net` |
+| **OS** | AlmaLinux 8.9 |
+| **SSH** | `ssh root@202.10.42.237` (key auth, port 22, password `r8I3%PL1KOA#4X`) |
+| **App dir** | `/var/www/fif` (monorepo root) |
+| **Frontend dist** | `/var/www/fif/frontend/dist` (served by nginx) |
+| **Worker auth** | `/var/www/fif/worker/auth_info/` (Baileys auth) |
+
+### Systemd Services
+
+| Service | Command | Port |
+|---------|---------|------|
+| `fif-backend` | `php artisan serve --host=127.0.0.1 --port=8000` | 8000 |
+| `fif-queue` | `php artisan queue:listen --tries=1 --timeout=0` | - |
+| `fif-worker` | `npm run start` (from `worker/`) | 3001 (Socket.IO) |
+
+### Nginx
+
+Reverse proxy at `/var/www/fif/nginx.conf` / `/etc/nginx/conf.d/fif.conf`:
+- `/api` -> `127.0.0.1:8000` (timeout 300s)
+- `/socket.io/` -> `127.0.0.1:3001` (WebSocket, timeout 86400s)
+- `/storage` -> `backend/public/storage`
+- `client_max_body_size 20M`
+
+### Deploy Script
+
+`deploy/deploy-vps.sh` — jalankan via SSH:
+
+```bash
+ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"
+```
+
+Script ini **smart** — hanya rebuild bagian yang berubah:
+
+| Perubahan di | Yang dijalankan |
+|---|---|
+| `backend/composer.json` atau `composer.lock` | `composer install --no-dev --optimize-autoloader` |
+| `backend/*` | migrate, config:cache, route:cache, view:clear |
+| `frontend/*` | `npm install && npm run build` |
+| `worker/*` | `npm install` |
+| Tidak ada perubahan | Exit 0 (tidak ngapa-ngapain) |
+
+Nginx config, PHP upload limits, dan systemd services selalu ditulis ulang (fast).
+Semua service di-restart setiap deploy via `systemctl restart nginx fif-backend fif-queue fif-worker`.
+
+### Auto-deploy
+
+Belum ada CI/CD. Deploy masih manual via SSH + script.
+
 ## Deployment History
