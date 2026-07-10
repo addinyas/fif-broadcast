@@ -29,10 +29,11 @@ jobs:
             cd $APP_DIR/backend
             composer install --no-dev --optimize-autoloader
             php artisan migrate --force
+            mkdir -p storage/framework/views bootstrap/cache
             php artisan optimize:clear
             php artisan config:cache
             php artisan route:cache
-            php artisan view:cache
+            php artisan view:clear
 
             echo "3. Installing frontend dependencies and building..."
             cd $APP_DIR/frontend

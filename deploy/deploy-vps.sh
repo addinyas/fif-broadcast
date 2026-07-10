@@ -13,10 +13,11 @@ cd "$APP_DIR/backend"
 composer install --no-dev --optimize-autoloader
 php artisan migrate --force
 php artisan storage:link || true
+mkdir -p storage/framework/views bootstrap/cache
 php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
-php artisan view:cache
+php artisan view:clear
 
 cd "$APP_DIR/frontend"
 npm install
