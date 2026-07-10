@@ -35,6 +35,8 @@ server {
     listen 80;
     server_name $DOMAIN www.$DOMAIN;
 
+    client_max_body_size 20M;
+
     root /var/www/fif/frontend/dist;
     index index.html;
 
@@ -48,6 +50,9 @@ server {
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_connect_timeout 300s;
     }
 
     location /socket.io/ {
@@ -63,6 +68,16 @@ server {
     }
 }
 EOF
+
+# Set PHP upload limits for CLI (php artisan serve)
+PHP_INI=$(php --ini | grep "Loaded Configuration" | awk '{print $NF}')
+if [ -n "$PHP_INI" ]; then
+    sed -i 's/upload_max_filesize = .*/upload_max_filesize = 20M/' "$PHP_INI" 2>/dev/null || true
+    sed -i 's/post_max_size = .*/post_max_size = 25M/' "$PHP_INI" 2>/dev/null || true
+    sed -i 's/max_execution_time = .*/max_execution_time = 300/' "$PHP_INI" 2>/dev/null || true
+    sed -i 's/max_input_time = .*/max_input_time = 300/' "$PHP_INI" 2>/dev/null || true
+    echo "PHP upload limits updated"
+fi
 
 cat > /etc/systemd/system/fif-backend.service <<EOF
 [Unit]
