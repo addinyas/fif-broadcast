@@ -81,7 +81,7 @@ class AuthController extends Controller
 
             return redirect("{$frontendUrl}/login?token={$result['token']}");
         } catch (\Exception $e) {
-            return redirect("{$frontendUrl}/login?error=" . urlencode($e->getMessage()));
+            return redirect("{$frontendUrl}/login?error=".urlencode($e->getMessage()));
         }
     }
 

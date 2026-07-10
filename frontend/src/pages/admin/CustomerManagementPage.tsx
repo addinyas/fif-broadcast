@@ -172,7 +172,16 @@ export function CustomerManagementPage() {
         setTimeout(() => { setShowImport(false); resetImport(); }, 800);
       }
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Gagal mengimport customer';
+      const data = (err as { response?: { data?: Record<string, unknown> } })?.response?.data;
+      let msg = 'Gagal mengimport customer';
+      if (data?.message && typeof data.message === 'string') {
+        msg = data.message;
+      } else if (data?.errors && typeof data.errors === 'object') {
+        const vals = Object.values(data.errors).flat();
+        msg = vals.length > 0 ? String(vals[0]) : msg;
+      } else if ((err as Error)?.message) {
+        msg = (err as Error).message;
+      }
       toast('error', msg);
     } finally {
       setImporting(false);
@@ -748,7 +757,7 @@ export function CustomerManagementPage() {
 
           {importTab === 'file' && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">Upload file <strong>.csv</strong> (maks 10MB)</p>
+              <p className="text-sm text-slate-500">Upload file <strong>.csv</strong> atau <strong>.xlsx</strong> (maks 10MB)</p>
               <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-6 py-8 transition-all hover:border-fif-400 hover:bg-fif-50/50 dark:hover:bg-fif-900/20">
                 <FileSpreadsheet className="h-10 w-10 text-slate-400 dark:text-slate-500" />
                 <div className="text-center">
@@ -757,14 +766,14 @@ export function CustomerManagementPage() {
                   ) : (
                     <>
                       <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Klik untuk pilih file</p>
-                      <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">CSV</p>
+                      <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">CSV, XLSX</p>
                     </>
                   )}
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.txt"
+                  accept=".csv,.txt,.xlsx,.xls"
                   className="hidden"
                   onChange={(e) => setImportFile(e.target.files?.[0] || null)}
                 />

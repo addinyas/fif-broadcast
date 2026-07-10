@@ -101,7 +101,7 @@ class CustomerRepository implements CustomerRepositoryInterface
 
         if ($marketingId !== null) {
             $query->where('marketing_id', $marketingId)
-                  ->where('assignment_status', 'assigned');
+                ->where('assignment_status', 'assigned');
         }
 
         if (! empty($filters['buss_unit'])) {

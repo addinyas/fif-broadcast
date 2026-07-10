@@ -84,7 +84,7 @@ class GoogleSheetsService
 
         if (! $response->successful()) {
             throw new Exception(
-                'Gagal mengakses spreadsheet. Pastikan sheet di-share publik (Anyone with link can view)'
+                'Gagal mengakses spreadsheet. Pastikan sheet di-share publik (Anyone with link can view). URL harus format: https://docs.google.com/spreadsheets/d/{ID}/edit'
             );
         }
 
@@ -119,7 +119,7 @@ class GoogleSheetsService
     {
         preg_match('/\/d\/([a-zA-Z0-9-_]+)/', $url, $matches);
         if (empty($matches[1])) {
-            throw new Exception('URL Google Spreadsheet tidak valid');
+            throw new Exception('URL Google Spreadsheet tidak valid. Format yang benar: https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit');
         }
 
         return $matches[1];

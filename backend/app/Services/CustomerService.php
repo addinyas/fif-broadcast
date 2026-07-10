@@ -6,6 +6,7 @@ use App\Interfaces\CustomerRepositoryInterface;
 use App\Models\BroadcastHistory;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class CustomerService
 {
@@ -98,8 +99,12 @@ class CustomerService
         $rows = [];
         $rawHeader = [];
 
+        if (in_array($extension, ['xlsx', 'xls'])) {
+            return $this->importFromExcel($file, $uploadedBy);
+        }
+
         if ($extension !== 'csv') {
-            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Hanya format CSV yang didukung']], 'detected_columns' => []];
+            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Format file tidak didukung. Gunakan CSV atau Excel (.xlsx)']], 'detected_columns' => []];
         }
 
         $contents = file_get_contents($file->getPathname());
@@ -132,6 +137,51 @@ class CustomerService
 
         $customers = [];
         foreach ($rows as $row) {
+            $parsed = $this->extractFromRow($row);
+            if ($parsed) {
+                $customers[] = $parsed;
+            }
+        }
+
+        $result = $this->customerRepository->bulkImport($customers, $uploadedBy);
+        $result['detected_columns'] = $rawHeader;
+
+        return $result;
+    }
+
+    protected function importFromExcel(UploadedFile $file, int $uploadedBy): array
+    {
+        try {
+            $spreadsheet = IOFactory::load($file->getPathname());
+        } catch (\Exception $e) {
+            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Gagal membaca file Excel: '.$e->getMessage()]], 'detected_columns' => []];
+        }
+
+        $worksheet = $spreadsheet->getActiveSheet();
+        $rows = $worksheet->toArray();
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        if (count($rows) < 2) {
+            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'File Excel kosong atau hanya berisi header']], 'detected_columns' => []];
+        }
+
+        $rawHeader = array_map(fn ($h) => (string) ($h ?? ''), array_shift($rows));
+        $header = $this->normalizeHeaders($rawHeader);
+
+        $parsedRows = [];
+        foreach ($rows as $row) {
+            $row = array_map(fn ($v) => (string) ($v ?? ''), $row);
+            if (count($header) === count($row)) {
+                $combined = array_combine($header, $row);
+                if ($combined !== false && array_filter($combined)) {
+                    $parsedRows[] = $combined;
+                }
+            }
+        }
+
+        $customers = [];
+        foreach ($parsedRows as $row) {
             $parsed = $this->extractFromRow($row);
             if ($parsed) {
                 $customers[] = $parsed;

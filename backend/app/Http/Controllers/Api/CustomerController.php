@@ -132,7 +132,7 @@ class CustomerController extends Controller
     public function importFile(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|file|mimes:csv,txt|max:10240',
+            'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240',
         ]);
 
         if ($validator->fails()) {
@@ -171,7 +171,7 @@ class CustomerController extends Controller
             $rows = $sheetsService->getSheetData($spreadsheetId);
 
             if (empty($rows)) {
-                return response()->json(['message' => 'Spreadsheet kosong atau tidak ditemukan'], 400);
+                return response()->json(['message' => 'Spreadsheet kosong atau tidak ditemukan. Pastikan sheet memiliki data dan di-share publik.'], 400);
             }
 
             $rawHeader = $rows[0];
