@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'FIF Broadcast',
   webDir: 'dist',
   server: {
-    url: 'https://dynamic-charm-production-8c29.up.railway.app',
+    url: 'https://fif-broadcast.net',
     androidScheme: 'https',
     cleartext: false,
   },

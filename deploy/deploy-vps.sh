@@ -65,21 +65,25 @@ server {
 
     client_max_body_size 20M;
 
-    root /var/www/fif/frontend/dist;
+    root /var/www/fif/backend/public;
     index index.html;
 
+    # Frontend SPA (serves from frontend/dist)
     location / {
+        root /var/www/fif/frontend/dist;
         try_files \$uri \$uri/ /index.html;
     }
 
+    # Laravel API
     location /api {
-        try_files \$uri /api/index.php?\$query_string;
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    location = /api/index.php {
-        include fastcgi_params;
+    # PHP-FPM
+    location ~ \.php\$ {
         fastcgi_pass unix:/run/php-fpm/www.sock;
-        fastcgi_param SCRIPT_FILENAME /var/www/fif/backend/public/index.php;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
         fastcgi_read_timeout 300s;
         fastcgi_send_timeout 300s;
         fastcgi_connect_timeout 300s;
@@ -151,7 +155,9 @@ WantedBy=multi-user.target
 EOF
 
 chown -R root:root "$APP_DIR"
+chown -R apache:apache "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache" "$APP_DIR/backend/database"
 chmod -R 775 "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
+chmod 664 "$APP_DIR/backend/database/database.sqlite"
 systemctl stop fif-backend 2>/dev/null || true
 systemctl disable fif-backend 2>/dev/null || true
 nginx -t
