@@ -5,7 +5,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import { AdminLayout } from './components/layouts/AdminLayout';
 import { MarketingLayout } from './components/layouts/MarketingLayout';
 import { usePermissions } from './hooks/usePermissions';
-import { Skeleton } from './components/ui/Skeleton';
 import { ToastProvider } from './components/ui/Toast';
 import type { ReactNode, ComponentType } from 'react';
 
@@ -26,16 +25,34 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ defa
 
 function LoadingScreen() {
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-surface">
-      <div className="flex items-center gap-3">
-        <img src="/logo.png" alt="FIF" className="h-8 w-8 animate-pulse object-contain" />
-        <span className="text-xl font-bold text-slate-800">FIF</span>
+    <div className="flex h-screen flex-col items-center justify-center bg-surface">
+      <div className="relative flex items-center justify-center">
+        <div
+          className="absolute h-24 w-24 rounded-full border-2 border-fif-400/40"
+          style={{ animation: 'orbital-pulse 2s ease-out infinite' }}
+        />
+        <div
+          className="absolute h-24 w-24 rounded-full border-2 border-fif-500/60"
+          style={{ animation: 'orbital-pulse 2s ease-out 0.6s infinite' }}
+        />
+        <img src="/logo.png" alt="FIF" className="relative h-10 w-10 object-contain" />
       </div>
-      <div className="flex gap-2">
-        <Skeleton className="h-2 w-12 rounded-full" />
-        <Skeleton className="h-2 w-8 rounded-full" />
-        <Skeleton className="h-2 w-10 rounded-full" />
-      </div>
+      <p
+        className="mt-6 text-sm font-medium text-slate-400"
+        style={{ animation: 'fade-pulse 1.5s ease-in-out infinite' }}
+      >
+        Memuat...
+      </p>
+      <style>{`
+        @keyframes orbital-pulse {
+          0% { transform: scale(0.5); opacity: 0.8; }
+          100% { transform: scale(2.2); opacity: 0; }
+        }
+        @keyframes fade-pulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

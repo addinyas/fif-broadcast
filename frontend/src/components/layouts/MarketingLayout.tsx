@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from '../ui/Sidebar';
 import { BroadcastStatusBanner } from '../ui/BroadcastStatusBanner';
+import { NotificationBell } from '../ui/NotificationBell';
 import { MobileNavBar } from '../ui/MobileNavBar';
 import { AndroidBottomNav } from '../ui/AndroidBottomNav';
 import { useAuth } from '../../context/AuthContext';
@@ -50,7 +51,7 @@ export function MarketingLayout() {
     <div className="flex h-screen overflow-hidden bg-surface dark:bg-slate-900">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
+        <div className="relative z-30 flex items-center gap-3 border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition-all hover:bg-slate-100 active:scale-95 dark:text-slate-400 dark:hover:bg-slate-700"
@@ -62,6 +63,9 @@ export function MarketingLayout() {
           <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
             {roleLabel[user?.role || ''] || user?.role}
           </span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </div>
         <BroadcastStatusBanner />
         <main className="flex-1 overflow-auto p-4 pb-20 lg:p-8 lg:pb-8">

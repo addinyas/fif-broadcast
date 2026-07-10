@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Search, Send, Save, Loader2, Clock, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
+import { getSocket } from '../../services/socketService';
+import { useAuth } from '../../context/AuthContext';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -35,16 +38,10 @@ function getPageRange(current: number, total: number): (number | 'ellipsis')[] {
   return pages;
 }
 
-function randomDelay(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1) + min) * 1000;
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export function ProspectListPage() {
   const { toast } = useToast();
+  const { token } = useAuth();
+  const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,13 +52,12 @@ export function ProspectListPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [sendingBatch, setSendingBatch] = useState(false);
   const [batchProgress, setBatchProgress] = useState(0);
-  const [delayMin, setDelayMin] = useState(30);
-  const [delayMax, setDelayMax] = useState(120);
-  const [templates, setTemplates] = useState<Template[]>([]);
+  const [batchStats, setBatchStats] = useState({ sent: 0, failed: 0, pending: 0 });
   const [saveModal, setSaveModal] = useState(false);
   const [saveTitle, setSaveTitle] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [deletingTemplate, setDeletingTemplate] = useState(false);
   const abortRef = useRef(false);
   const [addModal, setAddModal] = useState(false);
@@ -164,6 +160,42 @@ export function ProspectListPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (!sendingBatch) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await broadcastService.getHistory({ per_page: '1' });
+        const meta = res as unknown as { stats?: { sent: number; failed: number; pending: number; processing: number } };
+        if (meta.stats) {
+          const pending = meta.stats.pending + meta.stats.processing;
+          setBatchStats({ sent: meta.stats.sent, failed: meta.stats.failed, pending });
+          if (pending === 0 && (meta.stats.sent > 0 || meta.stats.failed > 0)) {
+            setSendingBatch(false);
+          }
+        }
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sendingBatch]);
+
+  useEffect(() => {
+    if (!sendingBatch) return;
+    if (!token) return;
+    const socket = getSocket();
+    socket.auth = { token };
+    socket.connect();
+
+    const handler = (data: { status: string }) => {
+      if (data.status === 'disconnected' || data.status === 'logged_out') {
+        abortRef.current = true;
+        toast('warning', 'WhatsApp terputus! Sisa pesan akan dikirim ulang setelah koneksi pulih.');
+      }
+    };
+
+    socket.on('wa:status', handler);
+    return () => { socket.off('wa:status', handler); };
+  }, [sendingBatch, toast, token]);
+
   const insertVariable = (variable: string) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -182,11 +214,21 @@ export function ProspectListPage() {
   const interpolateMessage = (customer: Customer): string => {
     const dd = customer.dynamic_data || {};
     return templateBody
+      .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
+      .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')
+      .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')
       .replace(/#tahun/g, dd.tahun || '')
       .replace(/#plafon/g, dd.plafon || '')
+      .replace(/#angsuran_kurang/g, dd.angsuran_kurang || '')
+      .replace(/#input_angsuran/g, dd.input_angsuran || '')
+      .replace(/#dinego_jadi/g, dd.dinego_jadi || '')
+      .replace(/#pinjaman/g, dd.pinjaman || '')
+      .replace(/#pelunasan/g, dd.pelunasan || '')
+      .replace(/#terima/g, dd.terima || '')
+      .replace(/#tenor/g, dd.tenor || '')
       .replace(/#sisa_angsuran/g, dd.sisa_angsuran || '');
   };
 
@@ -220,12 +262,11 @@ export function ProspectListPage() {
 
     setSendingBatch(true);
     setBatchProgress(0);
+    setBatchStats({ sent: 0, failed: 0, pending: 0 });
     abortRef.current = false;
 
     let success = 0;
     let failed = 0;
-    const BATCH_SIZE = 10;
-    const BATCH_PAUSE_MS = 120_000;
 
     for (let i = 0; i < selectedIds.length; i++) {
       if (abortRef.current) break;
@@ -247,22 +288,17 @@ export function ProspectListPage() {
       }
 
       setBatchProgress(i + 1);
-
-      if (i < selectedIds.length - 1) {
-        const ms = randomDelay(delayMin, delayMax);
-        await sleep(ms);
-      }
-
-      if ((i + 1) % BATCH_SIZE === 0 && i < selectedIds.length - 1) {
-        toast('info', `Jeda 2 menit setelah ${i + 1} pesan...`);
-        await sleep(BATCH_PAUSE_MS);
-      }
     }
 
-    setSendingBatch(false);
     setSelectedIds([]);
     fetchData();
-    toast('success', `Selesai: ${success} berhasil, ${failed} gagal`);
+
+    if (success === 0) {
+      setSendingBatch(false);
+      toast('error', `Gagal menyiapkan pesan: ${failed} error`);
+    } else {
+      toast('success', `Siap dikirim: ${success} pesan. Worker akan mengirim dalam beberapa menit.`);
+    }
   };
 
   const handleSaveTemplate = async () => {
@@ -653,43 +689,6 @@ export function ProspectListPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-200/80 bg-white/90 px-5 py-3.5 shadow-sm backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/50">
-        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-slate-400" />
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Jeda Waktu</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500">Min</label>
-            <input
-              type="number"
-              min={30}
-              max={60}
-              value={delayMin}
-              onChange={(e) => setDelayMin(Math.max(30, parseInt(e.target.value) || 30))}
-              className="w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-center outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700"
-            />
-            <span className="text-xs text-slate-400">dtk</span>
-          </div>
-          <span className="text-slate-300 dark:text-slate-600">—</span>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-slate-500">Max</label>
-            <input
-              type="number"
-              min={30}
-              max={300}
-              value={delayMax}
-              onChange={(e) => setDelayMax(Math.max(30, parseInt(e.target.value) || 30))}
-              className="w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-center outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700"
-            />
-            <span className="text-xs text-slate-400">dtk</span>
-          </div>
-          <span className="text-xs text-slate-400 dark:text-slate-500">
-            Jeda acak per pesan + jeda 2 menit tiap 10 pesan
-          </span>
-        </div>
-      </div>
-
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -715,27 +714,50 @@ export function ProspectListPage() {
             ]);
             setAddModal(true);
           }}
-          className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
+          className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
         >
-          <Plus className="h-4 w-4 transition-transform duration-300 group-hover:rotate-90" />
+          <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90 sm:h-4 sm:w-4" />
           Tambah Customer
+        </button>
+        <button
+          onClick={() => navigate('/marketing/history')}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm transition-all hover:bg-slate-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-400 dark:hover:text-fif-400 sm:px-4 sm:py-2 sm:text-sm"
+        >
+          <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          History
         </button>
       </div>
 
       {sendingBatch && (
-        <div className="overflow-hidden rounded-lg border border-fif-100 bg-gradient-to-r from-fif-50/90 to-fif-50/50 dark:border-fif-800/50 dark:from-fif-900/20 dark:to-fif-900/10">
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-3">
-              <Loader2 className="h-4 w-4 animate-spin text-fif-600 dark:text-fif-400" />
-              <p className="text-sm font-medium text-fif-700 dark:text-fif-300">
-                Mengirim {batchProgress} dari {selectedIds.length}...
-              </p>
+        <div className="overflow-hidden rounded-xl border border-fif-100 bg-gradient-to-r from-fif-50/90 to-fif-50/50 dark:border-fif-800/50 dark:from-fif-900/20 dark:to-fif-900/10">
+          <div className="px-4 py-3 sm:px-5 sm:py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-fif-600 dark:text-fif-400" />
+                <p className="text-sm font-medium text-fif-700 dark:text-fif-300">
+                  <span className="hidden sm:inline">Worker mengirim </span>
+                  <span className="sm:hidden"></span>
+                  {batchStats.sent + batchStats.failed + batchStats.pending > 0
+                    ? `${batchStats.sent + batchStats.failed}/${batchStats.sent + batchStats.failed + batchStats.pending}`
+                    : `${batchProgress} dikirim`}
+                </p>
+              </div>
+              {batchStats.sent + batchStats.failed + batchStats.pending > 0 && (
+                <span className="text-xs font-semibold text-fif-600 dark:text-fif-400">
+                  {Math.round(((batchStats.sent + batchStats.failed) / (batchStats.sent + batchStats.failed + batchStats.pending)) * 100)}%
+                </span>
+              )}
             </div>
-            <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-fif-200/70 dark:bg-fif-800/50">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-fif-200/70 dark:bg-fif-800/50">
               <div
-                className="h-full rounded-full bg-fif-500 transition-all duration-500 ease-out"
-                style={{ width: `${(batchProgress / selectedIds.length) * 100}%` }}
+                className="h-full rounded-full bg-gradient-to-r from-fif-500 to-fif-400 transition-all duration-700 ease-out"
+                style={{ width: `${batchStats.sent + batchStats.failed + batchStats.pending > 0 ? ((batchStats.sent + batchStats.failed) / (batchStats.sent + batchStats.failed + batchStats.pending)) * 100 : (batchProgress / Math.max(selectedIds.length, 1)) * 100}%` }}
               />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> {batchStats.sent} terkirim</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" /> {batchStats.failed} gagal</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" /> {batchStats.pending} pending</span>
             </div>
           </div>
         </div>

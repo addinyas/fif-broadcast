@@ -514,10 +514,31 @@ export function CalculatorPage() {
                     lines.push('Tenor Angsuran');
                     tenors.forEach((r) => lines.push(`${r.tenor} × Rp ${formatAngka(r.angsuran)}`));
                   }
-                  navigator.clipboard.writeText(lines.join('\r\n')).then(() => {
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                  });
+                  const text = lines.join('\r\n');
+                  const onSuccess = () => { setCopied(true); setTimeout(() => setCopied(false), 2000); };
+                  if (navigator.clipboard?.writeText) {
+                    navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
+                      const ta = document.createElement('textarea');
+                      ta.value = text;
+                      ta.style.position = 'fixed';
+                      ta.style.opacity = '0';
+                      document.body.appendChild(ta);
+                      ta.select();
+                      document.execCommand('copy');
+                      document.body.removeChild(ta);
+                      onSuccess();
+                    });
+                  } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    onSuccess();
+                  }
                 }}
                 className="shrink-0 rounded-lg border border-slate-200 dark:border-slate-600 p-2.5 text-slate-400 transition-all hover:bg-fif-50 hover:text-fif-600 dark:hover:bg-fif-900/20 dark:hover:text-fif-400 hover:border-fif-300"
               >

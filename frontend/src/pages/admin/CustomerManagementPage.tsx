@@ -34,11 +34,11 @@ export function CustomerManagementPage() {
   const [importResult, setImportResult] = useState<{ imported: number; failed: unknown[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAssign, setShowAssign] = useState(false);
-  const [showAssignByUnit, setShowAssignByUnit] = useState(false);
-  const [showConfirmByUnit, setShowConfirmByUnit] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<MarketingUser[]>([]);
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | null>(null);
-  const [assignCounts, setAssignCounts] = useState({ nmc: 0, refi: 0 });
+  const [assignSplitNmcRefi, setAssignSplitNmcRefi] = useState(false);
+  const [assignMaxData, setAssignMaxData] = useState(1000);
+  const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; unassigned_marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
@@ -331,10 +331,10 @@ export function CustomerManagementPage() {
 
   const columns = isAdmin ? adminColumns : sharedColumns;
 
-  const tabs: { key: ImportTab; label: string; icon: typeof Type }[] = [
-    { key: 'manual', label: 'Manual', icon: Type },
-    { key: 'spreadsheet', label: 'Link Spreadsheet', icon: Link },
-    { key: 'file', label: 'File CSV', icon: FileSpreadsheet },
+  const tabs: { key: ImportTab; label: string; shortLabel: string; icon: typeof Type }[] = [
+    { key: 'manual', label: 'Manual', shortLabel: 'Manual', icon: Type },
+    { key: 'spreadsheet', label: 'Link Spreadsheet', shortLabel: 'Spreadsheet', icon: Link },
+    { key: 'file', label: 'File CSV', shortLabel: 'File', icon: FileSpreadsheet },
   ];
 
   const dynamicFields = [
@@ -378,29 +378,24 @@ export function CustomerManagementPage() {
               <Button
                 variant="secondary"
                 icon={<UserCheck className="h-4 w-4" />}
-                disabled={selectedIds.length === 0}
                 onClick={async () => {
                   const users = await customerService.getMarketingUsers();
                   setMarketingUsers(users);
                   setSelectedMarketingId(null);
+                  setAutoCalc(null);
+                  if (selectedIds.length === 0) {
+                    const calc = await customerService.getAutoCalculate();
+                    setAutoCalc(calc);
+                    setAssignSplitNmcRefi(true);
+                    setAssignMaxData(calc.nmc_per_marketing + calc.refi_per_marketing);
+                  } else {
+                    setAssignSplitNmcRefi(false);
+                    setAssignMaxData(Math.min(1000, selectedIds.length));
+                  }
                   setShowAssign(true);
                 }}
               >
-                Assign ({selectedIds.length})
-              </Button>
-              <Button
-                variant="secondary"
-                icon={<Filter className="h-4 w-4" />}
-                disabled={selectedIds.length === 0}
-                onClick={async () => {
-                  const users = await customerService.getMarketingUsers();
-                  setMarketingUsers(users);
-                  setSelectedMarketingId(null);
-                  setAssignCounts({ nmc: 0, refi: 0 });
-                  setShowAssignByUnit(true);
-                }}
-              >
-                By Unit
+                Assign {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
               </Button>
               {selectedIds.length > 0 && (
                 <button
@@ -686,14 +681,15 @@ export function CustomerManagementPage() {
                 <button
                   key={tab.key}
                   onClick={() => { setImportTab(tab.key); setImportResult(null); }}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-all sm:gap-2 sm:px-3 sm:text-sm ${
                     importTab === tab.key
                       ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 shadow-sm dark:shadow-slate-900/30'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.shortLabel}</span>
                 </button>
               );
             })}
@@ -713,7 +709,7 @@ export function CustomerManagementPage() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
                     {dynamicFields.map((f) => {
                       const rupiah = isRupiahField(f.key);
                       return (
@@ -758,8 +754,8 @@ export function CustomerManagementPage() {
           {importTab === 'file' && (
             <div className="space-y-3">
               <p className="text-sm text-slate-500">Upload file <strong>.csv</strong> atau <strong>.xlsx</strong> (maks 10MB)</p>
-              <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-6 py-8 transition-all hover:border-fif-400 hover:bg-fif-50/50 dark:hover:bg-fif-900/20">
-                <FileSpreadsheet className="h-10 w-10 text-slate-400 dark:text-slate-500" />
+              <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-5 transition-all hover:border-fif-400 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 sm:gap-3 sm:px-6 sm:py-8">
+                <FileSpreadsheet className="h-8 w-8 text-slate-400 dark:text-slate-500 sm:h-10 sm:w-10" />
                 <div className="text-center">
                   {importFile ? (
                     <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{importFile.name}</p>
@@ -804,13 +800,13 @@ export function CustomerManagementPage() {
                       <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
                         {importResult.skipped.length} data duplikat dilewati (No Contract sudah terdaftar):
                       </p>
-                      <div className="mt-1 max-h-32 overflow-y-auto rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
+                      <div className="mt-1 max-h-32 overflow-auto rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
                         <table className="w-full text-left text-xs">
                           <thead>
                             <tr className="border-b border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300">
                               <th className="px-2 py-1 font-semibold">#</th>
                               <th className="px-2 py-1 font-semibold">No Contract</th>
-                              <th className="px-2 py-1 font-semibold">Nama</th>
+                              <th className="hidden px-2 py-1 font-semibold sm:table-cell">Nama</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-amber-100 dark:divide-amber-800">
@@ -818,7 +814,7 @@ export function CustomerManagementPage() {
                               <tr key={i} className="text-amber-900 dark:text-amber-200">
                                 <td className="px-2 py-1 text-amber-600">{s.row}</td>
                                 <td className="px-2 py-1 font-mono">{s.no_contract}</td>
-                                <td className="px-2 py-1">{s.name}</td>
+                                <td className="hidden px-2 py-1 sm:table-cell">{s.name}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -936,7 +932,11 @@ export function CustomerManagementPage() {
 
       <Modal open={showAssign} onClose={() => setShowAssign(false)} title="Assign ke Marketing">
         <div className="space-y-4">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Pilih marketing untuk {selectedIds.length} customer</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {selectedIds.length > 0
+              ? `Pilih marketing untuk ${selectedIds.length} customer yang dipilih`
+              : 'Assign dari pool customer unassigned'}
+          </p>
           <select
             value={selectedMarketingId ?? ''}
             onChange={(e) => setSelectedMarketingId(parseInt(e.target.value) || null)}
@@ -950,14 +950,93 @@ export function CustomerManagementPage() {
           {marketingUsers.length === 0 && (
             <p className="text-sm text-red-500 dark:text-red-400">Tidak ada user marketing. Daftarkan marketing terlebih dahulu.</p>
           )}
+
+          {selectedIds.length === 0 && autoCalc && (
+            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-blue-800 dark:text-blue-200">
+                <CheckCircle2 className="h-4 w-4" />
+                Auto-calculate dari pool
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-blue-700 dark:text-blue-300">
+                <div>Tersisa NMC: <strong>{autoCalc.total_nmc}</strong></div>
+                <div>Tersisa REFI: <strong>{autoCalc.total_refi}</strong></div>
+                <div>Marketing kosong: <strong>{autoCalc.unassigned_marketing_count}</strong></div>
+              </div>
+              {autoCalc.unassigned_marketing_count > 0 && (
+                <div className="border-t border-blue-200 dark:border-blue-700 pt-2 text-xs text-blue-800 dark:text-blue-200">
+                  Per marketing: <strong>NMC {autoCalc.nmc_per_marketing}</strong>, <strong>REFI {autoCalc.refi_per_marketing}</strong>
+                  {selectedMarketingId && (
+                    <span className="ml-1 text-blue-600 dark:text-blue-400">
+                      → {marketingUsers.find((u) => u.id === selectedMarketingId)?.name}
+                    </span>
+                  )}
+                </div>
+              )}
+              {autoCalc.unassigned_marketing_count === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Semua marketing sudah punya data.</p>
+              )}
+            </div>
+          )}
+
+          {selectedIds.length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Maks Data</label>
+              <select
+                value={assignMaxData}
+                onChange={(e) => setAssignMaxData(parseInt(e.target.value))}
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              >
+                {[500, 1000].map((v) => {
+                  const disabled = v > selectedIds.length;
+                  return (
+                    <option key={v} value={v} disabled={disabled}>
+                      {v} data{disabled ? ' (lebih dari yang dipilih)' : ''}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          )}
+
+          {selectedIds.length > 0 && (
+            <label className="flex cursor-pointer items-center gap-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/50 px-3 py-2.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/50">
+              <input
+                type="checkbox"
+                checked={assignSplitNmcRefi}
+                onChange={(e) => setAssignSplitNmcRefi(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-fif-600 focus:ring-fif-500"
+              />
+              <div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Bagi data NMC & REFI</span>
+                {assignSplitNmcRefi && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Otomatis dibagi rata: NMC {Math.ceil(assignMaxData / 2)}, REFI {Math.floor(assignMaxData / 2)}
+                  </p>
+                )}
+              </div>
+            </label>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowAssign(false)}>Batal</Button>
             <Button
               onClick={async () => {
                 if (!selectedMarketingId) return;
                 try {
-                  await customerService.assign(selectedIds, selectedMarketingId);
-                  toast('success', `${selectedIds.length} customer berhasil diassign`);
+                  if (selectedIds.length === 0) {
+                    if (!autoCalc || autoCalc.unassigned_marketing_count === 0) return;
+                    const res = await customerService.assignByUnit(selectedMarketingId, autoCalc.nmc_per_marketing, autoCalc.refi_per_marketing);
+                    toast('success', `${res.total} customer berhasil diassign`);
+                  } else if (assignSplitNmcRefi) {
+                    const nmc = Math.ceil(assignMaxData / 2);
+                    const refi = Math.floor(assignMaxData / 2);
+                    const res = await customerService.assignByUnit(selectedMarketingId, nmc, refi);
+                    toast('success', `${res.total} customer berhasil diassign`);
+                  } else {
+                    const idsToSend = selectedIds.slice(0, assignMaxData);
+                    await customerService.assign(idsToSend, selectedMarketingId);
+                    toast('success', `${idsToSend.length} customer berhasil diassign`);
+                  }
                   setSelectedIds([]);
                   setShowAssign(false);
                   fetchData();
@@ -965,103 +1044,9 @@ export function CustomerManagementPage() {
                   toast('error', 'Gagal mengassign customer');
                 }
               }}
-              disabled={!selectedMarketingId}
+              disabled={!selectedMarketingId || (selectedIds.length === 0 && (!autoCalc || autoCalc.unassigned_marketing_count === 0))}
             >
               Assign
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={showAssignByUnit} onClose={() => setShowAssignByUnit(false)} title="Assign by Unit">
-        <div className="space-y-4">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Tentukan jumlah NMC dan REFI yang akan diassign ke marketing</p>
-          <select
-            value={selectedMarketingId ?? ''}
-            onChange={(e) => setSelectedMarketingId(parseInt(e.target.value) || null)}
-            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-          >
-            <option value="">-- Pilih Marketing --</option>
-            {marketingUsers.map((u) => (
-              <option key={u.id} value={u.id}>{u.name} ({u.email}) — {u.assigned_customers_count ?? 0} data</option>
-            ))}
-          </select>
-          {marketingUsers.length === 0 && (
-            <p className="text-sm text-red-500 dark:text-red-400">Tidak ada user marketing. Daftarkan marketing terlebih dahulu.</p>
-          )}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah NMC</label>
-              <input
-                type="number" min={0}
-                value={assignCounts.nmc || ''}
-                onChange={(e) => setAssignCounts((p) => ({ ...p, nmc: Math.max(0, parseInt(e.target.value) || 0) }))}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Jumlah REFI</label>
-              <input
-                type="number" min={0}
-                value={assignCounts.refi || ''}
-                onChange={(e) => setAssignCounts((p) => ({ ...p, refi: Math.max(0, parseInt(e.target.value) || 0) }))}
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                placeholder="0"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowAssignByUnit(false)}>Batal</Button>
-            <Button
-              onClick={() => setShowConfirmByUnit(true)}
-              disabled={!selectedMarketingId || (assignCounts.nmc + assignCounts.refi) === 0}
-            >
-              Assign
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={showConfirmByUnit} onClose={() => setShowConfirmByUnit(false)} title="Konfirmasi Assign by Unit">
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
-            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                Assign ke {marketingUsers.find((u) => u.id === selectedMarketingId)?.name || 'Marketing'}
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-                NMC: <strong>{assignCounts.nmc}</strong>
-              </p>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                REFI: <strong>{assignCounts.refi}</strong>
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Total: <strong>{assignCounts.nmc + assignCounts.refi}</strong> customer
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowConfirmByUnit(false)}>Batal</Button>
-            <Button
-              onClick={async () => {
-                if (!selectedMarketingId) return;
-                const total = assignCounts.nmc + assignCounts.refi;
-                if (total === 0) return;
-                try {
-                  const res = await customerService.assignByUnit(selectedMarketingId, assignCounts.nmc, assignCounts.refi);
-                  toast('success', `${res.total} customer berhasil diassign`);
-                  setSelectedIds([]);
-                  setShowConfirmByUnit(false);
-                  setShowAssignByUnit(false);
-                  fetchData();
-                } catch {
-                  toast('error', 'Gagal mengassign customer');
-                }
-              }}
-            >
-              Ya, Assign
             </Button>
           </div>
         </div>

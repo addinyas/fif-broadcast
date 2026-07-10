@@ -29,6 +29,11 @@ export function BroadcastHistoryPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  useEffect(() => {
+    const interval = setInterval(() => { fetchData(); }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
   const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' => {
     switch (status) {
       case 'pending': return 'warning';

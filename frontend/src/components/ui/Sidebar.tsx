@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { NotificationBell } from './NotificationBell';
 import type { ReactNode } from 'react';
 
 interface LinkItem {
@@ -98,12 +99,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               {roleLabel[user?.role || ''] || user?.role}
             </span>
           </div>
-          <button onClick={logout} className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 lg:hidden" title="Logout">
-            <LogOut className="h-4 w-4" />
-          </button>
-          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="ml-auto flex items-center">
+            <span className="hidden lg:block"><NotificationBell variant="dark" placement="left" /></span>
+            <button onClick={logout} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 lg:hidden" title="Logout">
+              <LogOut className="h-4 w-4" />
+            </button>
+            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-3 min-h-0">
