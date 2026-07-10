@@ -148,10 +148,15 @@ class CustomerRepository implements CustomerRepositoryInterface
 
         $existingNoContracts = [];
         if (! empty($incomingNoContracts)) {
-            $existingNoContracts = Customer::whereIn('no_contract', array_keys($incomingNoContracts))
-                ->pluck('no_contract')
-                ->toArray();
-            $existingNoContracts = array_flip($existingNoContracts);
+            $chunks = array_chunk(array_keys($incomingNoContracts), 500);
+            foreach ($chunks as $chunk) {
+                $found = Customer::whereIn('no_contract', $chunk)
+                    ->pluck('no_contract')
+                    ->toArray();
+                foreach ($found as $nc) {
+                    $existingNoContracts[$nc] = true;
+                }
+            }
         }
 
         $processedNoContracts = [];
