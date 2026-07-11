@@ -155,7 +155,7 @@ export default function App() {
             <Route path="broadcast/:customerId" element={<RequireFeature feature="broadcast"><SuspendedPage Component={BroadcastFormPage} /></RequireFeature>} />
             <Route path="customers" element={<RequireFeature feature="customer_management"><SuspendedPage Component={CustomerManagementPage} /></RequireFeature>} />
             <Route path="connect" element={<RequireFeature feature="qr_scanner"><SuspendedPage Component={QRScannerPage} /></RequireFeature>} />
-            <Route path="users" element={<ProtectedRoute roles={['superadmin', 'UH']}><SuspendedPage Component={UserManagementPage} /></ProtectedRoute>} />
+            <Route path="users" element={<RequireFeature feature="user_management"><SuspendedPage Component={UserManagementPage} /></RequireFeature>} />
             <Route path="permissions" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={PermissionManagementPage} /></ProtectedRoute>} />
             <Route path="history" element={<RequireFeature feature="broadcast_history"><SuspendedPage Component={BroadcastHistoryPage} /></RequireFeature>} />
             <Route path="settings" element={<SuspendedPage Component={SettingsPage} />} />
