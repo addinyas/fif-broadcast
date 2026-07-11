@@ -175,6 +175,17 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 3. Test import spreadsheet (9114 rows) — SQLite harusnya tidak error lagi
 4. Test website feels faster (code splitting, PHP-FPM, per_page 50)
 
+### 2026-07-11 (malam) — Railway/Docker cleanup
+
+**Belum di-push ⏸️**
+- Hapus file deployment yang tidak relevan: `.dockerignore`, `Dockerfile`, `backend/.dockerignore`, `backend/Dockerfile`, `nginx.conf`, `start.sh`
+- `AGENTS.md`: cleanup 29 baris (hapus referensi Railway/Docker)
+- Alasan: deploy sudah pindah ke VPS (`deploy/deploy-vps.sh` + PHP-FPM + nginx), Docker/Railway tidak dipakai lagi
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy ke VPS: `bash /var/www/fif/deploy/deploy-vps.sh`
+
 ### 2026-07-11 — Broadcast reliability fix + connection safety + NotificationBell progress
 
 **Root causes fixed:**
@@ -206,35 +217,6 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
 3. Jalankan migration: `php artisan migrate` (kolom `retry_count`)
 4. Restart worker di VPS setelah deploy
-
-### 2026-07-11 — Railway cleanup + nginx fix + permissions fix
-
-**Sudah di-push ✅**
-- `railway.json`: deleted (no longer using Railway)
-- `frontend/capacitor.config.ts`: URL changed to `https://fif-broadcast.net`
-- `backend/.env.example`: all Railway/Vercel URLs → `fif-broadcast.net`
-- `deploy/deploy-vps.sh`: fixed nginx config (use `~ \.php$` instead of exact match `= /api/index.php`), fixed permissions (chown `apache:apache` for storage/cache/database)
-
-**VPS fixes (manual, not in git)**
-- `/etc/nginx/conf.d/fif.conf`: rewritten with working PHP-FPM config (`~ \.php$` regex location)
-- `/var/www/fif/backend/.env`: `APP_URL`, `FRONTEND_URL`, `SANCTUM_STATEFUL_DOMAINS`, `CORS_ALLOWED_ORIGINS`, `GOOGLE_REDIRECT_URI` all updated to `fif-broadcast.net`
-- SQLite + storage ownership: `chown -R apache:apache` for `database/`, `storage/`, `bootstrap/cache/`
-- `worker/.env`: created with correct delay (60-180s)
-- Laravel caches: `optimize:clear` + `config:cache` + `route:cache`
-
-**Root cause of API 404:**
-- Nginx config used `location = /api/index.php` (exact match) which didn't properly route to PHP-FPM
-- Fix: use `location ~ \.php$` (regex match) with `fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name`
-
-**Root cause of SQLite "readonly database":**
-- `chown -R root:root "$APP_DIR"` in deploy script set wrong ownership
-- PHP-FPM runs as `apache` user, needs write access to `database/`, `storage/`, `bootstrap/cache/`
-
-### Next steps when resuming
-1. Test website in browser: `https://fif-broadcast.net`
-2. Login with `superadmin@crm.test` / `password`
-3. Scan QR code for WhatsApp connection (halaman `/admin/connect` atau `/marketing/connect`)
-4. Uji lapangan broadcast — tanya "Dari 10 pesan, berapa yang merespon?"
 
 ### Troubleshooting: WhatsApp Ban / Blokir
 
