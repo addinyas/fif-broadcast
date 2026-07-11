@@ -107,16 +107,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('admin/permissions', [PermissionController::class, 'index']);
 
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
-        Route::prefix('whatsapp')->group(function () {
-            Route::get('status', [WhatsappConnectionController::class, 'status']);
-            Route::post('disconnect', [WhatsappConnectionController::class, 'disconnect']);
+        Route::middleware('feature:qr_scanner')->group(function () {
+            Route::prefix('whatsapp')->group(function () {
+                Route::get('status', [WhatsappConnectionController::class, 'status']);
+                Route::post('disconnect', [WhatsappConnectionController::class, 'disconnect']);
+            });
         });
     });
 
     Route::middleware('role:superadmin,UH')->group(function () {
-        Route::get('admin/users', [UserController::class, 'index']);
-        Route::patch('admin/users/{id}/role', [UserController::class, 'updateRole']);
-        Route::delete('admin/users/{id}', [UserController::class, 'destroy']);
+        Route::middleware('feature:user_management')->group(function () {
+            Route::get('admin/users', [UserController::class, 'index']);
+            Route::patch('admin/users/{id}/role', [UserController::class, 'updateRole']);
+            Route::delete('admin/users/{id}', [UserController::class, 'destroy']);
+        });
     });
 
     Route::middleware('role:superadmin')->group(function () {
