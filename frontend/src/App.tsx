@@ -24,29 +24,68 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 
 function LoadingScreen() {
+  const { user } = useAuth();
+  const isDark = !user;
+
   return (
-    <div className="flex h-screen flex-col items-center justify-center bg-surface">
+    <div className={`flex h-screen flex-col items-center justify-center overflow-hidden ${isDark ? 'bg-gradient-to-br from-slate-950 via-fif-950 to-slate-950' : 'bg-surface'}`}>
+      {isDark && (
+        <>
+          <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 animate-float rounded-full bg-fif-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 animate-float rounded-full bg-purple-500/10 blur-3xl" style={{ animationDelay: '-3s' }} />
+        </>
+      )}
+
       <div className="relative flex items-center justify-center">
         <div
-          className="absolute h-24 w-24 rounded-full border-2 border-fif-400/40"
-          style={{ animation: 'orbital-pulse 2s ease-out infinite' }}
+          className="absolute h-28 w-28 rounded-full"
+          style={{
+            background: isDark
+              ? 'conic-gradient(from 0deg, transparent 0deg, rgba(96,154,250,0.35) 20deg, rgba(59,130,246,0.1) 50deg, transparent 70deg)'
+              : 'conic-gradient(from 0deg, transparent 0deg, rgba(59,130,246,0.25) 20deg, rgba(59,130,246,0.08) 50deg, transparent 70deg)',
+            animation: 'radar-sweep 3s linear infinite',
+          }}
         />
-        <div
-          className="absolute h-24 w-24 rounded-full border-2 border-fif-500/60"
-          style={{ animation: 'orbital-pulse 2s ease-out 0.6s infinite' }}
+
+        {[
+          { delay: '0s', ring: isDark ? 'border-fif-400/15' : 'border-fif-400/30' },
+          { delay: '0.8s', ring: isDark ? 'border-fif-400/25' : 'border-fif-500/40' },
+          { delay: '1.6s', ring: isDark ? 'border-fif-400/35' : 'border-fif-500/60' },
+        ].map((r, i) => (
+          <div
+            key={i}
+            className={`absolute h-24 w-24 rounded-full border ${r.ring}`}
+            style={{ animation: `orbital-pulse 2.4s ease-out ${r.delay} infinite` }}
+          />
+        ))}
+
+        <img
+          src="/logo.png"
+          alt="FIF"
+          className="relative h-10 w-10 object-contain"
+          style={{ animation: 'logo-pulse 2s ease-in-out infinite' }}
         />
-        <img src="/logo.png" alt="FIF" className="relative h-10 w-10 object-contain" />
       </div>
+
       <p
-        className="mt-6 text-sm font-medium text-slate-400"
+        className={`mt-6 text-sm font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}
         style={{ animation: 'fade-pulse 1.5s ease-in-out infinite' }}
       >
         Memuat...
       </p>
+
       <style>{`
+        @keyframes radar-sweep {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
         @keyframes orbital-pulse {
           0% { transform: scale(0.5); opacity: 0.8; }
-          100% { transform: scale(2.2); opacity: 0; }
+          100% { transform: scale(2.4); opacity: 0; }
+        }
+        @keyframes logo-pulse {
+          0%, 100% { transform: scale(0.95); opacity: 0.85; }
+          50% { transform: scale(1.05); opacity: 1; }
         }
         @keyframes fade-pulse {
           0%, 100% { opacity: 0.4; }
