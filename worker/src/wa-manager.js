@@ -1,28 +1,22 @@
-const { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser } = require('./wa-client');
+const { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser } = require('./wa-client');
 
-const clients = new Map();
+const activeClients = new Map();
 
 async function getOrCreateClient(userId, onReady) {
-  const existing = clients.get(userId);
-  if (existing && existing.connected) {
+  if (activeClients.has(userId)) {
     if (onReady) onReady();
-    return existing;
+    return;
   }
 
   console.log(`[WA-Mgr] Creating WA client for user ${userId}`);
   const client = await createWAClientForUser(userId, (sock) => {
-    clients.set(userId, { sock, connected: true });
+    activeClients.set(userId, true);
     console.log(`[WA-Mgr] WA client ready for user ${userId}`);
     if (onReady) onReady(sock);
   });
 
-  clients.set(userId, { sock: client, connected: false });
+  activeClients.set(userId, false);
   return client;
-}
-
-function getClient(userId) {
-  const entry = clients.get(userId);
-  return entry ? entry.sock : null;
 }
 
 async function sendMessage(userId, jid, text) {
@@ -30,21 +24,8 @@ async function sendMessage(userId, jid, text) {
 }
 
 async function disconnect(userId) {
-  clients.delete(userId);
+  activeClients.delete(userId);
   await disconnectWAForUser(userId);
 }
 
-function isConnected(userId) {
-  const entry = clients.get(userId);
-  return entry ? entry.connected : false;
-}
-
-function getConnectedUsers() {
-  const connected = [];
-  for (const [userId, entry] of clients) {
-    if (entry.connected) connected.push(userId);
-  }
-  return connected;
-}
-
-module.exports = { getOrCreateClient, getClient, sendMessage, disconnect, isConnected, getConnectedUsers };
+module.exports = { getOrCreateClient, sendMessage, disconnect };

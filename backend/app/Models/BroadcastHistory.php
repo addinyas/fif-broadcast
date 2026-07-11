@@ -12,6 +12,7 @@ class BroadcastHistory extends Model
         'marketing_id',
         'exact_message',
         'status',
+        'retry_count',
         'error_log',
         'sent_at',
     ];

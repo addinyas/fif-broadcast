@@ -1,5 +1,5 @@
 const { getWritableDb } = require('./db');
-const { sendMessage, isConnected, getConnectedUsers } = require('./wa-manager');
+const { sendMessage, isConnected, getConnectedUsers } = require('./wa-client');
 const { emitBroadcastStatus, emitPendingStuck } = require('./socket-server');
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
@@ -53,7 +53,7 @@ async function processPending() {
 
   try {
     const pending = writeDb.prepare(`
-      SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, c.phone_number
+      SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, bh.retry_count, c.phone_number
       FROM broadcast_histories bh
       JOIN customers c ON c.id = bh.customer_id
       WHERE bh.status = 'pending' AND bh.id IN (
@@ -166,4 +166,4 @@ function stopQueue() {
   console.log('[Queue] Stopped');
 }
 
-module.exports = { startQueue, stopQueue };
+module.exports = { startQueue };

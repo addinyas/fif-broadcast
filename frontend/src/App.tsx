@@ -22,6 +22,7 @@ const QRScannerPage = lazy(() => import('./pages/marketing/QRScannerPage').then(
 const CalculatorPage = lazy(() => import('./pages/CalculatorPage').then(m => ({ default: m.CalculatorPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
+const TemplateManagementPage = lazy(() => import('./pages/admin/TemplateManagementPage').then(m => ({ default: m.TemplateManagementPage })));
 
 function LoadingScreen() {
   const { user } = useAuth();
@@ -159,6 +160,7 @@ export default function App() {
             <Route path="history" element={<RequireFeature feature="broadcast_history"><SuspendedPage Component={BroadcastHistoryPage} /></RequireFeature>} />
             <Route path="settings" element={<SuspendedPage Component={SettingsPage} />} />
             <Route path="calculator" element={<SuspendedPage Component={CalculatorPage} />} />
+            <Route path="templates" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={TemplateManagementPage} /></ProtectedRoute>} />
           </Route>
 
           <Route path="/marketing" element={<ProtectedRoute roles={['marketing']}><MarketingLayout /></ProtectedRoute>}>

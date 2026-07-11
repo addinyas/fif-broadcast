@@ -59,9 +59,10 @@ function createSocketServer(httpServer) {
 
     console.log(`[Socket] User ${userId} connected (socket ${socket.id})`);
 
-    const { getOrCreateClient, isConnected, disconnect } = require('./wa-manager');
+    const { getOrCreateClient, disconnect } = require('./wa-manager');
+    const { isConnectedForUser } = require('./wa-client');
 
-    if (isConnected(userId)) {
+    if (isConnectedForUser(userId)) {
       socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
     } else {
       socket.emit('wa:status', { status: 'disconnected', message: 'Menghubungkan...' });

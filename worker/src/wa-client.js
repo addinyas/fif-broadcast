@@ -51,10 +51,6 @@ async function createWAClientForUser(userId, onReady) {
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-  if (sock) {
-    try { sock.end(undefined); } catch {}
-  }
-
   sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
@@ -140,7 +136,10 @@ async function createWAClientForUser(userId, onReady) {
       try { sock.end(undefined); } catch {}
       setTimeout(() => {
         reconnecting = false;
-        createWAClientForUser(userId, onReady);
+        createWAClientForUser(userId, onReady).catch((err) => {
+          console.error(`[WA] Reconnect failed for user ${userId}:`, err.message);
+          reconnectAttempts--;
+        });
       }, delay);
     }
   });
@@ -198,4 +197,12 @@ function isConnectedForUser(userId) {
   return entry ? !!entry.connected : false;
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser };
+function getConnectedUsers() {
+  const connected = [];
+  for (const [userId, entry] of connections) {
+    if (entry.connected) connected.push(userId);
+  }
+  return connected;
+}
+
+module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser, getConnectedUsers };

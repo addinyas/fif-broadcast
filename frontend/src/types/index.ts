@@ -111,16 +111,15 @@ export interface DistributionReport {
   }[];
 }
 
-export interface TenorOption {
-  label: string;
-  value: string;
-}
-
 export const FORM_FIELDS = [
   { key: 'nomor_contract', label: 'Nomor Contract' },
+  { key: 'no_contract', label: 'No Contract' },
   { key: 'nama', label: 'Nama' },
   { key: 'motor_dan_tahun', label: 'Motor dan Tahun' },
   { key: 'plat', label: 'Plat' },
+  { key: 'obj_desc', label: 'Obj Desc' },
+  { key: 'tahun', label: 'Tahun' },
+  { key: 'plafon', label: 'Plafon' },
   { key: 'angsuran_kurang', label: 'Angsuran Kurang' },
   { key: 'input_angsuran', label: 'Input Angsuran' },
   { key: 'dinego_jadi', label: 'Dinego Jadi' },

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Camera, Trash2, Trash, User, Loader2 } from 'lucide-react';
+import { Camera, Trash, User, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/profileService';
 import { useToast } from '../components/ui/Toast';
@@ -145,7 +145,7 @@ export function SettingsPage() {
                 onClick={handleRemoveAvatar}
                 className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash className="h-3 w-3" />
                 Hapus foto
               </button>
             )}

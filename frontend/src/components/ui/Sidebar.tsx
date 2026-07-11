@@ -14,6 +14,7 @@ import {
   Calculator,
   Settings,
   X,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -35,6 +36,7 @@ const adminLinks: LinkItem[] = [
   { to: '/admin/connect', label: 'Connect', icon: <Smartphone className="h-5 w-5" />, feature: 'qr_scanner' },
   { to: '/admin/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
   { to: '/admin/users', label: 'Users', icon: <Shield className="h-5 w-5" /> },
+  { to: '/admin/templates', label: 'Templates', icon: <FileText className="h-5 w-5" /> },
   { to: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
   { to: '/admin/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
 ];

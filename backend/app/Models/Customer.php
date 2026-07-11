@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Customer extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'no_contract',
         'name',
@@ -16,6 +19,8 @@ class Customer extends Model
         'marketing_id',
         'assignment_status',
         'dynamic_data',
+        'manual_sent_at',
+        'manual_sent_by',
     ];
 
     protected function casts(): array
