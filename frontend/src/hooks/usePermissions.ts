@@ -7,6 +7,11 @@ let cache: { data: PermissionsByRole | null; promise: Promise<void> | null } = {
   promise: null,
 };
 
+export function clearPermissionsCache() {
+  cache.data = null;
+  cache.promise = null;
+}
+
 export function usePermissions() {
   const { user } = useAuth();
 
@@ -58,7 +63,7 @@ export function usePermissions() {
   const hasFeature = (feature: string): boolean => {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
-    if (loading) return true;
+    if (loading) return false;
     if (!perms || !perms[user.role]) return false;
     const p = perms[user.role].find((item) => item.feature === feature);
     return p ? p.enabled : false;

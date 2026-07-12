@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
 import type { User } from '../types';
 import { authService } from '../services/authService';
+import { clearPermissionsCache } from '../hooks/usePermissions';
 
 interface AuthContextType {
   user: User | null;
@@ -25,12 +26,18 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (token) {
+    if (initialized.current) return;
+    if (token && !user) {
+      initialized.current = true;
       authService.me()
         .then(setUser)
         .catch(() => { localStorage.removeItem('token'); setToken(null); })
@@ -38,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   const login = async (email: string, password: string) => {
     const res = await authService.login(email, password);
@@ -73,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try { await authService.logout(); } catch { /* ignore */ }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    clearPermissionsCache();
     setToken(null);
     setUser(null);
   };
