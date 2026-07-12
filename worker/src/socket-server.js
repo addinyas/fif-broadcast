@@ -3,11 +3,12 @@ const path = require('path');
 const crypto = require('crypto');
 
 const Database = require('better-sqlite3');
+const { getOrCreateClient, disconnect } = require('./wa-manager');
+const { isConnectedForUser } = require('./wa-client');
 
-const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite');
+const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
 let io = null;
-let onDisconnectRequest = null;
 
 function validateToken(token) {
   if (!token || !token.includes('|')) return null;
@@ -58,9 +59,6 @@ function createSocketServer(httpServer) {
     socket.join(room);
 
     console.log(`[Socket] User ${userId} connected (socket ${socket.id})`);
-
-    const { getOrCreateClient, disconnect } = require('./wa-manager');
-    const { isConnectedForUser } = require('./wa-client');
 
     if (isConnectedForUser(userId)) {
       socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });

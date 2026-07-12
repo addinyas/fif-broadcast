@@ -6,11 +6,12 @@ const Database = require('better-sqlite3');
 const { emitWAStatus } = require('./socket-server');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
-const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite');
+const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
 const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 
 const connections = new Map();
+const reconnectState = new Map();
 
 function getAuthDir(userId) {
   return path.join(AUTH_BASE, `user_${userId}`);
@@ -45,8 +46,10 @@ async function createWAClientForUser(userId, onReady) {
   const authDir = getAuthDir(userId);
   ensureAuthDir(userId);
 
-  let reconnectAttempts = 0;
-  let reconnecting = false;
+  if (!reconnectState.has(userId)) {
+    reconnectState.set(userId, { attempts: 0, reconnecting: false });
+  }
+  const state = reconnectState.get(userId);
   let sock = null;
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -76,21 +79,27 @@ async function createWAClientForUser(userId, onReady) {
 
     if (connection === 'open') {
       console.log(`[WA] User ${userId} connected successfully!`);
-      reconnectAttempts = 0;
-      reconnecting = false;
+      state.attempts = 0;
+      state.reconnecting = false;
       const entry = connections.get(userId);
       if (entry) {
         entry.connected = true;
         entry.connectedAt = Date.now();
+        entry.intentionalDisconnect = false;
 
         if (entry.disconnectTimer) clearTimeout(entry.disconnectTimer);
         entry.disconnectTimer = setTimeout(() => {
           console.log(`[WA] User ${userId} auto-disconnect after ${MAX_CONNECTION_MS / 3600000}h`);
           const e = connections.get(userId);
-          if (e && e.sock) {
-            try { e.sock.end(undefined); } catch {}
+          if (e) {
+            e.intentionalDisconnect = true;
+            if (e.sock) {
+              try { e.sock.ev.removeAllListeners('connection.update'); } catch {}
+              try { e.sock.end(undefined); } catch {}
+            }
           }
           connections.delete(userId);
+          reconnectState.delete(userId);
           const authDir = getAuthDir(userId);
           if (fs.existsSync(authDir)) {
             fs.rmSync(authDir, { recursive: true, force: true });
@@ -107,6 +116,11 @@ async function createWAClientForUser(userId, onReady) {
     if (connection === 'close') {
       const entry = connections.get(userId);
       if (entry) {
+        if (entry.intentionalDisconnect) {
+          console.log(`[WA] User ${userId} intentional disconnect (auto-timer), skipping reconnect`);
+          entry.connected = false;
+          return;
+        }
         entry.connected = false;
         if (entry.disconnectTimer) {
           clearTimeout(entry.disconnectTimer);
@@ -115,30 +129,30 @@ async function createWAClientForUser(userId, onReady) {
       }
 
       const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
-      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${reconnectAttempts}`);
+      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${state.attempts}`);
 
       if (isLoggedOut) {
         console.log(`[WA] User ${userId} logged out.`);
-        reconnecting = false;
+        state.reconnecting = false;
         try { sock.end(undefined); } catch {}
         connections.delete(userId);
+        reconnectState.delete(userId);
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
         return;
       }
 
-      if (reconnecting) return;
+      if (state.reconnecting) return;
 
-      reconnecting = true;
-      reconnectAttempts++;
-      const delay = Math.min(1000 * Math.pow(2, Math.min(reconnectAttempts, 5)), 30000);
-      console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${reconnectAttempts})`);
+      state.reconnecting = true;
+      state.attempts++;
+      const delay = Math.min(1000 * Math.pow(2, Math.min(state.attempts, 5)), 30000);
+      console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${state.attempts})`);
       try { sock.end(undefined); } catch {}
       setTimeout(() => {
-        reconnecting = false;
+        state.reconnecting = false;
         createWAClientForUser(userId, onReady).catch((err) => {
           console.error(`[WA] Reconnect failed for user ${userId}:`, err.message);
-          reconnectAttempts--;
         });
       }, delay);
     }

@@ -13,7 +13,7 @@ const { startQueue } = require('./queue-consumer');
 const { closeDb } = require('./db');
 
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
-const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite');
+const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 
@@ -71,10 +71,10 @@ function gracefulShutdown(signal) {
   if (httpServer) {
     httpServer.close(() => {
       logger.info('[Worker] HTTP server closed');
-      process.exit(0);
+      process.exit(1);
     });
   }
-  setTimeout(() => process.exit(0), 5000);
+  setTimeout(() => process.exit(1), 5000);
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -87,6 +87,7 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   logger.error('[Worker] Unhandled rejection:', reason);
+  gracefulShutdown('unhandledRejection');
 });
 
 main().catch((err) => {

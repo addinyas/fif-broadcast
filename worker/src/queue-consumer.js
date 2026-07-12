@@ -1,5 +1,6 @@
 const { getWritableDb } = require('./db');
-const { sendMessage, isConnected, getConnectedUsers } = require('./wa-client');
+const { isConnectedForUser, getConnectedUsers } = require('./wa-client');
+const { sendMessage } = require('./wa-manager');
 const { emitBroadcastStatus, emitPendingStuck } = require('./socket-server');
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
@@ -10,6 +11,7 @@ const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 
 let running = false;
+let processing = false;
 let intervalId = null;
 
 function randomDelay() {
@@ -43,6 +45,9 @@ async function sendPushNotification(userId, title, body) {
 }
 
 async function processPending() {
+  if (processing) return;
+  processing = true;
+
   let writeDb;
   try {
     writeDb = getWritableDb();
@@ -146,6 +151,7 @@ async function processPending() {
   } catch (err) {
     console.error('[Queue] Error:', err.message);
   } finally {
+    processing = false;
     writeDb.close();
   }
 }
