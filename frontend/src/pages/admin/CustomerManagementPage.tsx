@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { DataTable } from '../../components/ui/DataTable';
@@ -11,6 +11,30 @@ import { useAuth } from '../../context/AuthContext';
 import type { Customer } from '../../types';
 interface MarketingUser { id: number; name: string; email: string; assigned_customers_count?: number; }
 type ImportTab = 'manual' | 'spreadsheet' | 'file';
+
+function Pagination({ page, lastPage, onPageChange }: { page: number; lastPage: number; onPageChange: (p: number) => void }) {
+  const maxVisible = 5;
+  const pages: (number | 'ellipsis')[] = [];
+  let start = Math.max(1, page - Math.floor(maxVisible / 2));
+  let end = Math.min(lastPage, start + maxVisible - 1);
+  if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+  if (start > 1) { pages.push(1); if (start > 2) pages.push('ellipsis'); }
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (end < lastPage) { if (end < lastPage - 1) pages.push('ellipsis'); pages.push(lastPage); }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
+      <span>Halaman {page} dari {lastPage}</span>
+      <div className="flex items-center gap-1">
+        <button disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none">Prev</button>
+        {pages.map((p, i) => p === 'ellipsis' ? <span key={`e-${i}`} className="px-1 text-slate-400">...</span> : (
+          <button key={p} onClick={() => onPageChange(p)} className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${p === page ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{p}</button>
+        ))}
+        <button disabled={page >= lastPage} onClick={() => onPageChange(page + 1)} className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none">Next</button>
+      </div>
+    </div>
+  );
+}
 
 export function CustomerManagementPage() {
   const { toast } = useToast();
@@ -506,62 +530,7 @@ export function CustomerManagementPage() {
         )}
       </div>
 
-      {(function renderPagination() {
-        const maxVisible = 5;
-        const pages: (number | 'ellipsis')[] = [];
-        let start = Math.max(1, page - Math.floor(maxVisible / 2));
-        let end = Math.min(lastPage, start + maxVisible - 1);
-        if (end - start + 1 < maxVisible) {
-          start = Math.max(1, end - maxVisible + 1);
-        }
-        if (start > 1) {
-          pages.push(1);
-          if (start > 2) pages.push('ellipsis');
-        }
-        for (let i = start; i <= end; i++) pages.push(i);
-        if (end < lastPage) {
-          if (end < lastPage - 1) pages.push('ellipsis');
-          pages.push(lastPage);
-        }
-        return (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <span>Halaman {page} dari {lastPage}</span>
-            <div className="flex items-center gap-1">
-              <button
-                disabled={page <= 1}
-                onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
-                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Prev
-              </button>
-              {pages.map((p, i) =>
-                p === 'ellipsis' ? (
-                  <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => { setPage(p); setSelectAllPages(false); }}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${
-                      p === page
-                        ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-              <button
-                disabled={page >= lastPage}
-                onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
-                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      <Pagination page={page} lastPage={lastPage} onPageChange={(p) => { setPage(p); setSelectAllPages(false); }} />
 
       <DataTable
         columns={columns} data={customers} loading={loading}
@@ -606,62 +575,7 @@ export function CustomerManagementPage() {
         </div>
       )}
 
-      {(function renderPagination() {
-        const maxVisible = 5;
-        const pages: (number | 'ellipsis')[] = [];
-        let start = Math.max(1, page - Math.floor(maxVisible / 2));
-        let end = Math.min(lastPage, start + maxVisible - 1);
-        if (end - start + 1 < maxVisible) {
-          start = Math.max(1, end - maxVisible + 1);
-        }
-        if (start > 1) {
-          pages.push(1);
-          if (start > 2) pages.push('ellipsis');
-        }
-        for (let i = start; i <= end; i++) pages.push(i);
-        if (end < lastPage) {
-          if (end < lastPage - 1) pages.push('ellipsis');
-          pages.push(lastPage);
-        }
-        return (
-          <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <span>Halaman {page} dari {lastPage}</span>
-            <div className="flex items-center gap-1">
-              <button
-                disabled={page <= 1}
-                onClick={() => { setPage(page - 1); setSelectAllPages(false); }}
-                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Prev
-              </button>
-              {pages.map((p, i) =>
-                p === 'ellipsis' ? (
-                  <span key={`ellipsis-${i}`} className="px-1 text-slate-400">...</span>
-                ) : (
-                  <button
-                    key={p}
-                    onClick={() => { setPage(p); setSelectAllPages(false); }}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-all ${
-                      p === page
-                        ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-              <button
-                disabled={page >= lastPage}
-                onClick={() => { setPage(page + 1); setSelectAllPages(false); }}
-                className="rounded-lg border border-slate-200 dark:border-slate-600 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      <Pagination page={page} lastPage={lastPage} onPageChange={(p) => { setPage(p); setSelectAllPages(false); }} />
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editId ? 'Edit Customer' : 'Tambah Customer'}>
         <div className="space-y-4">

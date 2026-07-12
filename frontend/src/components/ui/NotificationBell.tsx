@@ -18,6 +18,7 @@ interface NotificationBellProps {
 
 const STORAGE_KEY = 'fif_notifications';
 const MAX_NOTIFICATIONS = 50;
+let notifCounter = 0;
 
 function loadNotifications(): Notification[] {
   try {
@@ -76,7 +77,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
     const handler = (msg: { customer_id: number; status: string }) => {
       if (msg.status !== 'sent' && msg.status !== 'failed') return;
       const item: Notification = {
-        id: `${msg.customer_id}-${Date.now()}`,
+        id: `${msg.customer_id}-${Date.now()}-${++notifCounter}`,
         customerId: msg.customer_id,
         status: msg.status as 'sent' | 'failed',
         time: Date.now(),
