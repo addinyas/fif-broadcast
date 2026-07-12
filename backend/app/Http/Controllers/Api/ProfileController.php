@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ProfileController extends Controller
 {
@@ -21,21 +22,23 @@ class ProfileController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
             'gender' => 'sometimes|nullable|in:L,P',
-            'npo_mce_id' => 'sometimes|nullable|string|max:100',
-            'kios_name' => 'sometimes|nullable|string|max:255',
-            'kios_id' => 'sometimes|nullable|string|max:100',
+            'npo_mce_id' => [
+                'sometimes', 'nullable', 'string', 'max:100', 'min:1',
+                Rule::unique('users', 'npo_mce_id')->ignore($user->id),
+            ],
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = $request->user();
-        $data = $request->only(['name', 'gender', 'npo_mce_id', 'kios_name', 'kios_id']);
-        $data = array_filter($data, fn ($v) => $v !== null);
+        $data = $request->only(['name', 'gender', 'npo_mce_id']);
+        $data = array_filter($data, fn ($v) => $v !== null && $v !== '');
 
         if (! empty($data)) {
             $user->update($data);
@@ -129,12 +132,6 @@ class ProfileController extends Controller
         if (file_exists($logFile)) {
             file_put_contents($logFile, '');
             $messages[] = 'Log file dibersihkan';
-        }
-
-        $authInfoPath = dirname(__DIR__, 4).'/worker/auth_info';
-        if (is_dir($authInfoPath)) {
-            $this->rmdirRecursive($authInfoPath);
-            $messages[] = 'Worker auth_info dibersihkan';
         }
 
         $deletedTokens = DB::table('personal_access_tokens')

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -19,13 +18,11 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
+            'email' => 'nullable|string|email|max:255|unique:users',
             'password' => 'required|string|min:8',
             'gender' => 'required|in:L,P',
-            'npo_mce_id' => 'required|string|max:100',
-            'kios_name' => 'required|string|max:255',
-            'kios_id' => 'required|string|max:100',
-            'role' => 'sometimes|in:superadmin,UH,marketing',
+            'npo_mce_id' => 'required|string|max:100|unique:users',
+            'kios_id' => 'required|string|exists:kios,kios_id',
         ]);
 
         if ($validator->fails()) {
@@ -44,7 +41,7 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'email' => 'required|string|email',
+            'npo_mce_id' => 'required|string',
             'password' => 'required|string',
         ]);
 
@@ -53,35 +50,11 @@ class AuthController extends Controller
         }
 
         try {
-            $result = $this->authService->login($request->only('email', 'password'));
+            $result = $this->authService->login($request->only('npo_mce_id', 'password'));
 
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 401);
-        }
-    }
-
-    public function googleRedirect(): JsonResponse
-    {
-        try {
-            $url = $this->authService->googleRedirect();
-
-            return response()->json(['url' => $url]);
-        } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
-        }
-    }
-
-    public function googleCallback(Request $request): RedirectResponse
-    {
-        $frontendUrl = config('app.frontend_url');
-
-        try {
-            $result = $this->authService->googleCallback();
-
-            return redirect("{$frontendUrl}/login?token={$result['token']}");
-        } catch (\Exception $e) {
-            return redirect("{$frontendUrl}/login?error=".urlencode($e->getMessage()));
         }
     }
 

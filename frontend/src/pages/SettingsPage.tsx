@@ -12,8 +12,6 @@ export function SettingsPage() {
   const [name, setName] = useState(user?.name || '');
   const [gender, setGender] = useState(user?.gender || '');
   const [npoMceId, setNpoMceId] = useState(user?.npo_mce_id || '');
-  const [kiosName, setKiosName] = useState(user?.kios_name || '');
-  const [kiosId, setKiosId] = useState(user?.kios_id || '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar_url || null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -24,6 +22,12 @@ export function SettingsPage() {
       setAvatarPreview(user.avatar_url);
     }
   }, [user?.avatar_url]);
+
+  useEffect(() => {
+    setName(user?.name || '');
+    setGender(user?.gender || '');
+    setNpoMceId(user?.npo_mce_id || '');
+  }, [user?.name, user?.gender, user?.npo_mce_id]);
 
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,8 +71,6 @@ export function SettingsPage() {
         name,
         gender: gender || null,
         npo_mce_id: npoMceId || null,
-        kios_name: kiosName || null,
-        kios_id: kiosId || null,
       });
       updateUser(res.data);
       toast('success', 'Profile berhasil disimpan');
@@ -218,36 +220,26 @@ export function SettingsPage() {
             <input
               type="text"
               value={npoMceId}
-              onChange={(e) => setNpoMceId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+              onChange={(e) => setNpoMceId(e.target.value.toUpperCase())}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 uppercase placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
               placeholder="Masukkan ID NPO atau MCE"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
             />
           </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Nama Kios
+              Kios
             </label>
             <input
               type="text"
-              value={kiosName}
-              onChange={(e) => setKiosName(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
-              placeholder="Masukkan nama kios"
+              value={user?.kios_name ? `${user.kios_name} (${user.kios_id})` : '-'}
+              disabled
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 outline-none dark:border-slate-600 dark:bg-slate-700/50 dark:text-slate-400"
             />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              ID Kios
-            </label>
-            <input
-              type="text"
-              value={kiosId}
-              onChange={(e) => setKiosId(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
-              placeholder="Masukkan ID kios"
-            />
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Hubungi superadmin untuk mengubah kios</p>
           </div>
 
           <div className="flex justify-end pt-2">

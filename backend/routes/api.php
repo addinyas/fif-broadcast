@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\GoogleSheetsController;
+use App\Http\Controllers\Api\KiosController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TemplateController;
@@ -12,10 +13,9 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WhatsappConnectionController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('kios', [KiosController::class, 'index']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/google/redirect', [AuthController::class, 'googleRedirect']);
-Route::get('/auth/google/callback', [AuthController::class, 'googleCallback']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -124,5 +124,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:superadmin')->group(function () {
         Route::put('admin/permissions', [PermissionController::class, 'update']);
+        Route::post('admin/kios', [KiosController::class, 'store']);
+        Route::put('admin/kios/{id}', [KiosController::class, 'update']);
+        Route::delete('admin/kios/{id}', [KiosController::class, 'destroy']);
+        Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
+        Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
     });
 });

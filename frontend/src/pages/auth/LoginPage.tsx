@@ -1,29 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Fingerprint, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 
 export function LoginPage() {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [npoMceId, setNpoMceId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get('token');
-    const errorParam = params.get('error');
-
-    if (tokenParam) {
-      localStorage.setItem('token', tokenParam);
-      window.location.href = '/';
-    } else if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-    }
-
     const timer = setTimeout(() => setShowForm(true), 800);
     return () => clearTimeout(timer);
   }, []);
@@ -33,10 +22,10 @@ export function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(npoMceId, password);
+      window.location.href = '/';
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login failed');
-    } finally {
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login gagal');
       setLoading(false);
     }
   };
@@ -51,7 +40,6 @@ export function LoginPage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-500/15 via-transparent to-transparent" />
 
       <div className="relative flex flex-col items-center gap-10">
-        {/* Logo with spin animation */}
         <div className="animate-fade-in">
           <div className="relative">
             <div className="absolute inset-0 animate-spin-slow rounded-full bg-gradient-to-r from-fif-500/20 via-purple-500/20 to-fif-500/20 blur-xl" />
@@ -63,7 +51,6 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Title */}
         <div className={`text-center transition-all duration-700 ${showForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
           <h1 className="bg-gradient-to-r from-white via-fif-100 to-fif-200 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
             Selamat Datang
@@ -71,7 +58,6 @@ export function LoginPage() {
           <p className="mt-1.5 text-sm text-slate-500">Federal International Finance</p>
         </div>
 
-        {/* Form — fully transparent, no card */}
         <form
           onSubmit={handleSubmit}
           className={`w-full max-w-sm space-y-4 transition-all duration-700 delay-150 ${showForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
@@ -83,14 +69,18 @@ export function LoginPage() {
           )}
 
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Fingerprint className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="text"
+              name="username"
+              value={npoMceId}
+              onChange={(e) => setNpoMceId(e.target.value.toUpperCase())}
               required
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white outline-none backdrop-blur-sm transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-              placeholder="Email"
+              autoComplete="username"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white uppercase outline-none backdrop-blur-sm transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
+              placeholder="ID NPO / MCE"
+              autoCapitalize="characters"
+              spellCheck={false}
             />
           </div>
 
@@ -98,9 +88,11 @@ export function LoginPage() {
             <Lock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
             <input
               type="password"
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
               className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white outline-none backdrop-blur-sm transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
               placeholder="Password"
             />

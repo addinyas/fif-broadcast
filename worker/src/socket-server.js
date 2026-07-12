@@ -80,6 +80,21 @@ function createSocketServer(httpServer) {
       console.log(`[Socket] Disconnect request from user ${userId}`);
       disconnect(userId);
     });
+
+    socket.on('wa:reconnect', async () => {
+      console.log(`[Socket] Reconnect request from user ${userId}`);
+      try {
+        disconnect(userId);
+        await new Promise((r) => setTimeout(r, 500));
+        getOrCreateClient(userId, () => {
+          console.log(`[Socket] WA client re-created for user ${userId}`);
+        }).catch((err) => {
+          console.error(`[Socket] Failed to re-create WA client for user ${userId}:`, err.message);
+        });
+      } catch (err) {
+        console.error(`[Socket] Reconnect error for user ${userId}:`, err.message);
+      }
+    });
   });
 
   return io;

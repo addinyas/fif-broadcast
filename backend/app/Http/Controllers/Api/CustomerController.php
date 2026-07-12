@@ -38,7 +38,7 @@ class CustomerController extends Controller
 
         if (! $customer) {
             // fallback ke dynamic_data untuk data lama — use parameterized LIKE
-            $escaped = '%' . addcslashes($noContract, '%_\\') . '%';
+            $escaped = '%'.addcslashes($noContract, '%_\\').'%';
             $customer = Customer::where('dynamic_data', 'like', $escaped)
                 ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract])
                 ->first();

@@ -15,6 +15,7 @@ import {
   Settings,
   X,
   FileText,
+  Store,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -43,6 +44,7 @@ const adminLinks: LinkItem[] = [
 const superadminOnlyLinks: LinkItem[] = [
   { to: '/admin/permissions', label: 'Permissions', icon: <Settings2 className="h-5 w-5" /> },
   { to: '/admin/templates', label: 'Templates', icon: <FileText className="h-5 w-5" /> },
+  { to: '/admin/kios', label: 'Kios', icon: <Store className="h-5 w-5" /> },
 ];
 
 const marketingLinks: LinkItem[] = [

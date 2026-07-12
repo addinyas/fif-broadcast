@@ -148,6 +148,7 @@ async function createWAClientForUser(userId, onReady) {
       rs.attempts++;
       const delay = Math.min(1000 * Math.pow(2, Math.min(rs.attempts, 5)), 30000);
       console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${rs.attempts})`);
+      emitWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
       try { sock.end(undefined); } catch {}
       setTimeout(() => {
         rs.reconnecting = false;

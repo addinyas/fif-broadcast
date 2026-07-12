@@ -373,6 +373,76 @@ useEffect(() => {
 3. Test auto-disconnect setelah 8 jam — pastikan tidak reconnect langsung
 4. Test broadcast → pastikan pesan terkirim (import fix)
 
+### 2026-07-12 — User Management: Terakhir Connect & Terakhir Broadcast
+
+**Sudah di-push ✅**
+- `UserController.php`: tambah subquery `broadcast_histories` → `MAX(sent_at)` per user, load `whatsappConnection` include `updated_at`, return `last_connected_at` + `last_broadcast_at`
+- `UserManagementPage.tsx`: tambah 2 kolom "Terakhir Connect" & "Terakhir Broadcast" format `HH:mm:ss` + tanggal, auto-refresh `setInterval` 10 detik
+- `types/index.ts`: tambah `last_connected_at?: string | null` & `last_broadcast_at?: string | null` ke `User` interface
+- `UserController.php`: sembunyikan akun superadmin dari user list untuk role UH & marketing (security)
+
+### 2026-07-12 — Registrasi Kios + Login NPO MCE ID + Reset Password
+
+**Belum di-push ⏸️**
+
+**Backend — 7 file baru/diubah:**
+- `database/migrations/2026_07_12_000001_create_kios_table.php`: tabel `kios` (`kios_id` unique, `kios_name`)
+- `database/migrations/2026_07_12_000002_add_unique_to_npo_mce_id.php`: unique constraint `npo_mce_id`
+- `database/seeders/KiosSeeder.php`: 8 kios entries (40200 CRE, 40207 POS WATES, 40272 PASAR TELO, 40274 GODEAN, 40275 SEDAYU, 40276 COKRO, 40278 WATES KOTA, 40279 YOGYAKARTA)
+- `database/seeders/DatabaseSeeder.php`: tambah `KiosSeeder`, seed user dengan `npo_mce_id` + `kios_id`
+- `app/Models/Kios.php`: model Kios baru
+- `app/Http/Controllers/Api/KiosController.php`: CRUD kios (index public, store/update/destroy superadmin)
+- `app/Http/Controllers/Api/AuthController.php`: login pakai `npo_mce_id` (bukan email), register `email` nullable + `kios_id` exists di tabel kios
+- `app/Services/AuthService.php`: login manual `where npo_mce_id` + `Hash::check`, register resolve `kios_name` dari tabel `kios`
+- `app/Http/Controllers/Api/UserController.php`: tambah `resetPassword()`, `updateKios()`, filter user by kios untuk non-superadmin
+- `routes/api.php`: tambah public `GET /kios`, superadmin routes `admin/kios/*`, `admin/users/{id}/reset-password`, `admin/users/{id}/kios`
+
+**Frontend — 9 file baru/diubah:**
+- `types/index.ts`: tambah `Kios` & `KiosGroup` interface
+- `services/authService.ts`: login pakai `npoMceId`, register tanpa `kios_name`, tambah `getKios()`
+- `context/AuthContext.tsx`: login signature `npoMceId`, register tanpa `kios_name`
+- `pages/auth/RegisterPage.tsx`: dropdown kios dari API, field order baru (Kios → Nama → NPO/MCE → Email optional → Password → Gender), kios name auto-fill
+- `pages/auth/LoginPage.tsx`: field `npo_mce_id` (bukan email), icon Fingerprint
+- `pages/admin/KiosManagementPage.tsx`: CRUD kios page (superadmin only), modal add/edit
+- `pages/admin/UserManagementPage.tsx`: group by kios, expand/collapse, reset password modal, edit kios modal, kolom NPO/MCE
+- `components/ui/Sidebar.tsx`: tambah "Kios" link ke `superadminOnlyLinks`
+- `App.tsx`: tambah route `/admin/kios` (superadmin only), lazy import `KiosManagementPage`
+
+**Login sekarang pakai NPO MCE ID, bukan email.** Email tetap ada tapi optional saat register. Seed password tetap `password`.
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy ke VPS: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
+3. Jalankan migration: `php artisan migrate` (tabel `kios` + unique constraint `npo_mce_id`)
+4. Jalankan seeder: `php artisan db:seed` (8 kios + update user seed)
+5. **Catatan future**: Email-based password reset. `password_reset_tokens` table sudah ada (Laravel default). Butuh SMTP service + `ForgotPasswordController` + frontend halaman ForgotPassword/ResetPassword.
+
+### 2026-07-12 — Security fixes: Google OAuth disabled + ProfileController validation
+
+**Belum di-push ⏸️**
+
+**Fix 1 — Google OAuth dinonaktifkan (incompatible dengan NPO MCE login):**
+- `backend/routes/api.php`: hapus route `auth/google/redirect` dan `auth/google/callback`
+- `frontend/src/pages/auth/LoginPage.tsx`: hapus token param handling dari Google callback
+- `frontend/src/services/authService.ts`: hapus `googleRedirect()` dan `googleCallback()` methods
+- Alasan: `googleCallback()` tidak set `npo_mce_id` atau `kios_id`, sehingga user Google tidak bisa login
+
+**Fix 2 — SettingsPage: kios hanya read-only:**
+- `frontend/src/pages/SettingsPage.tsx`: ganti 2 input free-text kios (nama + ID) jadi 1 field read-only `KiosName (KiosId)` + helper text "Hubungi superadmin untuk mengubah kios"
+- `frontend/src/pages/SettingsPage.tsx`: hapus state `kiosName`/`kiosId`, hapus dari `handleSave` payload
+- `frontend/src/services/profileService.ts`: hapus `kios_name`/`kios_id` dari `updateProfile()` type
+- Alasan: user tidak boleh ganti kios sendiri — hanya superadmin via `admin/users/{id}/kios`
+
+**Fix 3 — ProfileController: validasi npo_mce_id unique:**
+- `backend/app/Http/Controllers/Api/ProfileController.php`: tambah `Rule::unique('users', 'npo_mce_id')->ignore($user->id)` ke validasi `npo_mce_id`
+- `backend/app/Http/Controllers/Api/ProfileController.php`: hapus `kios_name`/`kios_id` dari validasi & update (hanya superadmin boleh ubah kios)
+- `backend/app/Http/Controllers/Api/ProfileController.php`: pindahkan `$user = $request->user()` sebelum validator (needed untuk `ignore()`)
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy ke VPS: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
+3. Jalankan migration (jika ada perubahan schema)
+
 ## Push & Deploy Workflow
 
 ### Sebelum Push ke GitHub

@@ -1,21 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, User, UserPlus, Building2, Fingerprint, Store } from 'lucide-react';
+import { Mail, Lock, User, UserPlus, Fingerprint, Store } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
 import { Button } from '../../components/ui/Button';
+import type { Kios } from '../../types';
 
 export function RegisterPage() {
   const { register } = useAuth();
+  const [kiosList, setKiosList] = useState<Kios[]>([]);
+  const [selectedKiosId, setSelectedKiosId] = useState('');
+  const [kiosName, setKiosName] = useState('');
   const [name, setName] = useState('');
+  const [npoMceId, setNpoMceId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [gender, setGender] = useState('');
-  const [npoMceId, setNpoMceId] = useState('');
-  const [kiosName, setKiosName] = useState('');
-  const [kiosId, setKiosId] = useState('');
   const [error, setError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    authService.getKios().then(setKiosList).catch(() => {});
+  }, []);
+
+  const handleKiosChange = (kiosId: string) => {
+    setSelectedKiosId(kiosId);
+    const found = kiosList.find((k) => k.kios_id === kiosId);
+    setKiosName(found?.kios_name || '');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +36,14 @@ export function RegisterPage() {
     setErrors({});
     setLoading(true);
     try {
-      await register({ name, email, password, gender, npo_mce_id: npoMceId, kios_name: kiosName, kios_id: kiosId });
+      await register({
+        name,
+        email: email || undefined,
+        password,
+        gender,
+        npo_mce_id: npoMceId,
+        kios_id: selectedKiosId,
+      });
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
       if (axiosErr?.response?.data?.errors) {
@@ -66,23 +86,68 @@ export function RegisterPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-400">Kios</label>
+                <div className="relative">
+                  <Store className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <select value={selectedKiosId} onChange={(e) => handleKiosChange(e.target.value)} required
+                    className="w-full appearance-none rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15">
+                    <option value="" className="bg-slate-900">Pilih kios...</option>
+                    {kiosList.map((k) => (
+                      <option key={k.kios_id} value={k.kios_id} className="bg-slate-900">
+                        {k.kios_id} - {k.kios_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {errors.kios_id && <p className="text-xs text-red-400">{errors.kios_id}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-400">Nama Kios</label>
+                <div className="relative">
+                  <Store className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input type="text" value={kiosName} readOnly
+                    className="w-full cursor-not-allowed rounded-xl border border-white/10 bg-white/[0.02] py-2.5 pl-10 pr-3 text-sm text-slate-500 outline-none"
+                    placeholder="Otomatis terisi" />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-400">Nama</label>
                 <div className="relative">
                   <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-                    placeholder="Nama lengkap" />
+                  <input type="text" value={name} onChange={(e) => setName(e.target.value.toUpperCase())} required
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white uppercase outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
+                    placeholder="Nama lengkap"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false} />
                 </div>
                 {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-400">Email</label>
+                <label className="block text-sm font-medium text-slate-400">ID NPO/MCE</label>
+                <div className="relative">
+                  <Fingerprint className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                  <input type="text" value={npoMceId} onChange={(e) => setNpoMceId(e.target.value.toUpperCase())} required
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
+                    placeholder="Masukkan ID NPO atau MCE"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false} />
+                </div>
+                {errors.npo_mce_id && <p className="text-xs text-red-400">{errors.npo_mce_id}</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-sm font-medium text-slate-400">Email <span className="text-slate-600">(opsional)</span></label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="off"
                     className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
                     placeholder="nama@email.com" />
                 </div>
@@ -94,6 +159,7 @@ export function RegisterPage() {
                 <div className="relative">
                   <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                   <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8}
+                    autoComplete="new-password"
                     className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
                     placeholder="Minimal 8 karakter" />
                 </div>
@@ -115,39 +181,6 @@ export function RegisterPage() {
                   </label>
                 </div>
                 {errors.gender && <p className="text-xs text-red-400">{errors.gender}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-400">ID NPO/MCE</label>
-                <div className="relative">
-                  <Fingerprint className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input type="text" value={npoMceId} onChange={(e) => setNpoMceId(e.target.value)} required
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-                    placeholder="Masukkan ID NPO atau MCE" />
-                </div>
-                {errors.npo_mce_id && <p className="text-xs text-red-400">{errors.npo_mce_id}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-400">Nama Kios</label>
-                <div className="relative">
-                  <Store className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input type="text" value={kiosName} onChange={(e) => setKiosName(e.target.value)} required
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-                    placeholder="Masukkan nama kios" />
-                </div>
-                {errors.kios_name && <p className="text-xs text-red-400">{errors.kios_name}</p>}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block text-sm font-medium text-slate-400">ID Kios</label>
-                <div className="relative">
-                  <Building2 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input type="text" value={kiosId} onChange={(e) => setKiosId(e.target.value)} required
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-                    placeholder="Masukkan ID kios" />
-                </div>
-                {errors.kios_id && <p className="text-xs text-red-400">{errors.kios_id}</p>}
               </div>
 
               <Button type="submit" loading={loading} className="w-full bg-gradient-to-r from-fif-600 to-fif-500 hover:from-fif-700 hover:to-fif-600 shadow-lg shadow-fif-600/25 hover:shadow-xl hover:shadow-fif-600/30" size="lg">

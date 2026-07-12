@@ -1,32 +1,21 @@
 import api from './api';
-import type { AuthResponse, User } from '../types';
+import type { AuthResponse, User, Kios } from '../types';
 
 export const authService = {
-  async login(email: string, password: string): Promise<AuthResponse> {
-    const { data } = await api.post('/auth/login', { email, password });
+  async login(npoMceId: string, password: string): Promise<AuthResponse> {
+    const { data } = await api.post('/auth/login', { npo_mce_id: npoMceId, password });
     return data;
   },
 
   async register(payload: {
     name: string;
-    email: string;
+    email?: string;
     password: string;
     gender: string;
     npo_mce_id: string;
-    kios_name: string;
     kios_id: string;
   }): Promise<AuthResponse> {
     const { data } = await api.post('/auth/register', payload);
-    return data;
-  },
-
-  async googleRedirect(): Promise<{ url: string }> {
-    const { data } = await api.post('/auth/google/redirect');
-    return data;
-  },
-
-  async googleCallback(code: string): Promise<AuthResponse> {
-    const { data } = await api.post('/auth/google/callback', { code });
     return data;
   },
 
@@ -37,5 +26,10 @@ export const authService = {
 
   async logout(): Promise<void> {
     await api.post('/auth/logout');
+  },
+
+  async getKios(): Promise<Kios[]> {
+    const { data } = await api.get('/kios');
+    return data.data;
   },
 };
