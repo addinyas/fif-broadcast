@@ -324,6 +324,55 @@ useEffect(() => {
 - Batch pause: worker otomatis delay antar pesan
 - Jika perlu lebih aman: naikkan ke 120-300 detik (2-3 pesan/jam, ~70-100/hari)
 
+### 2026-07-12 — Full codebase audit + 24 bugs fixed
+
+**Sudah di-push & deployed ✅**
+
+**Critical (Worker):**
+- `queue-consumer.js`: fix import — `sendMessage` from `wa-manager` (was undefined from `wa-client`)
+- `wa-client.js`: auto-disconnect sets `intentionalDisconnect` flag, skip reconnect in close handler
+- `queue-consumer.js`: add `processing` guard to prevent concurrent `processPending` double-sends
+- `wa-client.js`: move `reconnectAttempts`/`reconnecting` to shared `reconnectState` Map (backoff no longer resets)
+
+**Critical (Backend):**
+- `CustomerController.php`: `byNoContract` use parameterized LIKE + `json_extract` (was SQL injection)
+- `CustomerController.php`: `store`/`update` use `$request->only()` (was `$request->all()` — mass assignment)
+
+**High (Frontend):**
+- `usePermissions.ts`: `clearPermissionsCache()` exported, called on logout (was cross-session permission leak)
+- `AuthContext.tsx`: init user from localStorage, skip redundant `/auth/me` on login
+
+**Medium (Frontend):**
+- `BroadcastFormPage.tsx`: use `replaceAll()` for template variables (was first-match-only)
+- `BroadcastStatusBanner.tsx`: link uses role-based path (was hardcoded `/marketing/connect`)
+- `App.tsx`: add `ErrorBoundary` for lazy routes (was crash on chunk failure)
+- `api.ts`: skip 401 redirect if already on login/register
+
+**Low (Worker):**
+- All worker files: `DB_PATH` resolved to absolute path
+- `index.js`: exit code 1 on crash (was 0)
+- `index.js`: `unhandledRejection` triggers shutdown
+- `socket-server.js`: remove dead `onDisconnectRequest` variable
+
+**Low (Backend):**
+- `CustomerController.php`: remove internal exception messages from API responses
+- `BroadcastService.php`: `not_broadcast_count` uses distinct customer_id (was total rows)
+- `CustomerController.php`: `destroyManual` checks ownership for marketing users
+
+**Low (Frontend):**
+- `NotificationBell.tsx`: use counter suffix for unique notification IDs
+- `CustomerManagementPage.tsx`: extract duplicated pagination IIFE to `Pagination` component
+
+**Sengaja di-skip (intentional design):**
+- #2: Privilege escalation registration — superadmin hanya via seeder/manual
+- #10: Hard delete bypass SoftDeletes — intentional untuk monthly refresh
+
+### Next steps when resuming
+1. Test import spreadsheet (9114 rows) — SQL injection fix tidak boleh break import
+2. Test marketing login → /marketing/customers → pastikan bisa list tanpa 403
+3. Test auto-disconnect setelah 8 jam — pastikan tidak reconnect langsung
+4. Test broadcast → pastikan pesan terkirim (import fix)
+
 ## Push & Deploy Workflow
 
 ### Sebelum Push ke GitHub
