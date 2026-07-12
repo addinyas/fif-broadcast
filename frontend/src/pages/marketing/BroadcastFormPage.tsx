@@ -30,13 +30,15 @@ export function BroadcastFormPage() {
   }, [customerId]);
 
   useEffect(() => {
-    if (customer?.dynamic_data) {
+    if (customer?.dynamic_data && templateBody) {
       const dd = customer.dynamic_data;
+      let body = templateBody;
       for (const field of FORM_FIELDS) {
         if (dd[field.key]) {
-          setTemplateBody((prev) => prev.replace(`#${field.key}`, dd[field.key]));
+          body = body.replaceAll(`#${field.key}`, dd[field.key]);
         }
       }
+      setTemplateBody(body);
     }
   }, [customer]);
 
@@ -44,16 +46,15 @@ export function BroadcastFormPage() {
     const t = templates.find((tmpl) => tmpl.id === templateId);
     if (t) {
       setSelectedTemplate(t);
-      setTemplateBody(t.message_body);
+      let body = t.message_body;
       if (customer?.dynamic_data) {
-        let body = t.message_body;
         for (const field of FORM_FIELDS) {
           if (customer.dynamic_data[field.key]) {
-            body = body.replace(`#${field.key}`, customer.dynamic_data[field.key]);
+            body = body.replaceAll(`#${field.key}`, customer.dynamic_data[field.key]);
           }
         }
-        setTemplateBody(body);
       }
+      setTemplateBody(body);
     }
   };
 

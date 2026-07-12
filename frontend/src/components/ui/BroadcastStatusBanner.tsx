@@ -7,7 +7,7 @@ export function BroadcastStatusBanner() {
   const [counts, setCounts] = useState({ sent: 0, failed: 0, processing: 0 });
   const [lastStatus, setLastStatus] = useState<'success' | 'error' | 'info' | null>(null);
   const [pendingStuck, setPendingStuck] = useState(0);
-  const { token } = useAuth();
+  const { token, isAdmin } = useAuth();
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -48,10 +48,11 @@ export function BroadcastStatusBanner() {
   const total = counts.sent + counts.failed + counts.processing;
 
   if (pendingStuck > 0) {
+    const connectPath = isAdmin ? '/admin/connect' : '/marketing/connect';
     return (
       <div className="relative z-30 flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-white shadow-sm sm:px-6 bg-red-500">
         <WifiOff className="h-4 w-4" />
-        <span>WhatsApp terputus! {pendingStuck} pesan tertunda. <a href="/marketing/connect" className="underline">Hubungkan ulang</a></span>
+        <span>WhatsApp terputus! {pendingStuck} pesan tertunda. <a href={connectPath} className="underline">Hubungkan ulang</a></span>
       </div>
     );
   }

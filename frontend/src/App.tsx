@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, Component, type ReactNode, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -6,7 +6,6 @@ import { AdminLayout } from './components/layouts/AdminLayout';
 import { MarketingLayout } from './components/layouts/MarketingLayout';
 import { usePermissions } from './hooks/usePermissions';
 import { ToastProvider } from './components/ui/Toast';
-import type { ReactNode, ComponentType } from 'react';
 
 const LoginPage = lazy(() => import('./pages/auth/LoginPage').then(m => ({ default: m.LoginPage })));
 const RegisterPage = lazy(() => import('./pages/auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
@@ -97,11 +96,31 @@ function LoadingScreen() {
   );
 }
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-screen flex-col items-center justify-center bg-surface">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Gagal memuat halaman.</p>
+          <button onClick={() => window.location.reload()} className="mt-3 text-sm font-medium text-fif-600 hover:underline">
+            Muat ulang
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function SuspendedPage({ Component }: { Component: ComponentType }) {
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <Component />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<LoadingScreen />}>
+        <Component />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
 
