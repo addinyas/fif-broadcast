@@ -59,6 +59,10 @@ class BroadcastService
 
         $stats = $this->getStats($marketingId);
 
+        // Count unique customers who received broadcasts (not total rows)
+        $broadcastedCustomerQuery = (clone $historyQuery)->select('customer_id')->distinct();
+        $broadcastedCount = $broadcastedCustomerQuery->count();
+
         $lastBroadcast = (clone $historyQuery)->with('customer:id,name')
             ->latest('created_at')
             ->first();
@@ -72,7 +76,7 @@ class BroadcastService
         return [
             'assigned_count' => $assignedCount,
             'broadcast' => $stats,
-            'not_broadcast_count' => max(0, $assignedCount - $stats['total']),
+            'not_broadcast_count' => max(0, $assignedCount - $broadcastedCount),
             'last_broadcast' => $lastBroadcast ? [
                 'customer_name' => $lastBroadcast->customer?->name ?? "Customer #{$lastBroadcast->customer_id}",
                 'status' => $lastBroadcast->status,

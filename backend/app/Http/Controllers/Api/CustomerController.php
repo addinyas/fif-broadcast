@@ -37,8 +37,11 @@ class CustomerController extends Controller
         $customer = Customer::where('no_contract', $noContract)->first();
 
         if (! $customer) {
-            // fallback ke dynamic_data untuk data lama
-            $customer = Customer::where('dynamic_data', 'like', '%"no_contract":"'.addslashes($noContract).'"%')->orWhere('dynamic_data', 'like', "%'no_contract':'{$noContract}'%")->first();
+            // fallback ke dynamic_data untuk data lama — use parameterized LIKE
+            $escaped = '%' . addcslashes($noContract, '%_\\') . '%';
+            $customer = Customer::where('dynamic_data', 'like', $escaped)
+                ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract])
+                ->first();
         }
 
         if (! $customer) {
@@ -60,7 +63,7 @@ class CustomerController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $data = $request->only(['name', 'phone_number', 'dynamic_data']);
         $data['uploaded_by'] = $request->user()->id;
 
         // copy no_contract dari dynamic_data ke kolom
@@ -93,7 +96,8 @@ class CustomerController extends Controller
         }
 
         try {
-            $customer = $this->customerService->update($id, $request->all());
+            $validated = $request->only(['name', 'phone_number', 'dynamic_data']);
+            $customer = $this->customerService->update($id, $validated);
 
             return response()->json($customer);
         } catch (\Exception $e) {
@@ -151,7 +155,7 @@ class CustomerController extends Controller
 
             return response()->json($result);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal membaca file: '.$e->getMessage()], 400);
+            return response()->json(['message' => 'Gagal membaca file'], 400);
         }
     }
 
@@ -203,7 +207,7 @@ class CustomerController extends Controller
 
             return response()->json($result);
         } catch (\Exception $e) {
-            return response()->json(['message' => $e->getMessage()], 400);
+            return response()->json(['message' => 'Gagal memproses spreadsheet'], 400);
         }
     }
 
@@ -214,7 +218,7 @@ class CustomerController extends Controller
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal menghapus semua customer: '.$e->getMessage()], 400);
+            return response()->json(['message' => 'Gagal menghapus semua customer'], 400);
         }
     }
 
@@ -263,7 +267,7 @@ class CustomerController extends Controller
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal menghapus customer: '.$e->getMessage()], 400);
+            return response()->json(['message' => 'Gagal menghapus customer'], 400);
         }
     }
 
@@ -323,6 +327,11 @@ class CustomerController extends Controller
         $dd = $customer->dynamic_data ?? [];
         if (($dd['_entry_source'] ?? null) !== 'manual') {
             return response()->json(['message' => 'Hanya customer input manual yang bisa dihapus'], 403);
+        }
+
+        // Marketing can only delete their own manual entries
+        if ($request->user()->role === 'marketing' && $customer->marketing_id !== $request->user()->id) {
+            return response()->json(['message' => 'Tidak bisa menghapus customer milik marketing lain'], 403);
         }
 
         $this->customerService->unassign($id);
