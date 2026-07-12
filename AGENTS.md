@@ -186,6 +186,86 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 1. Push local changes → `git push origin main`
 2. Deploy ke VPS: `bash /var/www/fif/deploy/deploy-vps.sh`
 
+### 2026-07-11 (sore) — Feature permission middleware on backend routes
+
+**Sudah di-push ✅**
+- `backend/routes/api.php`: `feature:qr_scanner` ditambahkan ke `whatsapp/*` routes, `feature:user_management` ditambahkan ke `admin/users` routes
+- Backend sekarang konsisten dengan frontend (3-layer permission: seeder → backend middleware → frontend guards)
+
+### Next steps when resuming
+1. Push local changes → `git push origin main`
+2. Deploy ke VPS: `bash /var/www/fif/deploy/deploy-vps.sh`
+
+### 2026-07-11 — Cross-check: Fitur Customers untuk role UH & marketing (BUG DITEMUKAN)
+
+**Status: BELUM DIPERBAIKI, menunggu konfirmasi user**
+
+#### Bug 1 (Critical): Route `GET /customers` & `GET /customers/{id}` ter-shadow — marketing dapat 403
+
+**Root cause**: `apiResource('customers')` di `api.php:48` mendaftarkan route `GET /customers` (index) dan `GET /customers/{id}` (show) dengan middleware `role:superadmin,UH`. Route marketing-accessible di `api.php:74-75` mendaftarkan route yang SAMA (`GET /customers`, `GET /customers/{id}`) dengan middleware `role:superadmin,UH,marketing`, tapi **tidak pernah tercapai** karena Laravel menggunakan route PERTAMA yang match.
+
+| Route | Line pertama (shadow) | Line kedua (dead) |
+|-------|----------------------|-------------------|
+| `GET /customers` | 48: `role:superadmin,UH` | 74: `role:superadmin,UH,marketing` ❌ |
+| `GET /customers/{id}` | 49: `role:superadmin,UH` | 75: `role:superadmin,UH,marketing` ❌ |
+
+**Akibat**: Marketing users tidak bisa list/detail customers — selalu dapat 403.
+
+**Fix**: Ubah `apiResource` di line 48 menjadi `->only(['store', 'update', 'destroy'])` atau `->except(['index', 'show'])`. Route index dan show hanya boleh ada di group `role:superadmin,UH,marketing` (line 66-81).
+
+#### Bug 2 (Medium): `GET /admin/marketing-users` hanya bisa diakses superadmin/UH
+
+**Root cause**: Route di `api.php:61` hanya di group `role:superadmin,UH`, tapi frontend `CustomerManagementPage.tsx:91` memanggilnya tanpa guard `isAdmin`:
+
+```tsx
+useEffect(() => {
+    customerService.getMarketingUsers().then(setAllMarketingUsers); // selalu dipanggil
+}, []);
+```
+
+**Akibat**: Marketing users dapat error 403 saat load page Customers (silent failure, tapi fungsi filter MCE tidak jalan).
+
+**Fix**: 
+- Backend: Pindahkan route `admin/marketing-users` ke group `role:superadmin,UH,marketing` + `feature:customer_management` (line 66-81), ATAU
+- Frontend: Guard dengan `if (isAdmin)` sebelum memanggil `getMarketingUsers()`
+
+#### Bug 3 (Low): Route duplicate — `GET /customers` dan `GET /customers/{id}` terdaftar 2x
+
+`apiResource` (line 48) + explicit route (line 49/74/75) membuat route yang sama terdaftar 2x. Route kedua (marketing-accessible) menjadi dead code.
+
+#### Feature access matrix setelah fix
+
+| Endpoint | Superadmin | UH | Marketing |
+|----------|-----------|-----|-----------|
+| `GET /customers` (index) | ✅ | ✅ | ✅ |
+| `GET /customers/{id}` (show) | ✅ | ✅ | ✅ |
+| `POST /customers` (store) | ✅ | ✅ | ❌ |
+| `PUT /customers/{id}` (update) | ✅ | ✅ | ❌ |
+| `DELETE /customers/{id}` (destroy) | ✅ | ✅ | ❌ |
+| `POST /customers/marketing-add` | ✅ | ✅ | ✅ |
+| `DELETE /customers/{id}/manual-entry` | ✅ | ✅ | ✅ |
+| `PATCH /customers/{id}/cori` | ✅ | ✅ | ✅ |
+| `POST /customers/import*` | ✅ | ✅ | ❌ |
+| `POST /assignments/*` | ✅ | ✅ | ❌ |
+| `GET /admin/marketing-users` | ✅ | ✅ | ✅ (setelah fix) |
+
+#### Files yang perlu diubah
+
+1. **`backend/routes/api.php`**: 
+   - Line 48: `apiResource('customers')` → `apiResource('customers')->only(['store', 'update', 'destroy'])`
+   - Line 61: `admin/marketing-users` pindah ke group marketing-accessible (line 66-81)
+   
+2. **`frontend/src/pages/admin/CustomerManagementPage.tsx`**:
+   - Line 90-92: Guard `getMarketingUsers()` dengan `isAdmin`
+
+### Next steps when resuming
+1. Fix Bug 1: ubah `apiResource` → `apiResource()->only(['store', 'update', 'destroy'])`
+2. Fix Bug 2: pindahkan `admin/marketing-users` ke group `role:superadmin,UH,marketing`
+3. Fix Bug 3 (frontend): guard `getMarketingUsers()` dengan `if (isAdmin)`
+4. Test: login sebagai marketing → buka /marketing/customers → pastikan bisa list customers
+5. Test: login sebagai UH → buka /admin/customers → pastikan semua fitur masih jalan
+6. Push → deploy ke VPS
+
 ### 2026-07-11 — Broadcast reliability fix + connection safety + NotificationBell progress
 
 **Root causes fixed:**

@@ -45,8 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:superadmin,UH')->group(function () {
         Route::middleware('feature:customer_management')->group(function () {
-            Route::apiResource('customers', CustomerController::class)->except(['show']);
-            Route::get('customers/{id}', [CustomerController::class, 'show']);
+            Route::apiResource('customers', CustomerController::class)->only(['store', 'update', 'destroy']);
             Route::post('customers/import', [CustomerController::class, 'import']);
             Route::post('customers/import-file', [CustomerController::class, 'importFile']);
             Route::post('customers/import-spreadsheet', [CustomerController::class, 'importSpreadsheet']);
@@ -58,7 +57,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('assignments/unassign', [AssignmentController::class, 'unassign']);
             Route::get('assignments/distribution', [AssignmentController::class, 'distribution']);
             Route::get('assignments/auto-calculate', [AssignmentController::class, 'autoCalculate']);
-            Route::get('admin/marketing-users', [AssignmentController::class, 'marketingUsers']);
         });
 
     });
@@ -77,6 +75,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('customers/marketing-add', [CustomerController::class, 'marketingAdd']);
             Route::get('customers/by-no-contract/{noContract}', [CustomerController::class, 'byNoContract']);
             Route::delete('customers/{id}/manual-entry', [CustomerController::class, 'destroyManual']);
+            Route::get('admin/marketing-users', [AssignmentController::class, 'marketingUsers']);
         });
     });
 

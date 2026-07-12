@@ -88,8 +88,10 @@ export function CustomerManagementPage() {
   }, [page, search, mceFilterKey, showAssigned, bussUnitFilter]);
 
   useEffect(() => {
-    customerService.getMarketingUsers().then(setAllMarketingUsers);
-  }, []);
+    if (isAdmin) {
+      customerService.getMarketingUsers().then(setAllMarketingUsers);
+    }
+  }, [isAdmin]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
