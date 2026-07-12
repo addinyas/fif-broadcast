@@ -49,7 +49,7 @@ async function createWAClientForUser(userId, onReady) {
   if (!reconnectState.has(userId)) {
     reconnectState.set(userId, { attempts: 0, reconnecting: false });
   }
-  const state = reconnectState.get(userId);
+  const rs = reconnectState.get(userId);
   let sock = null;
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
@@ -79,8 +79,8 @@ async function createWAClientForUser(userId, onReady) {
 
     if (connection === 'open') {
       console.log(`[WA] User ${userId} connected successfully!`);
-      state.attempts = 0;
-      state.reconnecting = false;
+      rs.attempts = 0;
+      rs.reconnecting = false;
       const entry = connections.get(userId);
       if (entry) {
         entry.connected = true;
@@ -129,11 +129,11 @@ async function createWAClientForUser(userId, onReady) {
       }
 
       const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
-      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${state.attempts}`);
+      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${rs.attempts}`);
 
       if (isLoggedOut) {
         console.log(`[WA] User ${userId} logged out.`);
-        state.reconnecting = false;
+        rs.reconnecting = false;
         try { sock.end(undefined); } catch {}
         connections.delete(userId);
         reconnectState.delete(userId);
@@ -142,15 +142,15 @@ async function createWAClientForUser(userId, onReady) {
         return;
       }
 
-      if (state.reconnecting) return;
+      if (rs.reconnecting) return;
 
-      state.reconnecting = true;
-      state.attempts++;
-      const delay = Math.min(1000 * Math.pow(2, Math.min(state.attempts, 5)), 30000);
-      console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${state.attempts})`);
+      rs.reconnecting = true;
+      rs.attempts++;
+      const delay = Math.min(1000 * Math.pow(2, Math.min(rs.attempts, 5)), 30000);
+      console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${rs.attempts})`);
       try { sock.end(undefined); } catch {}
       setTimeout(() => {
-        state.reconnecting = false;
+        rs.reconnecting = false;
         createWAClientForUser(userId, onReady).catch((err) => {
           console.error(`[WA] Reconnect failed for user ${userId}:`, err.message);
         });
