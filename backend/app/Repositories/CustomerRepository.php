@@ -236,13 +236,17 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         $customerIds = Customer::query()
             ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
-            ->pluck('id');
+            ->pluck('id')
+            ->toArray();
 
-        $count = $customerIds->count();
+        $count = count($customerIds);
 
         if ($count > 0) {
-            DB::table('broadcast_histories')->whereIn('customer_id', $customerIds)->delete();
-            Customer::whereIn('id', $customerIds)->forceDelete();
+            $chunks = array_chunk($customerIds, 500);
+            foreach ($chunks as $chunk) {
+                DB::table('broadcast_histories')->whereIn('customer_id', $chunk)->delete();
+                Customer::whereIn('id', $chunk)->forceDelete();
+            }
         }
 
         return $count;
@@ -250,9 +254,14 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function batchDelete(array $ids): int
     {
-        DB::table('broadcast_histories')->whereIn('customer_id', $ids)->delete();
+        $deleted = 0;
+        $chunks = array_chunk($ids, 500);
+        foreach ($chunks as $chunk) {
+            DB::table('broadcast_histories')->whereIn('customer_id', $chunk)->delete();
+            $deleted += DB::table('customers')->whereIn('id', $chunk)->delete();
+        }
 
-        return DB::table('customers')->whereIn('id', $ids)->delete();
+        return $deleted;
     }
 
     public function getDistributionReport(): array
