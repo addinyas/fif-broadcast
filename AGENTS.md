@@ -728,6 +728,14 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 **Frontend:**
 - `frontend/src/components/ui/Toast.tsx`: responsive — `left-4 sm:left-auto sm:max-w-sm`, `break-words` untuk pesan error panjang di mobile, `shrink-0` untuk icon/close button
 
+### 2026-07-14 — Fix: deleteAll SQLite 999-variable limit
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — chunk IDs into batches of 500 before `whereIn`. SQLite has a hard limit of ~999 variables per query. With 8221 customers, the unchunked `whereIn('customer_id', $customerIds)` exceeded the limit. Same fix applied to `batchDelete()`.
+- `backend/app/Repositories/CustomerRepository.php`: `batchDelete()` — same chunking pattern, returns correct total deleted count across chunks.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

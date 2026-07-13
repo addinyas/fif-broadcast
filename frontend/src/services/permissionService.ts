@@ -29,4 +29,5 @@ export const FEATURE_LABELS: Record<string, string> = {
   broadcast_history: 'Broadcast History',
   qr_scanner: 'QR Scanner',
   broadcast_stats: 'Broadcast Stats',
+  data_rolling: 'Rolling Data',
 };

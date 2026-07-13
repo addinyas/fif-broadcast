@@ -36,8 +36,24 @@ export function QRScannerPage() {
 
     socket.on('wa:status', handleWAStatus);
 
+    const handleSocketError = (err: Error) => {
+      console.error('Socket connection error:', err.message);
+      setWaStatus('disconnected');
+    };
+    const handleDisconnect = (reason: string) => {
+      console.warn('Socket disconnected:', reason);
+      if (reason === 'io server disconnect') setWaStatus('disconnected');
+    };
+
+    socket.on('connect_error', handleSocketError);
+    socket.on('disconnect', handleDisconnect);
+
+    socket.emit('wa:request_status');
+
     return () => {
       socket.off('wa:status', handleWAStatus);
+      socket.off('connect_error', handleSocketError);
+      socket.off('disconnect', handleDisconnect);
     };
   }, [token]);
 

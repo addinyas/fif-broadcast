@@ -86,7 +86,7 @@ function createSocketServer(httpServer) {
     socket.on('wa:reconnect', async () => {
       console.log(`[Socket] Reconnect request from user ${userId}`);
       try {
-        disconnect(userId);
+        await disconnect(userId);
         await new Promise((r) => setTimeout(r, 500));
         getOrCreateClient(userId, () => {
           console.log(`[Socket] WA client re-created for user ${userId}`);
@@ -95,6 +95,14 @@ function createSocketServer(httpServer) {
         });
       } catch (err) {
         console.error(`[Socket] Reconnect error for user ${userId}:`, err.message);
+      }
+    });
+
+    socket.on('wa:request_status', () => {
+      if (isConnectedForUser(userId)) {
+        socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
+      } else {
+        socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
       }
     });
   });

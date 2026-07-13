@@ -7,8 +7,10 @@ use App\Models\BroadcastHistory;
 use App\Models\Customer;
 use App\Models\CustomerShare;
 use App\Models\Kios;
+use App\Models\Notification;
 use App\Models\Template;
 use App\Models\User;
+use App\Models\WhatsappConnection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -93,6 +95,8 @@ class UserController extends Controller
                   ->orWhere('approved_by', $user->id);
             })->delete();
 
+            WhatsappConnection::where('user_id', $user->id)->delete();
+            Notification::where('user_id', $user->id)->delete();
             Customer::where('uploaded_by', $user->id)->forceDelete();
             Customer::where('manual_sent_by', $user->id)->update(['manual_sent_by' => null]);
             $user->delete();
