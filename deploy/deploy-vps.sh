@@ -58,7 +58,73 @@ fi
 # --- Nginx config (always fresh) ---
 rm -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/ssl.conf
 
-cat > /etc/nginx/conf.d/fif.conf <<EOF
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    # SSL cert exists — write config with HTTPS + redirect
+    cat > /etc/nginx/conf.d/fif.conf <<EOF
+server {
+    server_name $DOMAIN www.$DOMAIN _;
+
+    client_max_body_size 20M;
+
+    root /var/www/fif/backend/public;
+    index index.html;
+
+    # Frontend SPA (serves from frontend/dist)
+    location / {
+        root /var/www/fif/frontend/dist;
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Laravel API
+    location /api {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    # PHP-FPM
+    location ~ \.php\$ {
+        fastcgi_pass unix:/run/php-fpm/www.sock;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_read_timeout 300s;
+        fastcgi_send_timeout 300s;
+        fastcgi_connect_timeout 300s;
+    }
+
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:3001/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+    }
+
+    location /storage {
+        alias /var/www/fif/backend/public/storage;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+server {
+    if (\$host = www.$DOMAIN) {
+        return 301 https://\$host\$request_uri;
+    }
+    if (\$host = $DOMAIN) {
+        return 301 https://\$host\$request_uri;
+    }
+    listen 80 default_server;
+    server_name $DOMAIN www.$DOMAIN _;
+    return 404;
+}
+EOF
+else
+    # No SSL yet — HTTP only
+    cat > /etc/nginx/conf.d/fif.conf <<EOF
 server {
     listen 80 default_server;
     server_name $DOMAIN www.$DOMAIN _;
@@ -104,6 +170,7 @@ server {
     }
 }
 EOF
+fi
 
 # --- PHP upload limits ---
 PHP_INI=$(php --ini | grep "Loaded Configuration" | awk '{print $NF}')
