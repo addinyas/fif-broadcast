@@ -122,7 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('google-sheets/tenors', [GoogleSheetsController::class, 'getTenors']);
 
-    Route::get('admin/permissions', [PermissionController::class, 'index'])->middleware('role:superadmin');
+    Route::get('admin/permissions', [PermissionController::class, 'index']);
 
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:qr_scanner')->group(function () {
