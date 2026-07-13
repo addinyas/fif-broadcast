@@ -758,6 +758,24 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - VPS database: seed `role_permissions` rows untuk `data_rolling` (UH + marketing) — sebelumnya tidak ada di DB karena seeder belum dijalankan ulang
 - `frontend/src/services/permissionService.ts`: tambah `data_rolling: 'Rolling Data'` ke `FEATURE_LABELS` — fix label di Permission Management page
 
+### 2026-07-14 — Rolling approval toast + notification persistence + data dipinjam column
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Http/Controllers/Api/CustomerShareController.php`: tambah `share_group` (requested_by_from_marketing_id) ke semua notif rolling — link notif ke share records untuk cek status pending
+- `backend/app/Http/Controllers/Api/CustomerShareController.php`: `mySharedCustomers()` return `from_marketing_name` + `share_group` via load relation `fromMarketing`
+- `backend/app/Http/Controllers/Api/NotificationController.php`: auto-trim skip notif rolling yang masih punya `customer_shares` dengan `status = 'pending'`
+- `backend/app/Http/Controllers/Api/NotificationController.php`: `deleteAll()` hanya hapus notif `created_at < hari ini` + skip pending rolling
+
+**Frontend:**
+- `frontend/src/components/ui/NotificationBell.tsx`: Klik notif "Rolling Data" (UH/superadmin) → floating toast di pojok kanan bawah dengan tombol Approve (hijau), Reject (merah), Batal (abu). Toast tetap sampai diambil tindakan. `clearAll()` panggil API lalu refresh (pending rolling tetap ada)
+- `frontend/src/types/index.ts`: tambah `from_marketing_name` & `share_group` ke `Customer` interface
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: tambah kolom "Pinjam Dari" di table Data Dipinjam
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
