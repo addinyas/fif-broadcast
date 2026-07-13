@@ -789,15 +789,48 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### 2026-07-14 — Daily Bug Report
 
-**Status: Dalam investigasi ⏳**
+**Status: Investigated & Partially Fixed**
 
 | # | Bug | Priority | Status |
 |---|-----|----------|--------|
-| 1 | Connect feature tidak bisa terhubung | HIGH | ⏳ Investigating |
-| 2 | Auto-calculate pool: NMC harus 4020, REFI harus 4029 | HIGH | ⏳ Investigating |
-| 4 | Calculator nopol tidak bisa input angka+huruf | HIGH | ⏳ Investigating |
-| 5 | UH delete: solusi hapus data | MEDIUM | ⏳ Investigating |
-| 6 | UH rolling approval hilang | HIGH | ⏳ Investigating |
+| 1 | Connect feature tidak bisa terhubung | HIGH | ⚠️ WhatsApp rate-limit (bukan code bug) |
+| 2 | Auto-calculate pool: NMC harus 4020, REFI harus 4029 | HIGH | ✅ Tidak ada bug, code konsisten |
+| 4 | Calculator nopol tidak bisa input angka+huruf | HIGH | ✅ Sudah fix di code, user perlu hard refresh |
+| 5 | UH delete: solusi hapus data | MEDIUM | ✅ Cleanup sudah lengkap |
+| 6 | UH rolling approval hilang | HIGH | ✅ Code & DB OK, user perlu hard refresh |
+
+**Bug 1 — Root Cause Analysis:**
+- Baileys v7 error: `"QR refs attempts ended"` — koneksi ke WA OK tapi QR pairing timeout
+- Baileys v6 error: `"Connection Failure"` di noise-handler — protocol terlalu tua
+- **Root cause: WhatsApp rate-limit VPS IP** karena reconnect loop panjang dari Baileys v7 sebelumnya
+- VPS IP perlu cooldown 1-2 jam sebelum coba connect lagi
+- Auth directories sudah di-clear untuk force fresh QR
+
+### Troubleshooting: WhatsApp Ban / Blokir
+
+**Pertanyaan kunci saat uji lapangan — ditanyakan ke user:**
+> "Dari 10 pesan yang dikirim, berapa yang merespon?"
+
+| Respons | Arti | Aksi |
+|---------|------|------|
+| 7-10 merespon | Pesan terkirim & terbaca, delay aman | Tidak perlu ubah apapun |
+| 4-6 merespon | Pesan terkirim tapi ada yang terkena spam filter | Pertimbangkan naikkan delay (120-300s) |
+| 1-3 merespon | Pesan terkirim tapi banyak masuk spam/restricted | Naikkan delay signifikan (180-600s), kurangi volume harian |
+| 0 merespon & ada yang "gagal" di notif | Pesan TIDAK terkirim / account restricted | Stop broadcast, ganti nomor WA, naikkan delay ke 300-900s |
+| 0 merespon & semua "terkirim" | Pesan terkirim tapi tidak terbaca (bukan blokir) | Bukan masalah delay — cek konten pesan, timing kirim (jam berapa) |
+
+**Jika masih kena blokir meskipun delay 60-180s:**
+1. Cek: apakah semua pesan statusnya "terkirim" atau ada yang "gagal"?
+2. Jika semua terkirim → delay sudah cukup, blokir mungkin dari nomor WA yang sudah lama tidak aktif atau konten pesan
+3. Jika banyak gagal → naikkan delay lagi: `MIN_DELAY_SEC=180`, `MAX_DELAY_SEC=600`
+4. Pertimbangkan: kirim di jam kerja (09:00-17:00), hindari malam/minggu
+5. Pertimbangkan: variasi pesan (tambah randomisasi teks per customer)
+
+**Anti-ban strategy reference:**
+- Delay saat ini: 60-180 detik (3-4 pesan/jam)
+- Daily limit: 150 pesan/hari
+- Batch pause: worker otomatis delay antar pesan
+- Jika perlu lebih aman: naikkan ke 120-300 detik (2-3 pesan/jam, ~70-100/hari)
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
