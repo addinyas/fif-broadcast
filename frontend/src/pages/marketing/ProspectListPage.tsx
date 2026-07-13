@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -88,6 +88,7 @@ export function ProspectListPage() {
   const [_loadingShared, setLoadingShared] = useState(true);
   const [showRollingModal, setShowRollingModal] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<User[]>([]);
+  const [waStatus, setWaStatus] = useState<string>('disconnected');
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -181,6 +182,19 @@ export function ProspectListPage() {
   useEffect(() => { fetchSharedCustomers(); }, [fetchSharedCustomers]);
   useEffect(() => { fetchMarketingUsers(); }, [fetchMarketingUsers]);
   useEffect(() => () => { if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current); }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    const socket = getSocket();
+    socket.auth = { token };
+    if (!socket.connected) socket.connect();
+    socket.emit('wa:request_status');
+    const handler = (data: { status: string }) => {
+      setWaStatus(data.status);
+    };
+    socket.on('wa:status', handler);
+    return () => { socket.off('wa:status', handler); };
+  }, [token]);
 
   useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter]);
 
@@ -810,22 +824,39 @@ export function ProspectListPage() {
       )}
 
       {selectedIds.length > 0 && !sendingBatch && (
-        <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-slate-50/90 px-4 py-2.5 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedIds.length}</span> customer dipilih
-            {selectedIds.length > MAX_BATCH && (
-              <span className="ml-1 text-red-500">(maks {MAX_BATCH})</span>
-            )}
-          </span>
-          <Button
-            variant="primary"
-            size="sm"
-            icon={<Send className="h-4 w-4" />}
-            onClick={handleBatchSend}
-            disabled={selectedIds.length > MAX_BATCH || selectedIds.length === 0}
-          >
-            Kirim ({selectedIds.length})
-          </Button>
+        <div className="space-y-2">
+          {waStatus !== 'connected' && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-800 dark:bg-amber-900/20">
+              {waStatus === 'awaiting_scan' ? (
+                <Smartphone className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              ) : (
+                <WifiOff className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              )}
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {waStatus === 'awaiting_scan'
+                  ? 'WhatsApp sedang menunggu scan QR.'
+                  : 'WhatsApp belum terhubung.'}
+                {' '}<a href="/marketing/connect" className="font-semibold underline">Hubungkan sekarang</a>
+              </p>
+            </div>
+          )}
+          <div className="flex items-center justify-between rounded-lg border border-slate-200/80 bg-slate-50/90 px-4 py-2.5 backdrop-blur-sm dark:border-slate-700/50 dark:bg-slate-800/80">
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedIds.length}</span> customer dipilih
+              {selectedIds.length > MAX_BATCH && (
+                <span className="ml-1 text-red-500">(maks {MAX_BATCH})</span>
+              )}
+            </span>
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<Send className="h-4 w-4" />}
+              onClick={handleBatchSend}
+              disabled={selectedIds.length > MAX_BATCH || selectedIds.length === 0 || waStatus !== 'connected'}
+            >
+              Kirim ({selectedIds.length})
+            </Button>
+          </div>
         </div>
       )}
 

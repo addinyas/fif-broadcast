@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\WhatsappConnection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BroadcastService
@@ -15,6 +16,11 @@ class BroadcastService
 
     public function prepare(int $customerId, int $marketingId, string $templateBody, array $formValues): array
     {
+        $waConnection = WhatsappConnection::where('user_id', $marketingId)->first();
+        if (!$waConnection || $waConnection->status !== 'connected') {
+            throw new \Exception('WhatsApp belum terhubung. Silakan hubungkan WhatsApp terlebih dahulu di menu Connect.');
+        }
+
         $sentToday = BroadcastHistory::where('marketing_id', $marketingId)
             ->where('status', 'sent')
             ->where('created_at', '>=', now()->startOfDay())

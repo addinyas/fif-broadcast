@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User } from 'lucide-react';
+import { ArrowLeft, User, WifiOff, Smartphone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { customerService } from '../../services/customerService';
 import { templateService } from '../../services/templateService';
 import { broadcastService } from '../../services/broadcastService';
+import { getSocket } from '../../services/socketService';
 import { DynamicFormEditor } from '../../components/forms/DynamicFormEditor';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -21,6 +22,7 @@ export function BroadcastFormPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [loading, setLoading] = useState(false);
   const [templateBody, setTemplateBody] = useState('');
+  const [waStatus, setWaStatus] = useState<string>('disconnected');
 
   useEffect(() => {
     if (customerId) {
@@ -28,6 +30,17 @@ export function BroadcastFormPage() {
     }
     templateService.getAll().then(setTemplates);
   }, [customerId]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket.connected) socket.connect();
+    socket.emit('wa:request_status');
+    const handler = (data: { status: string }) => {
+      setWaStatus(data.status);
+    };
+    socket.on('wa:status', handler);
+    return () => { socket.off('wa:status', handler); };
+  }, []);
 
   useEffect(() => {
     if (customer?.dynamic_data && templateBody) {
@@ -81,6 +94,25 @@ export function BroadcastFormPage() {
         </div>
       </div>
 
+      {waStatus !== 'connected' && (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+          {waStatus === 'awaiting_scan' ? (
+            <Smartphone className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          ) : (
+            <WifiOff className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          )}
+          <div>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">WhatsApp belum terhubung</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              {waStatus === 'awaiting_scan'
+                ? 'Scan QR atau masukkan kode pairing di halaman Connect.'
+                : 'Hubungkan WhatsApp terlebih dahulu untuk mengirim pesan.'}
+              {' '}<a href="/marketing/connect" className="underline font-semibold">Buka halaman Connect</a>
+            </p>
+          </div>
+        </div>
+      )}
+
       {customer && (
         <Card>
           <div className="flex items-center gap-3">
@@ -114,6 +146,8 @@ export function BroadcastFormPage() {
         onSubmit={handleSubmit}
         onCancel={() => navigate(`${base}/broadcast`)}
         loading={loading}
+        disabled={waStatus !== 'connected'}
+        disabledReason={waStatus === 'awaiting_scan' ? 'Scan QR atau masukkan kode pairing terlebih dahulu' : 'Hubungkan WhatsApp terlebih dahulu di menu Connect'}
       />
     </div>
   );

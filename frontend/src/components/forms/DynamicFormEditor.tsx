@@ -9,12 +9,14 @@ interface DynamicFormEditorProps {
   onSubmit: (values: Record<string, string>) => void;
   onCancel: () => void;
   loading?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 const READ_ONLY_FIELDS = new Set(['nama', 'pelunasan', 'terima']);
 const COMPUTED_FIELDS = new Set(['pelunasan', 'terima']);
 
-export function DynamicFormEditor({ templateBody, onSubmit, onCancel, loading }: DynamicFormEditorProps) {
+export function DynamicFormEditor({ templateBody, onSubmit, onCancel, loading, disabled, disabledReason }: DynamicFormEditorProps) {
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(FORM_FIELDS.map((f) => [f.key, '']))
   );
@@ -93,9 +95,16 @@ export function DynamicFormEditor({ templateBody, onSubmit, onCancel, loading }:
 
       <div className="flex justify-end gap-3">
         <Button variant="secondary" onClick={onCancel}>Batal</Button>
-        <Button onClick={() => onSubmit(values)} loading={loading} icon={<Send className="h-4 w-4" />}>
-          Kirim Broadcast
-        </Button>
+        <div className="relative group">
+          <Button onClick={() => onSubmit(values)} loading={loading} disabled={disabled} icon={<Send className="h-4 w-4" />}>
+            Kirim Broadcast
+          </Button>
+          {disabled && disabledReason && (
+            <div className="pointer-events-none absolute bottom-full right-0 mb-2 hidden w-64 rounded-lg bg-slate-800 px-3 py-2 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-slate-700">
+              {disabledReason}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
