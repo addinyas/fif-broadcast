@@ -262,7 +262,7 @@ export function SettingsPage() {
             <input
               type="text"
               value={npoMceId}
-              onChange={(e) => setNpoMceId(e.target.value.toUpperCase())}
+              onChange={(e) => setNpoMceId(e.target.value)}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 uppercase placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
               placeholder="Masukkan ID NPO atau MCE"
               autoComplete="off"

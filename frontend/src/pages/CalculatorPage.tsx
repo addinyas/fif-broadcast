@@ -168,7 +168,7 @@ export function CalculatorPage() {
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nama <span className="text-red-500">*</span></label>
               <input value={manual.name}
-                onChange={(e) => setManual({ ...manual, name: e.target.value.replace(/[^a-zA-Z\s]/g, '').toUpperCase() })}
+                onChange={(e) => setManual({ ...manual, name: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               />
             </div>
