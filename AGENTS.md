@@ -805,6 +805,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - **Root cause: WhatsApp rate-limit VPS IP** karena reconnect loop panjang dari Baileys v7 sebelumnya
 - VPS IP perlu cooldown 1-2 jam sebelum coba connect lagi
 - Auth directories sudah di-clear untuk force fresh QR
+- **Fitur baru**: Pairing Code (kode 8 digit) sebagai alternatif QR — flow terpisah, bypass QR rate limit
 
 ### Troubleshooting: WhatsApp Ban / Blokir
 
