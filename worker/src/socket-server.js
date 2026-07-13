@@ -36,7 +36,7 @@ function validateToken(token) {
 function createSocketServer(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: '*',
+      origin: ['https://fif-broadcast.net', 'https://www.fif-broadcast.net', 'http://localhost:5173'],
       methods: ['GET', 'POST'],
     },
   });

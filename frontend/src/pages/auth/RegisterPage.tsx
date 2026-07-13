@@ -34,6 +34,11 @@ export function RegisterPage() {
     e.preventDefault();
     setError('');
     setErrors({});
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      setError('Password minimal 8 karakter, harus mengandung huruf besar, huruf kecil, dan angka');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       await register({

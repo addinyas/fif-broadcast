@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -96,7 +97,7 @@ class ProfileController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'current_password' => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8|confirmed|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/',
         ]);
 
         if ($validator->fails()) {
@@ -110,44 +111,24 @@ class ProfileController extends Controller
         }
 
         $user->update(['password' => $request->password]);
+        $user->tokens()->delete();
 
-        return response()->json(['message' => 'Password berhasil diubah']);
+        return response()->json(['message' => 'Password berhasil diubah. Silakan login ulang.']);
     }
 
     public function clearCache(Request $request): JsonResponse
     {
-        $messages = [];
-        $errors = [];
-
-        if (function_exists('exec')) {
-            $artisan = base_path('artisan');
-
-            $commands = [
-                'cache:clear',
-                'config:clear',
-                'view:clear',
-                'route:clear',
-            ];
-
-            foreach ($commands as $cmd) {
-                exec("php \"{$artisan}\" {$cmd} 2>&1", $output, $exitCode);
-                if ($exitCode === 0) {
-                    $messages[] = "{$cmd} berhasil";
-                } else {
-                    $errors[] = "{$cmd} gagal: ".implode(', ', $output);
-                }
-            }
+        if ($request->user()->role !== 'superadmin') {
+            return response()->json(['message' => 'Hanya superadmin yang bisa menjalankan clear cache'], 403);
         }
 
-        $paths = [
-            storage_path('framework/cache/data'),
-            storage_path('framework/views'),
-        ];
+        $messages = [];
+        $commands = ['cache:clear', 'config:clear', 'view:clear', 'route:clear'];
 
-        foreach ($paths as $path) {
-            if (is_dir($path)) {
-                $this->rmdirRecursive($path);
-                $messages[] = basename(dirname($path)).'/'.basename($path).' dibersihkan';
+        foreach ($commands as $cmd) {
+            $exitCode = Artisan::call($cmd);
+            if ($exitCode === 0) {
+                $messages[] = "{$cmd} berhasil";
             }
         }
 
@@ -197,17 +178,6 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Cache berhasil dibersihkan',
             'details' => $messages,
-            'errors' => $errors,
         ]);
-    }
-
-    private function rmdirRecursive(string $dir): void
-    {
-        $items = array_diff(scandir($dir), ['.', '..']);
-        foreach ($items as $item) {
-            $path = $dir.DIRECTORY_SEPARATOR.$item;
-            is_dir($path) ? $this->rmdirRecursive($path) : unlink($path);
-        }
-        rmdir($dir);
     }
 }

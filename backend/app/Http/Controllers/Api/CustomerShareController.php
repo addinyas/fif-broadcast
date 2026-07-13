@@ -177,11 +177,17 @@ class CustomerShareController extends Controller
         }
     }
 
-    public function pendingRequests(): JsonResponse
+    public function pendingRequests(Request $request): JsonResponse
     {
-        $requests = CustomerShare::with(['customer', 'fromMarketing', 'requestedBy'])
-            ->where('status', 'pending')
-            ->latest()
+        $user = $request->user();
+        $query = CustomerShare::with(['customer', 'fromMarketing', 'requestedBy'])
+            ->where('status', 'pending');
+
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->whereHas('fromMarketing', fn ($q) => $q->where('kios_id', $user->kios_id));
+        }
+
+        $requests = $query->latest()
             ->get()
             ->groupBy(fn ($s) => $s->requested_by.'_'.$s->from_marketing_id.'_'.$s->created_at->timestamp)
             ->map(function ($group) {
@@ -209,6 +215,13 @@ class CustomerShareController extends Controller
         $firstShare = CustomerShare::where('id', $id)->where('status', 'pending')->first();
         if (! $firstShare) {
             return response()->json(['message' => 'Request tidak ditemukan atau sudah diproses'], 404);
+        }
+
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $fromMarketing = User::find($firstShare->from_marketing_id);
+            if (! $fromMarketing || $fromMarketing->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Request tidak ditemukan'], 404);
+            }
         }
 
         CustomerShare::where('requested_by', $firstShare->requested_by)
@@ -255,6 +268,13 @@ class CustomerShareController extends Controller
         $firstShare = CustomerShare::where('id', $id)->first();
         if (! $firstShare) {
             return response()->json(['message' => 'Request tidak ditemukan'], 404);
+        }
+
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $fromMarketing = User::find($firstShare->from_marketing_id);
+            if (! $fromMarketing || $fromMarketing->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Request tidak ditemukan'], 404);
+            }
         }
 
         CustomerShare::where('requested_by', $firstShare->requested_by)

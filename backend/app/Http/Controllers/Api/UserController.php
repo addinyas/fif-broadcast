@@ -125,7 +125,7 @@ class UserController extends Controller
     public function resetPassword(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:8|regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/',
         ]);
 
         if ($validator->fails()) {
@@ -134,8 +134,9 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
         $user->update(['password' => $request->password]);
+        $user->tokens()->delete();
 
-        return response()->json(['message' => 'Password berhasil direset']);
+        return response()->json(['message' => 'Password berhasil direset. User harus login ulang.']);
     }
 
     public function updateKios(Request $request, int $id): JsonResponse

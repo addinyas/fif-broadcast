@@ -69,7 +69,7 @@ export const customerService = {
   },
 
   async deleteAll(): Promise<{ message: string }> {
-    const { data } = await api.delete('/customers');
+    const { data } = await api.post('/customers/delete-all', { confirm: 'DELETE_ALL' });
     return data;
   },
 

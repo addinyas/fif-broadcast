@@ -59,7 +59,7 @@ class TemplateController extends Controller
         }
 
         try {
-            $template = $this->templateService->update($id, $request->all(), $request->user());
+            $template = $this->templateService->update($id, $request->only(['title', 'message_body']), $request->user());
 
             return response()->json($template);
         } catch (\Exception $e) {

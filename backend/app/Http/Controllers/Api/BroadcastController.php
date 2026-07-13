@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Services\BroadcastService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,6 +30,20 @@ class BroadcastController extends Controller
         }
 
         try {
+            $user = $request->user();
+            if ($user->role !== 'superadmin') {
+                $customer = Customer::find($request->customer_id);
+                if (! $customer) {
+                    return response()->json(['message' => 'Customer tidak ditemukan'], 404);
+                }
+                if ($user->kios_id && $customer->kios_id !== $user->kios_id) {
+                    return response()->json(['message' => 'Customer tidak ditemukan'], 404);
+                }
+                if ($user->role === 'marketing' && $customer->marketing_id !== $user->id) {
+                    return response()->json(['message' => 'Customer tidak ditemukan'], 404);
+                }
+            }
+
             $result = $this->broadcastService->prepare(
                 $request->customer_id,
                 $request->user()->id,

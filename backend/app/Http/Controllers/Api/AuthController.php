@@ -70,7 +70,10 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        return response()->json($request->user()->only([
+            'id', 'name', 'email', 'avatar_url', 'role',
+            'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+        ]));
     }
 
     public function updateFcmToken(Request $request): JsonResponse

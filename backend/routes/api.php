@@ -15,9 +15,8 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WhatsappConnectionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('kios', [KiosController::class, 'index']);
-Route::post('/auth/register', [AuthController::class, 'register']);
-Route::post('/auth/login', [AuthController::class, 'login']);
+Route::get('kios', [KiosController::class, 'index'])->middleware('auth:sanctum');
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -53,7 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('customers/import-file', [CustomerController::class, 'importFile']);
             Route::post('customers/import-spreadsheet', [CustomerController::class, 'importSpreadsheet']);
             Route::get('customers/template-download', [CustomerController::class, 'templateDownload']);
-            Route::delete('customers', [CustomerController::class, 'deleteAll']);
+            Route::post('customers/delete-all', [CustomerController::class, 'deleteAll']);
             Route::get('customers/all-ids', [CustomerController::class, 'allIds']);
             Route::post('customers/batch-delete', [CustomerController::class, 'batchDelete']);
             Route::post('assignments/assign', [AssignmentController::class, 'assign']);
@@ -123,7 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('google-sheets/tenors', [GoogleSheetsController::class, 'getTenors']);
 
-    Route::get('admin/permissions', [PermissionController::class, 'index']);
+    Route::get('admin/permissions', [PermissionController::class, 'index'])->middleware('role:superadmin');
 
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:qr_scanner')->group(function () {
@@ -149,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('admin/kios/{id}', [KiosController::class, 'destroy']);
         Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
+        Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     });
 
     Route::get('notifications', [NotificationController::class, 'index']);

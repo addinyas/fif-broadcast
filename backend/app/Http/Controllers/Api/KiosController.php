@@ -22,15 +22,19 @@ class KiosController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'kios_id' => 'required|string|max:100|unique:kios,kios_id',
-            'kios_name' => 'required|string|max:255',
+            'kios_id' => 'required|string|max:100|unique:kios,kios_id|regex:/^[A-Z0-9_\-]+$/i',
+            'kios_name' => 'required|string|max:255|trim',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $kios = Kios::create($validator->validated());
+        $validated = $validator->validated();
+        $validated['kios_id'] = strtoupper(trim($validated['kios_id']));
+        $validated['kios_name'] = trim($validated['kios_name']);
+
+        $kios = Kios::create($validated);
 
         return response()->json(['message' => 'Kios ditambahkan', 'kios' => $kios], 201);
     }
@@ -40,15 +44,19 @@ class KiosController extends Controller
         $kios = Kios::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'kios_id' => 'required|string|max:100|unique:kios,kios_id,'.$id,
-            'kios_name' => 'required|string|max:255',
+            'kios_id' => 'required|string|max:100|unique:kios,kios_id,'.$id.'|regex:/^[A-Z0-9_\-]+$/i',
+            'kios_name' => 'required|string|max:255|trim',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $kios->update($validator->validated());
+        $validated = $validator->validated();
+        $validated['kios_id'] = strtoupper(trim($validated['kios_id']));
+        $validated['kios_name'] = trim($validated['kios_name']);
+
+        $kios->update($validated);
 
         return response()->json(['message' => 'Kios diupdate', 'kios' => $kios]);
     }

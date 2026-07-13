@@ -109,6 +109,10 @@ export function SettingsPage() {
       toast('error', 'Password baru minimal 8 karakter');
       return;
     }
+    if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      toast('error', 'Password harus mengandung huruf besar, huruf kecil, dan angka');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       toast('error', 'Konfirmasi password tidak cocok');
       return;

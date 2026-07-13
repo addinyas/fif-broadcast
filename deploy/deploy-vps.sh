@@ -65,6 +65,13 @@ server {
     server_name $DOMAIN www.$DOMAIN _;
 
     client_max_body_size 20M;
+    server_tokens off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     root /var/www/fif/backend/public;
     index index.html;
@@ -130,6 +137,12 @@ server {
     server_name $DOMAIN www.$DOMAIN _;
 
     client_max_body_size 20M;
+    server_tokens off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     root /var/www/fif/backend/public;
     index index.html;
@@ -197,7 +210,8 @@ WorkingDirectory=/var/www/fif/backend
 ExecStart=/usr/bin/php artisan queue:listen --tries=1 --timeout=0
 Restart=always
 RestartSec=5
-User=root
+User=fif
+Group=fif
 
 [Install]
 WantedBy=multi-user.target
@@ -214,17 +228,27 @@ WorkingDirectory=/var/www/fif/worker
 ExecStart=/usr/bin/npm run start
 Restart=always
 RestartSec=5
-User=root
+User=fif
+Group=fif
 Environment=NODE_ENV=production
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
+# Create fif user if not exists
+id -u fif &>/dev/null || useradd -r -s /bin/false fif
+
 chown -R root:root "$APP_DIR"
 chown -R apache:apache "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache" "$APP_DIR/backend/database"
 chmod -R 775 "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
 chmod 664 "$APP_DIR/backend/database/database.sqlite"
+chown -R fif:fif "$APP_DIR/worker/auth_info" 2>/dev/null || true
+chmod 700 "$APP_DIR/worker/auth_info" 2>/dev/null || true
+# Worker needs read-write access to SQLite DB + read access to bootstrap/cache
+setfacl -R -m u:fif:rwx "$APP_DIR/backend/database/database.sqlite" 2>/dev/null || true
+setfacl -R -m u:fif:r "$APP_DIR/backend/storage" 2>/dev/null || true
+setfacl -R -m u:fif:rx "$APP_DIR/backend/bootstrap" 2>/dev/null || true
 systemctl stop fif-backend 2>/dev/null || true
 systemctl disable fif-backend 2>/dev/null || true
 nginx -t

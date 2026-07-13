@@ -300,6 +300,14 @@ class CustomerController extends Controller
 
     public function deleteAll(Request $request): JsonResponse
     {
+        $validator = Validator::make($request->all(), [
+            'confirm' => 'required|in:DELETE_ALL',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Konfirmasi diperlukan. Kirim confirm: "DELETE_ALL"'], 422);
+        }
+
         try {
             $user = $request->user();
             $count = $this->customerService->deleteAll(
@@ -408,11 +416,11 @@ class CustomerController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $data = $request->only(['name', 'phone_number', 'dynamic_data']);
         $dynamicData = $data['dynamic_data'] ?? [];
 
         // ekstrak & cek duplikat no_contract (per kios)
-        $noContract = $dynamicData['no_contract'] ?? ($data['no_contract'] ?? null);
+        $noContract = $dynamicData['no_contract'] ?? null;
         if ($noContract) {
             $dupQuery = Customer::where('no_contract', $noContract);
             $userKiosId = $request->user()->kios_id;
