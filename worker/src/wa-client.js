@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const { emitWAStatus } = require('./events');
+const { emitWAStatus, emitPairingCode } = require('./events');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
@@ -215,6 +215,18 @@ async function sendWAMessageForUser(userId, jid, text) {
   return result;
 }
 
+async function requestPairingCodeForUser(userId, phoneNumber) {
+  const entry = connections.get(userId);
+  if (!entry || !entry.sock) throw new Error('WA client not found for user');
+  if (entry.connected) throw new Error('WA already connected');
+
+  const sock = entry.sock;
+  const code = await sock.requestPairingCode(phoneNumber);
+  console.log(`[WA] Pairing code for user ${userId}: ${code}`);
+  emitPairingCode(userId, { code, message: `Masukkan kode ${code} di WhatsApp Anda` });
+  return code;
+}
+
 async function disconnectWAForUser(userId) {
   const entry = connections.get(userId);
   if (entry) {
@@ -278,4 +290,4 @@ function disconnectAllConnections() {
   reconnectState.clear();
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles };
+module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles };

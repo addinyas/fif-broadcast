@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Smartphone, Wifi, WifiOff, AlertTriangle, RefreshCw, Unlink, Loader2 } from 'lucide-react';
+import { Smartphone, Wifi, WifiOff, AlertTriangle, RefreshCw, Unlink, Loader2, Hash, QrCode } from 'lucide-react';
 import QRCode from 'qrcode';
 import { getSocket } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,10 @@ export function QRScannerPage() {
   const [waQR, setWaQR] = useState<string | null>(null);
   const [waStatus, setWaStatus] = useState<string>('disconnected');
   const [reconnecting, setReconnecting] = useState(false);
+  const [connectMode, setConnectMode] = useState<'qr' | 'code'>('qr');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [pairingError, setPairingError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuth();
 
@@ -31,10 +35,25 @@ export function QRScannerPage() {
       setWaStatus(msg.status);
       setReconnecting(false);
       if (msg.qr) setWaQR(msg.qr);
-      if (msg.status === 'connected' || msg.status === 'logged_out') setWaQR(null);
+      if (msg.status === 'connected' || msg.status === 'logged_out') {
+        setWaQR(null);
+        setPairingCode(null);
+      }
+    };
+
+    const handlePairingCode = (msg: { code?: string; error?: string; message?: string }) => {
+      if (msg.error) {
+        setPairingError(msg.error);
+        setPairingCode(null);
+      } else if (msg.code) {
+        setPairingCode(msg.code);
+        setPairingError(null);
+        setWaStatus('awaiting_scan');
+      }
     };
 
     socket.on('wa:status', handleWAStatus);
+    socket.on('wa:pairing_code', handlePairingCode);
 
     const handleSocketError = (err: Error) => {
       console.error('Socket connection error:', err.message);
@@ -52,6 +71,7 @@ export function QRScannerPage() {
 
     return () => {
       socket.off('wa:status', handleWAStatus);
+      socket.off('wa:pairing_code', handlePairingCode);
       socket.off('connect_error', handleSocketError);
       socket.off('disconnect', handleDisconnect);
     };
@@ -79,8 +99,21 @@ export function QRScannerPage() {
     const socket = getSocket();
     setReconnecting(true);
     setWaQR(null);
+    setPairingCode(null);
     socket.emit('wa:reconnect');
   }, []);
+
+  const handleRequestPairingCode = useCallback(() => {
+    const clean = phoneNumber.replace(/\D/g, '');
+    if (!clean || clean.length < 8) {
+      setPairingError('Masukkan nomor telepon yang valid');
+      return;
+    }
+    const socket = getSocket();
+    setPairingError(null);
+    setPairingCode(null);
+    socket.emit('wa:request_pairing_code', { phoneNumber: clean });
+  }, [phoneNumber]);
 
   const statusConfig: Record<string, { icon: React.ReactNode; label: string; variant: 'success' | 'warning' | 'danger' | 'info' }> = {
     connected: { icon: <Wifi className="h-5 w-5" />, label: 'Terhubung', variant: 'success' },
@@ -115,7 +148,28 @@ export function QRScannerPage() {
               <Badge variant={cfg.variant}>{cfg.label}</Badge>
             </div>
 
-            {effectiveStatus === 'awaiting_scan' && waQR && (
+            {effectiveStatus !== 'connected' && effectiveStatus !== 'logged_out' && (
+              <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
+                <button
+                  onClick={() => { setConnectMode('qr'); setPairingCode(null); setPairingError(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    connectMode === 'qr' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <QrCode className="h-4 w-4" /> QR Code
+                </button>
+                <button
+                  onClick={() => { setConnectMode('code'); setWaQR(null); setPairingError(null); }}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                    connectMode === 'code' ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-700 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  }`}
+                >
+                  <Hash className="h-4 w-4" /> Kode Pairing
+                </button>
+              </div>
+            )}
+
+            {connectMode === 'qr' && effectiveStatus === 'awaiting_scan' && waQR && (
               <div className="flex flex-col items-center gap-3 py-4">
                 <p className="text-sm text-slate-500 dark:text-slate-400">
                   Buka WhatsApp di ponsel &gt; Tap titik tiga &gt; <strong>Linked Devices</strong> &gt; Scan QR
@@ -123,6 +177,43 @@ export function QRScannerPage() {
                 <div className="rounded-xl border-2 border-dashed border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
                   <canvas ref={canvasRef} />
                 </div>
+              </div>
+            )}
+
+            {connectMode === 'code' && effectiveStatus !== 'connected' && (
+              <div className="space-y-3 py-2">
+                {!pairingCode ? (
+                  <>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Buka WhatsApp di ponsel &gt; Tap titik tiga &gt; <strong>Linked Devices</strong> &gt; <strong>Link with phone number</strong>
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="628xxxxxxxxxx"
+                        value={phoneNumber}
+                        onChange={(e) => { setPhoneNumber(e.target.value.replace(/\D/g, '')); setPairingError(null); }}
+                        className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        onKeyDown={(e) => e.key === 'Enter' && handleRequestPairingCode()}
+                      />
+                      <Button variant="primary" onClick={handleRequestPairingCode} disabled={!phoneNumber || phoneNumber.length < 8}>
+                        Dapatkan Kode
+                      </Button>
+                    </div>
+                    {pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 py-4">
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Masukkan kode berikut di WhatsApp Anda:
+                    </p>
+                    <div className="rounded-xl border-2 border-dashed border-fif-200 bg-fif-50 px-8 py-6 text-center dark:border-fif-800 dark:bg-fif-900/20">
+                      <p className="text-4xl font-bold tracking-[0.3em] text-fif-600 dark:text-fif-400 font-mono">{pairingCode}</p>
+                    </div>
+                    <p className="text-xs text-slate-400">Kode akan expired dalam beberapa menit</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -2,7 +2,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { Server } = require('socket.io');
-const { getOrCreateClient, disconnect } = require('./wa-manager');
+const { getOrCreateClient, disconnect, requestPairingCode } = require('./wa-manager');
 const { isConnectedForUser } = require('./wa-client');
 const { setIO } = require('./events');
 
@@ -103,6 +103,26 @@ function createSocketServer(httpServer) {
         socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
       } else {
         socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+      }
+    });
+
+    socket.on('wa:request_pairing_code', async (data) => {
+      const phoneNumber = data?.phoneNumber;
+      if (!phoneNumber || !/^\d+$/.test(phoneNumber)) {
+        socket.emit('wa:pairing_code', { error: 'Nomor telepon tidak valid' });
+        return;
+      }
+      try {
+        if (!isConnectedForUser(userId)) {
+          await new Promise((resolve) => {
+            getOrCreateClient(userId, resolve).catch(() => resolve());
+            setTimeout(resolve, 3000);
+          });
+        }
+        await requestPairingCode(userId, phoneNumber);
+      } catch (err) {
+        console.error(`[Socket] Pairing code error for user ${userId}:`, err.message);
+        socket.emit('wa:pairing_code', { error: err.message });
       }
     });
   });

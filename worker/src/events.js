@@ -22,4 +22,10 @@ function emitPendingStuck(userId, data) {
   }
 }
 
-module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck };
+function emitPairingCode(userId, data) {
+  if (io) {
+    io.to(`user:${userId}`).emit('wa:pairing_code', data);
+  }
+}
+
+module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck, emitPairingCode };
