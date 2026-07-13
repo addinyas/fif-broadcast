@@ -234,14 +234,16 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function deleteAll(?string $kiosId = null): int
     {
-        $query = Customer::query();
-        if ($kiosId) {
-            $query->where('kios_id', $kiosId);
-        }
-        $count = $query->count();
+        $customerIds = Customer::query()
+            ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
+            ->pluck('id');
 
-        DB::table('broadcast_histories')->whereIn('customer_id', $query->toBase())->delete();
-        $query->forceDelete();
+        $count = $customerIds->count();
+
+        if ($count > 0) {
+            DB::table('broadcast_histories')->whereIn('customer_id', $customerIds)->delete();
+            Customer::whereIn('id', $customerIds)->forceDelete();
+        }
 
         return $count;
     }

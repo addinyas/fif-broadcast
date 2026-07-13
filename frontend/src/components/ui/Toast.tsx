@@ -47,17 +47,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+      <div className="fixed bottom-4 right-4 left-4 z-[100] flex flex-col gap-2 sm:left-auto sm:max-w-sm">
         {items.map((item) => (
           <div
             key={item.id}
             className={`animate-toast-in flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg dark:shadow-slate-900/50 ${bgStyles[item.type]}`}
           >
-            {icons[item.type]}
-            <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{item.message}</p>
+            <span className="shrink-0">{icons[item.type]}</span>
+            <p className="min-w-0 flex-1 break-words text-sm font-medium text-slate-800 dark:text-slate-200">{item.message}</p>
             <button
               onClick={() => remove(item.id)}
-              className="ml-2 rounded-lg p-1 text-slate-400 hover:bg-slate-200/50 dark:text-slate-500 dark:hover:bg-slate-700/50"
+              className="ml-2 shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-200/50 dark:text-slate-500 dark:hover:bg-slate-700/50"
             >
               <X className="h-4 w-4" />
             </button>
