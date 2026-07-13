@@ -776,6 +776,17 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Fix: rolling notif persistence + center toast + assignedToMe logging
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `NotificationController.php`: ganti `where('status', 'pending')` → `whereIn('status', ['pending', 'approved'])` di auto-trim (2 tempat) + deleteAll (1 tempat). Notif rolling sekarang tetap ada selama share masih pending ATAU approved. Fix notif approved terhapus dari semua akun.
+- `CustomerController.php`: tambah `Log::info()` di `assignedToMe()` — log user_id, role, marketing_id, kios_id, total, page_count. Untuk debug data pemilik hilang setelah approve (belum ditemukan root cause-nya dari kode).
+
+**Frontend:**
+- `NotificationBell.tsx`: rolling approval toast dipindah ke tengah layar (fixed inset-0 + flex center)
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
