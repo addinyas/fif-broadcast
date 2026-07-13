@@ -23,7 +23,7 @@ class KiosController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'kios_id' => 'required|string|max:100|unique:kios,kios_id|regex:/^[A-Z0-9_\-]+$/i',
-            'kios_name' => 'required|string|max:255|trim',
+            'kios_name' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -45,7 +45,7 @@ class KiosController extends Controller
 
         $validator = Validator::make($request->all(), [
             'kios_id' => 'required|string|max:100|unique:kios,kios_id,'.$id.'|regex:/^[A-Z0-9_\-]+$/i',
-            'kios_name' => 'required|string|max:255|trim',
+            'kios_name' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
