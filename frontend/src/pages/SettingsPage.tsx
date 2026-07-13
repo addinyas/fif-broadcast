@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Camera, Trash, User, Loader2 } from 'lucide-react';
+import { Camera, Trash, User, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/profileService';
 import { useToast } from '../components/ui/Toast';
@@ -16,6 +16,12 @@ export function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
 
   useEffect(() => {
     if (user?.avatar_url) {
@@ -91,6 +97,38 @@ export function SettingsPage() {
       toast('error', 'Gagal membersihkan cache');
     } finally {
       setClearing(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword) {
+      toast('error', 'Semua field password wajib diisi');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast('error', 'Password baru minimal 8 karakter');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast('error', 'Konfirmasi password tidak cocok');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await profileService.changePassword({
+        current_password: currentPassword,
+        password: newPassword,
+        password_confirmation: confirmPassword,
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast('success', 'Password berhasil diubah');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Gagal mengubah password';
+      toast('error', msg);
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -251,6 +289,76 @@ export function SettingsPage() {
             >
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
               Simpan
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90">
+        <h2 className="mb-6 text-lg font-semibold text-slate-800 dark:text-slate-100">Ubah Password</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Password Saat Ini</label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type={showCurrentPw ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+                placeholder="Masukkan password saat ini"
+                autoComplete="current-password"
+              />
+              <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Password Baru</label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type={showNewPw ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+                placeholder="Minimal 8 karakter"
+                autoComplete="new-password"
+              />
+              <button type="button" onClick={() => setShowNewPw(!showNewPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Konfirmasi Password Baru</label>
+            <div className="relative">
+              <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+                placeholder="Ulangi password baru"
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              className="flex items-center gap-2 rounded-xl bg-fif-600 px-6 py-2.5 text-sm font-semibold text-white shadow transition-all hover:bg-fif-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {changingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
+              Ubah Password
             </button>
           </div>
         </div>

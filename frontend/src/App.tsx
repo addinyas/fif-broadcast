@@ -23,6 +23,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage').then(m => ({ defa
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const TemplateManagementPage = lazy(() => import('./pages/admin/TemplateManagementPage').then(m => ({ default: m.TemplateManagementPage })));
 const KiosManagementPage = lazy(() => import('./pages/admin/KiosManagementPage').then(m => ({ default: m.KiosManagementPage })));
+const RollingApprovalPage = lazy(() => import('./pages/admin/RollingApprovalPage').then(m => ({ default: m.RollingApprovalPage })));
 
 function LoadingScreen() {
   const { user } = useAuth();
@@ -182,6 +183,7 @@ export default function App() {
             <Route path="calculator" element={<SuspendedPage Component={CalculatorPage} />} />
             <Route path="templates" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={TemplateManagementPage} /></ProtectedRoute>} />
             <Route path="kios" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={KiosManagementPage} /></ProtectedRoute>} />
+            <Route path="rolling" element={<RequireFeature feature="data_rolling"><SuspendedPage Component={RollingApprovalPage} /></RequireFeature>} />
           </Route>
 
           <Route path="/marketing" element={<ProtectedRoute roles={['marketing']}><MarketingLayout /></ProtectedRoute>}>

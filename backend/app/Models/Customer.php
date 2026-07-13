@@ -16,6 +16,7 @@ class Customer extends Model
         'name',
         'phone_number',
         'uploaded_by',
+        'kios_id',
         'marketing_id',
         'assignment_status',
         'dynamic_data',

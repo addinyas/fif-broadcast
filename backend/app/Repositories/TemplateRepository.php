@@ -17,9 +17,14 @@ class TemplateRepository implements TemplateRepositoryInterface
         return $query->latest()->get();
     }
 
-    public function findById(int $id)
+    public function findById(int $id, $user = null)
     {
-        return Template::with('creator:id,name')->findOrFail($id);
+        $query = Template::with('creator:id,name')->where('id', $id);
+        if ($user && $user->role === 'marketing') {
+            $query->where('created_by', $user->id);
+        }
+
+        return $query->findOrFail($id);
     }
 
     public function create(array $data)
@@ -27,16 +32,24 @@ class TemplateRepository implements TemplateRepositoryInterface
         return Template::create($data);
     }
 
-    public function update(int $id, array $data)
+    public function update(int $id, array $data, $user = null)
     {
-        $template = Template::findOrFail($id);
+        $query = Template::where('id', $id);
+        if ($user && $user->role === 'marketing') {
+            $query->where('created_by', $user->id);
+        }
+        $template = $query->findOrFail($id);
         $template->update($data);
 
         return $template->fresh();
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, $user = null): void
     {
-        Template::findOrFail($id)->delete();
+        $query = Template::where('id', $id);
+        if ($user && $user->role === 'marketing') {
+            $query->where('created_by', $user->id);
+        }
+        $query->findOrFail($id)->delete();
     }
 }

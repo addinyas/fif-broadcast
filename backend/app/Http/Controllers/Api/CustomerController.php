@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Notification;
 use App\Services\CustomerService;
 use App\Services\GoogleSheetsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class CustomerController extends Controller
 {
@@ -18,30 +23,48 @@ class CustomerController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'buss_unit']);
+        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'customer_type']);
+
+        $user = $request->user();
+        if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
+            $filters['kios_id'] = $user->kios_id;
+        }
 
         return response()->json($this->customerService->getAll($filters));
     }
 
-    public function show(int $id): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
         try {
-            return response()->json($this->customerService->findById($id));
+            $customer = $this->customerService->findById($id);
+            $user = $request->user();
+            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+
+            return response()->json($customer);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
     }
 
-    public function byNoContract(string $noContract): JsonResponse
+    public function byNoContract(string $noContract, Request $request): JsonResponse
     {
-        $customer = Customer::where('no_contract', $noContract)->first();
+        $user = $request->user();
+        $query = Customer::where('no_contract', $noContract);
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
+        }
+        $customer = $query->first();
 
         if (! $customer) {
-            // fallback ke dynamic_data untuk data lama — use parameterized LIKE
             $escaped = '%'.addcslashes($noContract, '%_\\').'%';
-            $customer = Customer::where('dynamic_data', 'like', $escaped)
-                ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract])
-                ->first();
+            $fallbackQuery = Customer::where('dynamic_data', 'like', $escaped)
+                ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract]);
+            if ($user->role !== 'superadmin' && $user->kios_id) {
+                $fallbackQuery->where('kios_id', $user->kios_id);
+            }
+            $customer = $fallbackQuery->first();
         }
 
         if (! $customer) {
@@ -65,6 +88,9 @@ class CustomerController extends Controller
 
         $data = $request->only(['name', 'phone_number', 'dynamic_data']);
         $data['uploaded_by'] = $request->user()->id;
+        if ($request->user()->kios_id) {
+            $data['kios_id'] = $request->user()->kios_id;
+        }
 
         // copy no_contract dari dynamic_data ke kolom
         $dynamicData = $data['dynamic_data'] ?? [];
@@ -72,10 +98,16 @@ class CustomerController extends Controller
             $data['no_contract'] = $dynamicData['no_contract'];
         }
 
-        // cek duplikat no_contract
+        // cek duplikat no_contract (per kios)
         $noContract = $data['no_contract'] ?? null;
-        if ($noContract && Customer::where('no_contract', $noContract)->exists()) {
-            return response()->json(['message' => "No Contract '$noContract' sudah terdaftar"], 409);
+        if ($noContract) {
+            $dupQuery = Customer::where('no_contract', $noContract);
+            if (! empty($data['kios_id'])) {
+                $dupQuery->where('kios_id', $data['kios_id']);
+            }
+            if ($dupQuery->exists()) {
+                return response()->json(['message' => "No Contract '$noContract' sudah terdaftar"], 409);
+            }
         }
 
         $customer = $this->customerService->create($data);
@@ -96,6 +128,12 @@ class CustomerController extends Controller
         }
 
         try {
+            $customer = $this->customerService->findById($id);
+            $user = $request->user();
+            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+
             $validated = $request->only(['name', 'phone_number', 'dynamic_data']);
             $customer = $this->customerService->update($id, $validated);
 
@@ -105,9 +143,15 @@ class CustomerController extends Controller
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id, Request $request): JsonResponse
     {
         try {
+            $customer = $this->customerService->findById($id);
+            $user = $request->user();
+            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+
             $this->customerService->delete($id);
 
             return response()->json(['message' => 'Customer deleted']);
@@ -128,7 +172,21 @@ class CustomerController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $result = $this->customerService->bulkImport($request->customers, $request->user()->id);
+        $result = $this->customerService->bulkImport($request->customers, $request->user()->id, $request->user()->kios_id);
+
+        if (($result['imported'] ?? 0) > 0) {
+            $user = $request->user();
+            Notification::create([
+                'user_id' => $user->id,
+                'type' => 'import',
+                'title' => 'Import berhasil',
+                'message' => "{$result['imported']} data berhasil diimport.",
+                'data' => [
+                    'imported' => $result['imported'],
+                    'failed' => $result['failed'] ?? [],
+                ],
+            ]);
+        }
 
         return response()->json($result);
     }
@@ -146,11 +204,26 @@ class CustomerController extends Controller
         try {
             $result = $this->customerService->importFromFile(
                 $request->file('file'),
-                $request->user()->id
+                $request->user()->id,
+                $request->user()->kios_id
             );
 
             if (! isset($result['detected_columns'])) {
                 $result['detected_columns'] = [];
+            }
+
+            if (($result['imported'] ?? 0) > 0) {
+                $user = $request->user();
+                Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'import',
+                    'title' => 'Import berhasil',
+                    'message' => "{$result['imported']} data berhasil diimport dari file.",
+                    'data' => [
+                        'imported' => $result['imported'],
+                        'failed' => $result['failed'] ?? [],
+                    ],
+                ]);
             }
 
             return response()->json($result);
@@ -199,10 +272,24 @@ class CustomerController extends Controller
                 ], 200);
             }
 
-            $result = $this->customerService->importFromSpreadsheetData($data, $request->user()->id);
+            $result = $this->customerService->importFromSpreadsheetData($data, $request->user()->id, $request->user()->kios_id);
 
             if ($result['imported'] === 0) {
                 $result['detected_columns'] = $rawHeader;
+            }
+
+            if (($result['imported'] ?? 0) > 0) {
+                $user = $request->user();
+                Notification::create([
+                    'user_id' => $user->id,
+                    'type' => 'import',
+                    'title' => 'Import berhasil',
+                    'message' => "{$result['imported']} data berhasil diimport dari spreadsheet.",
+                    'data' => [
+                        'imported' => $result['imported'],
+                        'failed' => $result['failed'] ?? [],
+                    ],
+                ]);
             }
 
             return response()->json($result);
@@ -214,7 +301,10 @@ class CustomerController extends Controller
     public function deleteAll(Request $request): JsonResponse
     {
         try {
-            $count = $this->customerService->deleteAll();
+            $user = $request->user();
+            $count = $this->customerService->deleteAll(
+                $user->role === 'superadmin' ? null : $user->kios_id
+            );
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
@@ -224,7 +314,12 @@ class CustomerController extends Controller
 
     public function allIds(Request $request): JsonResponse
     {
-        $ids = Customer::query()->pluck('id');
+        $user = $request->user();
+        $query = Customer::query();
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
+        }
+        $ids = $query->pluck('id');
 
         return response()->json(['ids' => $ids, 'total' => $ids->count()]);
     }
@@ -241,6 +336,10 @@ class CustomerController extends Controller
 
         try {
             $customer = $this->customerService->findById($id);
+            $user = $request->user();
+            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
             $dynamicData = $customer->dynamic_data ?? [];
             $dynamicData['cori'] = $request->cori;
             $customer = $this->customerService->update($id, ['dynamic_data' => $dynamicData]);
@@ -263,7 +362,15 @@ class CustomerController extends Controller
         }
 
         try {
-            $count = $this->customerService->batchDelete($request->ids);
+            $user = $request->user();
+            $ids = $request->ids;
+            if ($user->role !== 'superadmin' && $user->kios_id) {
+                $ids = Customer::whereIn('id', $ids)
+                    ->where('kios_id', $user->kios_id)
+                    ->pluck('id')
+                    ->toArray();
+            }
+            $count = $this->customerService->batchDelete($ids);
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
@@ -273,10 +380,17 @@ class CustomerController extends Controller
 
     public function assignedToMe(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'per_page', 'buss_unit', 'sisa_angsuran']);
-        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
-            ? null
-            : $request->user()->id;
+        $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran']);
+        $user = $request->user();
+
+        // Marketing: only their assigned customers. Superadmin/UH: all (scoped by kios below).
+        $marketingId = $user->role === 'marketing' ? $user->id : null;
+
+        // UH/marketing: scope to their kios
+        if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
+            $filters['kios_id'] = $user->kios_id;
+        }
+
         $customers = $this->customerService->getAssignedToMarketing($marketingId, $filters);
 
         return response()->json($customers);
@@ -297,16 +411,24 @@ class CustomerController extends Controller
         $data = $request->all();
         $dynamicData = $data['dynamic_data'] ?? [];
 
-        // ekstrak & cek duplikat no_contract
+        // ekstrak & cek duplikat no_contract (per kios)
         $noContract = $dynamicData['no_contract'] ?? ($data['no_contract'] ?? null);
         if ($noContract) {
-            if (Customer::where('no_contract', $noContract)->exists()) {
+            $dupQuery = Customer::where('no_contract', $noContract);
+            $userKiosId = $request->user()->kios_id;
+            if ($userKiosId) {
+                $dupQuery->where('kios_id', $userKiosId);
+            }
+            if ($dupQuery->exists()) {
                 return response()->json(['message' => "No Contract '$noContract' sudah terdaftar"], 409);
             }
             $data['no_contract'] = $noContract;
         }
 
         $data['uploaded_by'] = $request->user()->id;
+        if ($request->user()->kios_id) {
+            $data['kios_id'] = $request->user()->kios_id;
+        }
         $dynamicData['_entry_source'] = 'manual';
         $data['dynamic_data'] = $dynamicData;
 
@@ -324,13 +446,18 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
+        $user = $request->user();
+        if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+
         $dd = $customer->dynamic_data ?? [];
         if (($dd['_entry_source'] ?? null) !== 'manual') {
             return response()->json(['message' => 'Hanya customer input manual yang bisa dihapus'], 403);
         }
 
         // Marketing can only delete their own manual entries
-        if ($request->user()->role === 'marketing' && $customer->marketing_id !== $request->user()->id) {
+        if ($user->role === 'marketing' && $customer->marketing_id !== $user->id) {
             return response()->json(['message' => 'Tidak bisa menghapus customer milik marketing lain'], 403);
         }
 
@@ -342,9 +469,12 @@ class CustomerController extends Controller
 
     public function markSent(Request $request, int $id): JsonResponse
     {
+        $user = $request->user();
         $query = Customer::where('id', $id);
-        if (! in_array($request->user()->role, ['superadmin', 'UH'], true)) {
-            $query->where('marketing_id', $request->user()->id);
+        if ($user->role === 'marketing') {
+            $query->where('marketing_id', $user->id);
+        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
         }
 
         $customer = $query->first();
@@ -362,9 +492,12 @@ class CustomerController extends Controller
 
     public function sentIds(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = Customer::whereNotNull('manual_sent_at');
-        if (! in_array($request->user()->role, ['superadmin', 'UH'], true)) {
-            $query->where('marketing_id', $request->user()->id);
+        if ($user->role === 'marketing') {
+            $query->where('marketing_id', $user->id);
+        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
         }
         $ids = $query->pluck('id');
 
@@ -373,11 +506,14 @@ class CustomerController extends Controller
 
     public function clearSentMarks(Request $request): JsonResponse
     {
+        $user = $request->user();
         $query = Customer::whereNotNull('manual_sent_at');
-        if (in_array($request->user()->role, ['superadmin', 'UH'], true)) {
-            $query->where('manual_sent_by', $request->user()->id);
+        if ($user->role === 'marketing') {
+            $query->where('marketing_id', $user->id);
+        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
         } else {
-            $query->where('marketing_id', $request->user()->id);
+            $query->where('manual_sent_by', $user->id);
         }
         $query->update(['manual_sent_at' => null, 'manual_sent_by' => null]);
 
@@ -391,12 +527,17 @@ class CustomerController extends Controller
             return response()->json([]);
         }
 
-        $customers = Customer::where(function ($query) use ($q) {
+        $user = $request->user();
+        $query = Customer::where(function ($query) use ($q) {
             $query->where('no_contract', $q)
                 ->orWhere('no_contract', 'like', "%{$q}%")
                 ->orWhere('name', 'like', "%{$q}%");
-        })
-            ->limit(20)
+        });
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('kios_id', $user->kios_id);
+        }
+
+        $customers = $query->limit(20)
             ->get(['id', 'name', 'no_contract', 'dynamic_data']);
 
         // sort: exact no_contract match first
@@ -416,5 +557,52 @@ class CustomerController extends Controller
         })->values();
 
         return response()->json($customers);
+    }
+
+    public function templateDownload()
+    {
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $headers = [
+            'NO_CONTRACT', 'NAMA', 'SISA ANGSURAN', 'KECAMATAN', 'KELURAHAN',
+            'OBJ_DESC', 'VCODE', 'TAHUN', 'OTR', 'PLAFON',
+            'CORI', 'NO_WHATSAPP',
+        ];
+
+        $sampleData = [
+            '40200001', 'Nama Contoh', '6', 'Gamping', 'Trimurti',
+            'Honda Beat', '001', '2023', '18000000', '12000000',
+            'GOOD', '08123456789',
+        ];
+
+        foreach ($headers as $col => $header) {
+            $coord = Coordinate::stringFromColumnIndex($col + 1).'1';
+            $cell = $sheet->getCell($coord);
+            $cell->setValue($header);
+            $cell->getStyle()->getFont()->setBold(true);
+        }
+
+        foreach ($sampleData as $col => $value) {
+            $coord = Coordinate::stringFromColumnIndex($col + 1).'2';
+            $sheet->getCell($coord)->setValue($value);
+        }
+
+        foreach ($headers as $col => $header) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($col + 1))->setAutoSize(true);
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $tempPath = tempnam(sys_get_temp_dir(), 'template_');
+        $writer->save($tempPath);
+        $spreadsheet->disconnectWorksheets();
+
+        $contents = file_get_contents($tempPath);
+        unlink($tempPath);
+
+        return Response::make($contents, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment;filename="template_import_customer.xlsx"',
+        ]);
     }
 }

@@ -22,11 +22,11 @@ interface CustomerRepositoryInterface
 
     public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator;
 
-    public function bulkImport(array $customers, int $uploadedBy): array;
+    public function bulkImport(array $customers, int $uploadedBy, ?string $kiosId = null): array;
 
     public function getDistributionReport(): array;
 
-    public function deleteAll(): int;
+    public function deleteAll(?string $kiosId = null): int;
 
     public function batchDelete(array $ids): int;
 }

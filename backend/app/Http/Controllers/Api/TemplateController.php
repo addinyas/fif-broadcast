@@ -19,10 +19,10 @@ class TemplateController extends Controller
         return response()->json($this->templateService->getAll($request->user()));
     }
 
-    public function show(int $id): JsonResponse
+    public function show(int $id, Request $request): JsonResponse
     {
         try {
-            return response()->json($this->templateService->findById($id));
+            return response()->json($this->templateService->findById($id, $request->user()));
         } catch (\Exception $e) {
             return response()->json(['message' => 'Template not found'], 404);
         }
@@ -59,7 +59,7 @@ class TemplateController extends Controller
         }
 
         try {
-            $template = $this->templateService->update($id, $request->all());
+            $template = $this->templateService->update($id, $request->all(), $request->user());
 
             return response()->json($template);
         } catch (\Exception $e) {
@@ -67,10 +67,10 @@ class TemplateController extends Controller
         }
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(int $id, Request $request): JsonResponse
     {
         try {
-            $this->templateService->delete($id);
+            $this->templateService->delete($id, $request->user());
 
             return response()->json(['message' => 'Template deleted']);
         } catch (\Exception $e) {

@@ -1,38 +1,75 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Send, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Send, Clock, Filter } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
+import { customerService } from '../../services/customerService';
+import { authService } from '../../services/authService';
+import { getSocket } from '../../services/socketService';
+import { useAuth } from '../../context/AuthContext';
 import { DataTable } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
-import type { BroadcastHistory } from '../../types';
+import type { BroadcastHistory, Kios } from '../../types';
 
 type Tab = 'sent' | 'not_sent';
 
 export function BroadcastHistoryPage() {
+  const { user, token } = useAuth();
+  const isSuperadmin = user?.role === 'superadmin';
+  const isUH = user?.role === 'UH';
+  const isAdmin = isSuperadmin || isUH;
+
   const [history, setHistory] = useState<BroadcastHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [tab, setTab] = useState<Tab>('not_sent');
+  const [marketingUsers, setMarketingUsers] = useState<{ id: number; name: string }[]>([]);
+  const [selectedMarketingId, setSelectedMarketingId] = useState<number | ''>('');
+  const [kiosList, setKiosList] = useState<Kios[]>([]);
+  const [selectedKiosId, setSelectedKiosId] = useState<string>('');
+  const fetchIdRef = useRef(0);
+
+  useEffect(() => {
+    if (isSuperadmin) {
+      authService.getKios().then(setKiosList);
+    }
+  }, [isSuperadmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    customerService.getMarketingUsers(selectedKiosId || undefined).then(setMarketingUsers);
+    setSelectedMarketingId('');
+  }, [isAdmin, selectedKiosId]);
 
   const fetchData = useCallback(async () => {
+    const fetchId = ++fetchIdRef.current;
     setLoading(true);
     try {
       const params: Record<string, string> = { page: page.toString() };
       if (tab === 'sent') params.status = 'sent';
+      if (isSuperadmin && selectedKiosId) params.kios_id = selectedKiosId;
+      if ((isSuperadmin || isUH) && selectedMarketingId) params.marketing_id = selectedMarketingId.toString();
       const res = await broadcastService.getHistory(params);
-      setHistory(res.data);
-      setLastPage(res.last_page);
+      if (fetchId === fetchIdRef.current) {
+        setHistory(res.data);
+        setLastPage(res.last_page);
+      }
     } finally {
-      setLoading(false);
+      if (fetchId === fetchIdRef.current) setLoading(false);
     }
-  }, [page, tab]);
+  }, [page, tab, selectedMarketingId, selectedKiosId, isSuperadmin, isUH]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    const interval = setInterval(() => { fetchData(); }, 5000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    if (!token) return;
+    const socket = getSocket();
+    socket.auth = { token };
+    socket.connect();
+
+    const handler = () => { fetchData(); };
+    socket.on('broadcast:status', handler);
+    return () => { socket.off('broadcast:status', handler); };
+  }, [token, fetchData]);
 
   const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' => {
     switch (status) {
@@ -94,6 +131,36 @@ export function BroadcastHistoryPage() {
           })}
         </div>
       </div>
+
+      {isAdmin && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Filter className="h-4 w-4 text-slate-400" />
+          {isSuperadmin && kiosList.length > 0 && (
+            <select
+              value={selectedKiosId}
+              onChange={(e) => { setSelectedKiosId(e.target.value); setPage(1); }}
+              className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+            >
+              <option value="">Semua Kios</option>
+              {kiosList.map((k) => (
+                <option key={k.kios_id} value={k.kios_id}>{k.kios_name} ({k.kios_id})</option>
+              ))}
+            </select>
+          )}
+          {marketingUsers.length > 0 && (
+            <select
+              value={selectedMarketingId}
+              onChange={(e) => { setSelectedMarketingId(e.target.value ? parseInt(e.target.value) : ''); setPage(1); }}
+              className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+            >
+              <option value="">Semua Marketing</option>
+              {marketingUsers.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
 
       <DataTable columns={columns} data={history} loading={loading} />
 

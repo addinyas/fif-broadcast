@@ -13,12 +13,17 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         return BroadcastHistory::create($data);
     }
 
-    public function getHistory(?int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getHistory(?int $marketingId, array $filters = [], ?string $kiosId = null): LengthAwarePaginator
     {
-        $query = BroadcastHistory::with('customer:id,name,phone_number');
+        $query = BroadcastHistory::with('customer:id,name,phone_number')
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id');
+
+        if ($kiosId) {
+            $query->where('customers.kios_id', $kiosId);
+        }
 
         if ($marketingId !== null) {
-            $query->where('marketing_id', $marketingId);
+            $query->where('broadcast_histories.marketing_id', $marketingId);
         }
 
         if (! empty($filters['status'])) {
@@ -28,11 +33,16 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         return $query->latest()->paginate($filters['per_page'] ?? 50);
     }
 
-    public function getStats(?int $marketingId = null): array
+    public function getStats(?int $marketingId = null, ?string $kiosId = null): array
     {
-        $query = BroadcastHistory::query();
+        $query = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id');
+
+        if ($kiosId) {
+            $query->where('customers.kios_id', $kiosId);
+        }
         if ($marketingId) {
-            $query->where('marketing_id', $marketingId);
+            $query->where('broadcast_histories.marketing_id', $marketingId);
         }
 
         $stats = $query->selectRaw("

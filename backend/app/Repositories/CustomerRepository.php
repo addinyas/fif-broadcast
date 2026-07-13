@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Interfaces\CustomerRepositoryInterface;
 use App\Models\Customer;
+use App\Models\CustomerShare;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -12,6 +13,10 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function getAll(array $filters = []): LengthAwarePaginator
     {
         $query = Customer::query()->with(['uploader', 'marketing']);
+
+        if (! empty($filters['kios_id'])) {
+            $query->where('kios_id', $filters['kios_id']);
+        }
 
         if (! empty($filters['search'])) {
             $searchTerm = $filters['search'];
@@ -41,8 +46,9 @@ class CustomerRepository implements CustomerRepositoryInterface
             $query->whereIn('marketing_id', array_map('intval', $ids));
         }
 
-        if (! empty($filters['buss_unit'])) {
-            $query->whereRaw("json_extract(dynamic_data, '$.buss_unit') = ?", [$filters['buss_unit']]);
+        if (! empty($filters['customer_type'])) {
+            $prefix = $filters['customer_type'] === 'NMC' ? '4020%' : '4029%';
+            $query->where('no_contract', 'LIKE', $prefix);
         }
 
         return $query->latest()->paginate($filters['per_page'] ?? 50);
@@ -95,17 +101,35 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
+        $sharedIds = [];
+        if ($marketingId !== null) {
+            $sharedIds = CustomerShare::where('to_marketing_id', $marketingId)
+                ->where('status', 'approved')
+                ->pluck('customer_id')
+                ->toArray();
+        }
+
         $query = Customer::with(['broadcastHistories' => function ($q) {
             $q->latest();
         }]);
 
         if ($marketingId !== null) {
-            $query->where('marketing_id', $marketingId)
-                ->where('assignment_status', 'assigned');
+            $query->where(function ($q) use ($marketingId, $sharedIds) {
+                $q->where('marketing_id', $marketingId)
+                    ->where('assignment_status', 'assigned');
+                if (! empty($sharedIds)) {
+                    $q->orWhereIn('id', $sharedIds);
+                }
+            });
         }
 
-        if (! empty($filters['buss_unit'])) {
-            $query->where('dynamic_data->buss_unit', $filters['buss_unit']);
+        if (! empty($filters['kios_id'])) {
+            $query->where('kios_id', $filters['kios_id']);
+        }
+
+        if (! empty($filters['customer_type'])) {
+            $prefix = $filters['customer_type'] === 'NMC' ? '4020%' : '4029%';
+            $query->where('no_contract', 'LIKE', $prefix);
         }
 
         if (! empty($filters['sisa_angsuran'])) {
@@ -128,7 +152,7 @@ class CustomerRepository implements CustomerRepositoryInterface
         return $query->latest()->paginate($filters['per_page'] ?? 50);
     }
 
-    public function bulkImport(array $customers, int $uploadedBy): array
+    public function bulkImport(array $customers, int $uploadedBy, ?string $kiosId = null): array
     {
         $imported = 0;
         $failed = [];
@@ -150,9 +174,11 @@ class CustomerRepository implements CustomerRepositoryInterface
         if (! empty($incomingNoContracts)) {
             $chunks = array_chunk(array_keys($incomingNoContracts), 500);
             foreach ($chunks as $chunk) {
-                $found = Customer::whereIn('no_contract', $chunk)
-                    ->pluck('no_contract')
-                    ->toArray();
+                $query = Customer::whereIn('no_contract', $chunk);
+                if ($kiosId) {
+                    $query->where('kios_id', $kiosId);
+                }
+                $found = $query->pluck('no_contract')->toArray();
                 foreach ($found as $nc) {
                     $existingNoContracts[$nc] = true;
                 }
@@ -160,62 +186,62 @@ class CustomerRepository implements CustomerRepositoryInterface
         }
 
         $processedNoContracts = [];
+        $batchSize = 500;
+        $batch = [];
+        $batchIndexMap = [];
 
-        DB::beginTransaction();
-        try {
-            foreach ($customers as $index => $data) {
-                try {
-                    $dynamicData = $data['dynamic_data'] ?? null;
-                    if (is_string($dynamicData)) {
-                        $dynamicData = json_decode($dynamicData, true);
-                    }
-                    $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
-
-                    if ($noContract) {
-                        if (isset($existingNoContracts[$noContract]) || isset($processedNoContracts[$noContract])) {
-                            $name = $data['name'] ?? '';
-                            $reason = isset($existingNoContracts[$noContract])
-                                ? "No Contract '$noContract' sudah terdaftar"
-                                : "No Contract '$noContract' duplikat dalam 1 file (baris ke-".($processedNoContracts[$noContract] + 1).')';
-                            $skipped[] = [
-                                'row' => $index + 1,
-                                'no_contract' => $noContract,
-                                'name' => $name,
-                                'reason' => $reason,
-                            ];
-
-                            continue;
-                        }
-                        $processedNoContracts[$noContract] = $index;
-                    }
-
-                    Customer::create([
-                        'no_contract' => $noContract,
-                        'name' => $data['name'] ?? '',
-                        'phone_number' => $data['phone_number'] ?? '',
-                        'uploaded_by' => $uploadedBy,
-                        'dynamic_data' => $dynamicData,
-                    ]);
-                    $imported++;
-                } catch (\Exception $e) {
-                    $failed[] = ['row' => $index + 1, 'error' => $e->getMessage()];
-                }
+        foreach ($customers as $index => $data) {
+            $dynamicData = $data['dynamic_data'] ?? null;
+            if (is_string($dynamicData)) {
+                $dynamicData = json_decode($dynamicData, true);
             }
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
+            $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
 
-            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Database error: '.$e->getMessage()]], 'skipped' => []];
+            if ($noContract) {
+                if (isset($existingNoContracts[$noContract]) || isset($processedNoContracts[$noContract])) {
+                    $name = $data['name'] ?? '';
+                    $reason = isset($existingNoContracts[$noContract])
+                        ? "No Contract '$noContract' sudah terdaftar"
+                        : "No Contract '$noContract' duplikat dalam 1 file (baris ke-".($processedNoContracts[$noContract] + 1).')';
+                    $skipped[] = [
+                        'row' => $index + 1,
+                        'no_contract' => $noContract,
+                        'name' => $name,
+                        'reason' => $reason,
+                    ];
+
+                    continue;
+                }
+                $processedNoContracts[$noContract] = $index;
+            }
+
+            $batch[] = $data;
+            $batchIndexMap[] = $index;
+
+            if (count($batch) >= $batchSize) {
+                $this->processBatch($batch, $batchIndexMap, $uploadedBy, $kiosId, $imported, $failed);
+                $batch = [];
+                $batchIndexMap = [];
+            }
+        }
+
+        if (! empty($batch)) {
+            $this->processBatch($batch, $batchIndexMap, $uploadedBy, $kiosId, $imported, $failed);
         }
 
         return ['imported' => $imported, 'failed' => $failed, 'skipped' => $skipped];
     }
 
-    public function deleteAll(): int
+    public function deleteAll(?string $kiosId = null): int
     {
-        $count = Customer::count();
-        DB::table('broadcast_histories')->delete();
-        DB::table('customers')->delete();
+        $query = Customer::query();
+        if ($kiosId) {
+            $query->where('kios_id', $kiosId);
+        }
+        $count = $query->count();
+
+        DB::table('broadcast_histories')->whereIn('customer_id', $query->toBase())->delete();
+        $query->forceDelete();
 
         return $count;
     }
@@ -245,5 +271,63 @@ class CustomerRepository implements CustomerRepositoryInterface
             'unassigned' => $unassigned,
             'by_marketing' => $byMarketing,
         ];
+    }
+
+    private function processBatch(array $batch, array $indexMap, int $uploadedBy, ?string $kiosId, int &$imported, array &$failed): void
+    {
+        DB::beginTransaction();
+        try {
+            foreach ($batch as $i => $data) {
+                $dynamicData = $data['dynamic_data'] ?? null;
+                if (is_string($dynamicData)) {
+                    $dynamicData = json_decode($dynamicData, true);
+                }
+                $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
+
+                Customer::create([
+                    'no_contract' => $noContract,
+                    'name' => $data['name'] ?? '',
+                    'phone_number' => $data['phone_number'] ?? '',
+                    'uploaded_by' => $uploadedBy,
+                    'kios_id' => $kiosId,
+                    'dynamic_data' => $dynamicData,
+                ]);
+            }
+            DB::commit();
+            $imported += count($batch);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->processBatchIndividually($batch, $indexMap, $uploadedBy, $kiosId, $imported, $failed);
+        }
+    }
+
+    private function processBatchIndividually(array $batch, array $indexMap, int $uploadedBy, ?string $kiosId, int &$imported, array &$failed): void
+    {
+        foreach ($batch as $i => $data) {
+            try {
+                $dynamicData = $data['dynamic_data'] ?? null;
+                if (is_string($dynamicData)) {
+                    $dynamicData = json_decode($dynamicData, true);
+                }
+                $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
+
+                DB::beginTransaction();
+                Customer::create([
+                    'no_contract' => $noContract,
+                    'name' => $data['name'] ?? '',
+                    'phone_number' => $data['phone_number'] ?? '',
+                    'uploaded_by' => $uploadedBy,
+                    'kios_id' => $kiosId,
+                    'dynamic_data' => $dynamicData,
+                ]);
+                DB::commit();
+                $imported++;
+            } catch (\Exception $e) {
+                if (DB::transactionLevel() > 0) {
+                    DB::rollBack();
+                }
+                $failed[] = ['row' => $indexMap[$i] + 1, 'error' => $e->getMessage()];
+            }
+        }
     }
 }

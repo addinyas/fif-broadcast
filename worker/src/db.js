@@ -11,6 +11,4 @@ function getWritableDb() {
   return d;
 }
 
-function closeDb() {}
-
-module.exports = { getWritableDb, closeDb };
+module.exports = { getWritableDb };

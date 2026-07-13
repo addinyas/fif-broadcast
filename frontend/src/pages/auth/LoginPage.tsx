@@ -59,6 +59,7 @@ export function LoginPage() {
         </div>
 
         <form
+          method="post"
           onSubmit={handleSubmit}
           className={`w-full max-w-sm space-y-4 transition-all duration-700 delay-150 ${showForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
         >

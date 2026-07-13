@@ -41,7 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = ++toastId;
     setItems((prev) => [...prev, { id, type, message }]);
-    setTimeout(() => remove(id), 4000);
+    setTimeout(() => remove(id), 8000);
   }, [remove]);
 
   return (

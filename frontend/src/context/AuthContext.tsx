@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, type ReactNode 
 import type { User } from '../types';
 import { authService } from '../services/authService';
 import { clearPermissionsCache } from '../hooks/usePermissions';
+import { disconnectSocket } from '../services/socketService';
 
 interface AuthContextType {
   user: User | null;
@@ -79,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
     clearPermissionsCache();
+    disconnectSocket();
     setToken(null);
     setUser(null);
   };

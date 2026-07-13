@@ -4,8 +4,10 @@ use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\CustomerController;
+use App\Http\Controllers\Api\CustomerShareController;
 use App\Http\Controllers\Api\GoogleSheetsController;
 use App\Http\Controllers\Api\KiosController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PermissionController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TemplateController;
@@ -25,6 +27,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::put('/', [ProfileController::class, 'update']);
+        Route::put('/password', [ProfileController::class, 'changePassword']);
         Route::post('/avatar', [ProfileController::class, 'uploadAvatar']);
         Route::delete('/avatar', [ProfileController::class, 'deleteAvatar']);
         Route::post('/clear-cache', [ProfileController::class, 'clearCache']);
@@ -49,6 +52,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('customers/import', [CustomerController::class, 'import']);
             Route::post('customers/import-file', [CustomerController::class, 'importFile']);
             Route::post('customers/import-spreadsheet', [CustomerController::class, 'importSpreadsheet']);
+            Route::get('customers/template-download', [CustomerController::class, 'templateDownload']);
             Route::delete('customers', [CustomerController::class, 'deleteAll']);
             Route::get('customers/all-ids', [CustomerController::class, 'allIds']);
             Route::post('customers/batch-delete', [CustomerController::class, 'batchDelete']);
@@ -91,6 +95,22 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
+    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+        Route::middleware('feature:data_rolling')->group(function () {
+            Route::get('customer-shares/info/{marketingId}', [CustomerShareController::class, 'info']);
+            Route::post('customer-shares/request', [CustomerShareController::class, 'requestShare']);
+            Route::get('customer-shares/my-shared', [CustomerShareController::class, 'mySharedCustomers']);
+        });
+    });
+
+    Route::middleware('role:superadmin,UH')->group(function () {
+        Route::middleware('feature:data_rolling')->group(function () {
+            Route::get('customer-shares/pending', [CustomerShareController::class, 'pendingRequests']);
+            Route::post('customer-shares/{id}/approve', [CustomerShareController::class, 'approveShare']);
+            Route::post('customer-shares/{id}/revoke', [CustomerShareController::class, 'revokeShare']);
+        });
+    });
+
     Route::middleware('role:superadmin,marketing')->group(function () {
         Route::middleware('feature:template_management')->group(function () {
             Route::get('templates', [TemplateController::class, 'index']);
@@ -130,4 +150,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
     });
+
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::delete('notifications', [NotificationController::class, 'deleteAll']);
 });

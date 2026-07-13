@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { permissionService, type PermissionsByRole } from '../services/permissionService';
 import { useAuth } from '../context/AuthContext';
 
-let cache: { data: PermissionsByRole | null; promise: Promise<void> | null } = {
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let cache: { data: PermissionsByRole | null; promise: Promise<void> | null; timestamp: number } = {
   data: null,
   promise: null,
+  timestamp: 0,
 };
 
 export function clearPermissionsCache() {
   cache.data = null;
   cache.promise = null;
+  cache.timestamp = 0;
 }
 
 export function usePermissions() {
@@ -28,7 +32,7 @@ export function usePermissions() {
       return;
     }
 
-    if (cache.data) {
+    if (cache.data && (Date.now() - cache.timestamp) < CACHE_TTL_MS) {
       setPerms(cache.data);
       setLoading(false);
       return;
@@ -46,6 +50,7 @@ export function usePermissions() {
     const p = permissionService.getAll()
       .then((data) => {
         cache.data = data;
+        cache.timestamp = Date.now();
         setPerms(data);
       })
       .catch(() => {

@@ -54,11 +54,16 @@ class AuthService
         return $user;
     }
 
-    public function getMarketingUsers()
+    public function getMarketingUsers(?string $kiosId = null)
     {
-        return User::where('role', 'marketing')
+        $query = User::where('role', 'marketing')
             ->select('id', 'name', 'email')
-            ->withCount('assignedCustomers')
-            ->get();
+            ->withCount('assignedCustomers');
+
+        if ($kiosId) {
+            $query->where('kios_id', $kiosId);
+        }
+
+        return $query->get();
     }
 }

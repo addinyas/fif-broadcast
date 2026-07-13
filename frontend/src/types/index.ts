@@ -119,6 +119,22 @@ export interface DistributionReport {
   }[];
 }
 
+export interface ShareInfo {
+  total: number;
+  broadcast_count: number;
+  pending_count: number;
+}
+
+export interface CustomerShareRequest {
+  id: number;
+  from_marketing: User;
+  requested_by: User;
+  count: number;
+  share_type: string;
+  created_at: string;
+  share_ids: number[];
+}
+
 export const FORM_FIELDS = [
   { key: 'nomor_contract', label: 'Nomor Contract' },
   { key: 'no_contract', label: 'No Contract' },

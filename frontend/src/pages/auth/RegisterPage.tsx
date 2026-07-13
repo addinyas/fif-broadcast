@@ -44,6 +44,7 @@ export function RegisterPage() {
         npo_mce_id: npoMceId,
         kios_id: selectedKiosId,
       });
+      window.location.href = '/';
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
       if (axiosErr?.response?.data?.errors) {
@@ -86,7 +87,7 @@ export function RegisterPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4">
+            <form onSubmit={handleSubmit} method="post" autoComplete="off" className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-sm font-medium text-slate-400">Kios</label>
                 <div className="relative">

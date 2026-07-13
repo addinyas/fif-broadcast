@@ -26,19 +26,19 @@ export const customerService = {
     await api.delete(`/customers/${id}`);
   },
 
-  async bulkImport(customers: Record<string, unknown>[]): Promise<{ imported: number; failed: unknown[] }> {
+  async bulkImport(customers: Record<string, unknown>[]): Promise<{ imported: number; failed: { row: number; error: string }[] }> {
     const { data } = await api.post('/customers/import', { customers });
     return data;
   },
 
-  async importFile(file: File): Promise<{ imported: number; failed: unknown[] }> {
+  async importFile(file: File): Promise<{ imported: number; failed: { row: number; error: string }[] }> {
     const form = new FormData();
     form.append('file', file);
     const { data } = await api.post('/customers/import-file', form);
     return data;
   },
 
-  async importSpreadsheet(url: string): Promise<{ imported: number; failed: unknown[] }> {
+  async importSpreadsheet(url: string): Promise<{ imported: number; failed: { row: number; error: string }[] }> {
     const { data } = await api.post('/customers/import-spreadsheet', { spreadsheet_url: url });
     return data;
   },
@@ -83,8 +83,10 @@ export const customerService = {
     return data;
   },
 
-  async getMarketingUsers(): Promise<{ id: number; name: string; email: string }[]> {
-    const { data } = await api.get('/admin/marketing-users');
+  async getMarketingUsers(kiosId?: string): Promise<{ id: number; name: string; email: string }[]> {
+    const params: Record<string, string> = {};
+    if (kiosId) params.kios_id = kiosId;
+    const { data } = await api.get('/admin/marketing-users', { params });
     return data;
   },
 
@@ -137,6 +139,53 @@ export const customerService = {
     refi_per_marketing: number;
   }> {
     const { data } = await api.get('/assignments/auto-calculate');
+    return data;
+  },
+
+  async downloadTemplate(): Promise<void> {
+    const response = await api.get('/customers/template-download', { responseType: 'blob' });
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'template_import_customer.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  async getShareInfo(marketingId: number): Promise<{ total: number; broadcast_count: number; pending_count: number }> {
+    const { data } = await api.get(`/customer-shares/info/${marketingId}`);
+    return data;
+  },
+
+  async requestShare(fromMarketingId: number, count: number, shareType: string): Promise<{ message: string; total: number }> {
+    const { data } = await api.post('/customer-shares/request', {
+      from_marketing_id: fromMarketingId,
+      count,
+      share_type: shareType,
+    });
+    return data;
+  },
+
+  async getPendingShares(): Promise<import('../types').CustomerShareRequest[]> {
+    const { data } = await api.get('/customer-shares/pending');
+    return data;
+  },
+
+  async approveShare(id: number): Promise<{ message: string }> {
+    const { data } = await api.post(`/customer-shares/${id}/approve`);
+    return data;
+  },
+
+  async revokeShare(id: number): Promise<{ message: string }> {
+    const { data } = await api.post(`/customer-shares/${id}/revoke`);
+    return data;
+  },
+
+  async getMySharedCustomers(): Promise<Customer[]> {
+    const { data } = await api.get('/customer-shares/my-shared');
     return data;
   },
 };

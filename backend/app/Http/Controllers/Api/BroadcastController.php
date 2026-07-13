@@ -45,34 +45,70 @@ class BroadcastController extends Controller
     public function history(Request $request): JsonResponse
     {
         $filters = $request->only(['status', 'per_page']);
-        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
-            ? null
-            : $request->user()->id;
+        $user = $request->user();
+
+        $kiosId = null;
+        $marketingId = null;
+
+        if ($user->role === 'marketing') {
+            $marketingId = $user->id;
+            $kiosId = $user->kios_id;
+        } elseif ($user->role === 'UH') {
+            $kiosId = $user->kios_id;
+            if ($request->query('marketing_id')) {
+                $marketingId = (int) $request->query('marketing_id');
+            }
+        } else {
+            if ($request->query('kios_id')) {
+                $kiosId = $request->query('kios_id');
+            }
+            if ($request->query('marketing_id')) {
+                $marketingId = (int) $request->query('marketing_id');
+            }
+        }
 
         return response()->json(
-            $this->broadcastService->getHistory($marketingId, $filters)
+            $this->broadcastService->getHistory($marketingId, $filters, $kiosId)
         );
     }
 
     public function stats(Request $request): JsonResponse
     {
-        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
-            ? null
-            : $request->user()->id;
+        $user = $request->user();
+
+        $kiosId = null;
+        $marketingId = null;
+
+        if ($user->role === 'marketing') {
+            $marketingId = $user->id;
+            $kiosId = $user->kios_id;
+        } elseif ($user->role === 'UH') {
+            $kiosId = $user->kios_id;
+            if ($request->query('marketing_id')) {
+                $marketingId = (int) $request->query('marketing_id');
+            }
+        } else {
+            if ($request->query('kios_id')) {
+                $kiosId = $request->query('kios_id');
+            }
+            if ($request->query('marketing_id')) {
+                $marketingId = (int) $request->query('marketing_id');
+            }
+        }
 
         return response()->json(
-            $this->broadcastService->getStats($marketingId)
+            $this->broadcastService->getStats($marketingId, $kiosId)
         );
     }
 
     public function marketingSummary(Request $request): JsonResponse
     {
-        $marketingId = in_array($request->user()->role, ['superadmin', 'UH'], true)
-            ? null
-            : $request->user()->id;
+        $user = $request->user();
+        $marketingId = $user->role === 'marketing' ? $user->id : null;
+        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
 
         return response()->json(
-            $this->broadcastService->marketingSummary($marketingId)
+            $this->broadcastService->marketingSummary($marketingId, $kiosId)
         );
     }
 }

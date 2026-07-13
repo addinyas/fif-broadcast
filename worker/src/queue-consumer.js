@@ -53,6 +53,7 @@ async function processPending() {
     writeDb = getWritableDb();
   } catch (err) {
     console.error('[Queue] Failed to open writable DB:', err.message);
+    processing = false;
     return;
   }
 
@@ -74,7 +75,10 @@ async function processPending() {
 
     if (toProcess.length === 0) {
       console.log('[Queue] No connected WA clients for pending broadcasts');
+      const seenMarketingIds = new Set();
       for (const row of stuckPending) {
+        if (seenMarketingIds.has(row.marketing_id)) continue;
+        seenMarketingIds.add(row.marketing_id);
         const count = writeDb.prepare(
           "SELECT COUNT(*) as cnt FROM broadcast_histories WHERE marketing_id = ? AND status = 'pending'"
         ).get(row.marketing_id);
@@ -172,4 +176,4 @@ function stopQueue() {
   console.log('[Queue] Stopped');
 }
 
-module.exports = { startQueue };
+module.exports = { startQueue, stopQueue };

@@ -1,11 +1,14 @@
-const { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser } = require('./wa-client');
+const { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser } = require('./wa-client');
 
 const activeClients = new Map();
 
 async function getOrCreateClient(userId, onReady) {
   if (activeClients.has(userId)) {
-    if (onReady) onReady();
-    return;
+    if (isConnectedForUser(userId)) {
+      if (onReady) onReady();
+      return;
+    }
+    activeClients.delete(userId);
   }
 
   console.log(`[WA-Mgr] Creating WA client for user ${userId}`);

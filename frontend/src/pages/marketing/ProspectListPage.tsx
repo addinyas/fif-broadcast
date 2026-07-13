@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -11,8 +11,9 @@ import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
+import { RollingDataModal } from '../../components/ui/RollingDataModal';
 import { useToast } from '../../components/ui/Toast';
-import type { Customer, Template } from '../../types';
+import type { Customer, Template, User } from '../../types';
 
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
@@ -60,6 +61,8 @@ export function ProspectListPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [deletingTemplate, setDeletingTemplate] = useState(false);
   const abortRef = useRef(false);
+  const wasSendingRef = useRef(false);
+  const skipAutoAdvanceRef = useRef(false);
   const [addModal, setAddModal] = useState(false);
   const [newNoContract, setNewNoContract] = useState('');
   const [newName, setNewName] = useState('');
@@ -74,13 +77,17 @@ export function ProspectListPage() {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [sentIds, setSentIds] = useState<number[]>([]);
   const [refreshingSent, setRefreshingSent] = useState(false);
-  const [bussUnitFilter, setBussUnitFilter] = useState('');
-  const [showBussUnitDropdown, setShowBussUnitDropdown] = useState(false);
-  const bussUnitRef = useRef<HTMLDivElement>(null);
+  const [customerTypeFilter, setBussUnitFilter] = useState('');
+  const [showCustomerTypeDropdown, setShowBussUnitDropdown] = useState(false);
+  const customerTypeRef = useRef<HTMLDivElement>(null);
   const [sisaAngsuranFilter, setSisaAngsuranFilter] = useState('');
   const [showSisaAngsuranDropdown, setShowSisaAngsuranDropdown] = useState(false);
   const sisaAngsuranRef = useRef<HTMLDivElement>(null);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [sharedCustomers, setSharedCustomers] = useState<Customer[]>([]);
+  const [_loadingShared, setLoadingShared] = useState(true);
+  const [showRollingModal, setShowRollingModal] = useState(false);
+  const [marketingUsers, setMarketingUsers] = useState<User[]>([]);
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -120,17 +127,23 @@ export function ProspectListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), buss_unit: bussUnitFilter, sisa_angsuran: sisaAngsuranFilter });
+      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter });
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
       setSentIds(res.data.filter((c) => c.manual_sent_at).map((c) => c.id));
+
+      if (!skipAutoAdvanceRef.current && res.data.length > 0 && res.data.every((c) => c.manual_sent_at) && page < (res.last_page || 1)) {
+        setPage((p) => p + 1);
+      } else {
+        skipAutoAdvanceRef.current = false;
+      }
     } catch {
       setCustomers([]);
       setLastPage(1);
     } finally {
       setLoading(false);
     }
-  }, [page, search, bussUnitFilter, sisaAngsuranFilter]);
+  }, [page, search, customerTypeFilter, sisaAngsuranFilter]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -143,13 +156,37 @@ export function ProspectListPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+
+  const fetchSharedCustomers = useCallback(async () => {
+    setLoadingShared(true);
+    try {
+      const data = await customerService.getMySharedCustomers();
+      setSharedCustomers(data);
+    } catch {
+      setSharedCustomers([]);
+    } finally {
+      setLoadingShared(false);
+    }
+  }, []);
+
+  const fetchMarketingUsers = useCallback(async () => {
+    try {
+      const data = await customerService.getMarketingUsers();
+      setMarketingUsers(data as User[]);
+    } catch {
+      setMarketingUsers([]);
+    }
+  }, []);
+
+  useEffect(() => { fetchSharedCustomers(); }, [fetchSharedCustomers]);
+  useEffect(() => { fetchMarketingUsers(); }, [fetchMarketingUsers]);
   useEffect(() => () => { if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current); }, []);
 
-  useEffect(() => { setPage(1); }, [bussUnitFilter, sisaAngsuranFilter]);
+  useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (bussUnitRef.current && !bussUnitRef.current.contains(e.target as Node)) {
+      if (customerTypeRef.current && !customerTypeRef.current.contains(e.target as Node)) {
         setShowBussUnitDropdown(false);
       }
       if (sisaAngsuranRef.current && !sisaAngsuranRef.current.contains(e.target as Node)) {
@@ -176,6 +213,20 @@ export function ProspectListPage() {
       } catch { /* ignore */ }
     }, 5000);
     return () => clearInterval(interval);
+  }, [sendingBatch]);
+
+  useEffect(() => {
+    if (sendingBatch) {
+      wasSendingRef.current = true;
+      return;
+    }
+    if (wasSendingRef.current) {
+      wasSendingRef.current = false;
+      if (customers.length > 0 && customers.every((c) => sentIds.includes(c.id)) && page < lastPage) {
+        setPage((p) => p + 1);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendingBatch]);
 
   useEffect(() => {
@@ -416,7 +467,13 @@ export function ProspectListPage() {
   const handleManualSend = async (c: Customer) => {
     try {
       await customerService.markSent(c.id);
-      setSentIds((prev) => prev.includes(c.id) ? prev : [...prev, c.id]);
+      setSentIds((prev) => {
+        const updated = prev.includes(c.id) ? prev : [...prev, c.id];
+        if (customers.every((cust) => updated.includes(cust.id)) && page < lastPage) {
+          setPage(page + 1);
+        }
+        return updated;
+      });
       toast('success', 'Tanda kirim tersimpan');
     } catch (e) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message || (e as Error)?.message || 'Gagal menyimpan tanda kirim';
@@ -470,18 +527,18 @@ export function ProspectListPage() {
       key: 'buss_unit',
       header: (
         <div className="relative inline-flex items-center gap-1">
-          <span>Buss Unit</span>
-          <div ref={bussUnitRef} className="relative">
+          <span>Tipe</span>
+          <div ref={customerTypeRef} className="relative">
             <button
               onClick={() => setShowBussUnitDropdown((p) => !p)}
-              className={`rounded p-0.5 transition-colors ${bussUnitFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`rounded p-0.5 transition-colors ${customerTypeFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
             >
-              <ChevronDown className={`h-4 w-4 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-4 w-4 transition-transform ${showCustomerTypeDropdown ? 'rotate-180' : ''}`} />
             </button>
-            {showBussUnitDropdown && (
+            {showCustomerTypeDropdown && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[110px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
                 {['', 'NMC', 'REFI'].map((val) => {
-                  const active = val ? bussUnitFilter === val : !bussUnitFilter;
+                  const active = val ? customerTypeFilter === val : !customerTypeFilter;
                   return (
                     <button
                       key={val}
@@ -702,29 +759,18 @@ export function ProspectListPage() {
         </div>
 
         <button
-          onClick={() => {
-            setNewNoContract('');
-            setNewName('');
-            setNewPhone('');
-            setNewDynamicFields([
-              { key: 'obj_desc', value: '' },
-              { key: 'tahun', value: '' },
-              { key: 'plafon', value: '' },
-              { key: 'sisa_angsuran', value: '' },
-            ]);
-            setAddModal(true);
-          }}
-          className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
-        >
-          <Plus className="h-3.5 w-3.5 transition-transform duration-300 group-hover:rotate-90 sm:h-4 sm:w-4" />
-          Tambah Customer
-        </button>
-        <button
           onClick={() => navigate('/marketing/history')}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm transition-all hover:bg-slate-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-800/90 dark:text-slate-400 dark:hover:text-fif-400 sm:px-4 sm:py-2 sm:text-sm"
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-slate-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-slate-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-slate-900/30 dark:hover:shadow-slate-800/40"
         >
           <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           History
+        </button>
+        <button
+          onClick={() => setShowRollingModal(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
+        >
+          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          Rolling Data
         </button>
       </div>
 
@@ -818,7 +864,7 @@ export function ProspectListPage() {
         <div className="flex items-center gap-1">
           <button
             disabled={page <= 1 || sendingBatch}
-            onClick={() => { setPage(page - 1); setSelectedIds([]); }}
+            onClick={() => { skipAutoAdvanceRef.current = true; setPage(page - 1); setSelectedIds([]); }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &lt;
@@ -830,7 +876,7 @@ export function ProspectListPage() {
               <button
                 key={p}
                 disabled={sendingBatch}
-                onClick={() => { setPage(p); setSelectedIds([]); }}
+                onClick={() => { skipAutoAdvanceRef.current = true; setPage(p); setSelectedIds([]); }}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all ${
                   p === page
                     ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
@@ -843,7 +889,7 @@ export function ProspectListPage() {
           )}
           <button
             disabled={page >= lastPage || sendingBatch}
-            onClick={() => { setPage(page + 1); setSelectedIds([]); }}
+            onClick={() => { skipAutoAdvanceRef.current = true; setPage(page + 1); setSelectedIds([]); }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &gt;
@@ -925,6 +971,48 @@ export function ProspectListPage() {
           </div>
         </div>
       </Modal>
+
+      {sharedCustomers.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-purple-500" />
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Data Dipinjam ({sharedCustomers.length})</h3>
+          </div>
+          <div className="overflow-hidden rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-purple-200 dark:border-purple-800 bg-purple-100/50 dark:bg-purple-900/20">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No Contract</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Nama</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No. WhatsApp</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sharedCustomers.map((c) => {
+                  const latest = c.broadcast_histories?.[0];
+                  return (
+                    <tr key={c.id} className="border-b border-purple-100 dark:border-purple-800/50 last:border-0">
+                      <td className="px-4 py-2 font-mono text-xs font-semibold text-purple-900 dark:text-purple-100">{c.no_contract}</td>
+                      <td className="px-4 py-2 text-purple-800 dark:text-purple-200">{c.name}</td>
+                      <td className="px-4 py-2 font-mono text-xs text-purple-700 dark:text-purple-300">{c.phone_number}</td>
+                      <td className="px-4 py-2">
+                        {latest ? (
+                          <Badge variant={statusVariant(latest.status)} size="sm">{statusLabel(latest.status)}</Badge>
+                        ) : (
+                          <span className="text-xs text-purple-400">&mdash;</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <RollingDataModal open={showRollingModal} onClose={() => setShowRollingModal(false)} marketingUsers={marketingUsers} />
     </div>
   );
 }

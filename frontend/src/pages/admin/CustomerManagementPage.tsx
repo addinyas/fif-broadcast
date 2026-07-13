@@ -45,6 +45,7 @@ export function CustomerManagementPage() {
   const [lastPage, setLastPage] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -55,11 +56,18 @@ export function CustomerManagementPage() {
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ imported: number; failed: unknown[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] } | null>(null);
+  const [importResult, setImportResult] = useState<{ imported: number; failed: { row: number; error: string }[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAssign, setShowAssign] = useState(false);
+  const [assigning, setAssigning] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<MarketingUser[]>([]);
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isAdmin) {
+      customerService.getMarketingUsers().then(setAllMarketingUsers);
+    }
+  }, [isAdmin]);
   const [assignSplitNmcRefi, setAssignSplitNmcRefi] = useState(false);
   const [assignMaxData, setAssignMaxData] = useState(1000);
   const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; unassigned_marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
@@ -68,39 +76,43 @@ export function CustomerManagementPage() {
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
   const [selectAllPages, setSelectAllPages] = useState(false);
-  const [selectedMceIds, setSelectedMceIds] = useState<number[]>([]);
+  const [selectedMceId, setSelectedMceId] = useState<number | null>(null);
   const [allMarketingUsers, setAllMarketingUsers] = useState<MarketingUser[]>([]);
-  const [showAssigned, setShowAssigned] = useState(false);
-  const [bussUnitFilter, setBussUnitFilter] = useState('');
-  const [showBussUnitDropdown, setShowBussUnitDropdown] = useState(false);
-  const bussUnitRef = useRef<HTMLDivElement>(null);
+  const [customerTypeFilter, setBussUnitFilter] = useState('');
+  const [showCustomerTypeDropdown, setShowBussUnitDropdown] = useState(false);
+  const customerTypeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (bussUnitRef.current && !bussUnitRef.current.contains(e.target as Node)) {
+      if (customerTypeRef.current && !customerTypeRef.current.contains(e.target as Node)) {
         setShowBussUnitDropdown(false);
       }
     };
-    if (showBussUnitDropdown) {
+    if (showCustomerTypeDropdown) {
       document.addEventListener('mousedown', handler);
       return () => document.removeEventListener('mousedown', handler);
     }
-  }, [showBussUnitDropdown]);
+  }, [showCustomerTypeDropdown]);
 
-  const mceFilterKey = selectedMceIds.join(',');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const mceFilterKey = selectedMceId ? selectedMceId.toString() : '';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string> = { page: page.toString(), search, per_page: '50' };
-      if (!showAssigned) {
-        params.assignment_status = 'unassigned';
+      const params: Record<string, string> = { page: page.toString(), search: debouncedSearch, per_page: '50' };
+      if (!debouncedSearch && !isAdmin) {
+        params.assignment_status = 'assigned';
       }
       if (mceFilterKey) {
         params.marketing_ids = mceFilterKey;
       }
-      if (bussUnitFilter) {
-        params.buss_unit = bussUnitFilter;
+      if (customerTypeFilter) {
+        params.customer_type = customerTypeFilter;
       }
       const res = await customerService.getAll(params);
       setCustomers(res.data);
@@ -109,7 +121,7 @@ export function CustomerManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, mceFilterKey, showAssigned, bussUnitFilter]);
+  }, [page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -167,7 +179,7 @@ export function CustomerManagementPage() {
     setImporting(true);
     setImportResult(null);
     try {
-      let result: { imported: number; failed: unknown[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] };
+      let result: { imported: number; failed: { row: number; error: string }[]; skipped?: { row: number; no_contract: string; name: string; reason: string }[]; detected_columns?: string[] };
       if (importTab === 'manual') {
         const customers = manualRows.map((row) => ({
           name: row.name || row.nama || '',
@@ -229,18 +241,18 @@ export function CustomerManagementPage() {
       key: 'buss_unit',
       header: (
         <div className="relative inline-flex items-center gap-1">
-          <span>Buss Unit</span>
-          <div ref={bussUnitRef} className="relative">
+          <span>Tipe</span>
+          <div ref={customerTypeRef} className="relative">
             <button
               onClick={() => setShowBussUnitDropdown((p) => !p)}
-              className={`rounded p-0.5 transition-colors ${bussUnitFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
+              className={`rounded p-0.5 transition-colors ${customerTypeFilter ? 'text-fif-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}
             >
-              <ChevronDown className={`h-3 w-3 transition-transform ${showBussUnitDropdown ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-3 w-3 transition-transform ${showCustomerTypeDropdown ? 'rotate-180' : ''}`} />
             </button>
-            {showBussUnitDropdown && (
+            {showCustomerTypeDropdown && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full z-50 mt-1 min-w-[110px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
                 {['', 'NMC', 'REFI'].map((val) => {
-                  const active = val ? bussUnitFilter === val : !bussUnitFilter;
+                  const active = val ? customerTypeFilter === val : !customerTypeFilter;
                   return (
                     <button
                       key={val}
@@ -462,70 +474,23 @@ export function CustomerManagementPage() {
           />
         </div>
 
-        {isAdmin && (
+        {isAdmin && allMarketingUsers.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 px-3 py-2 shadow-sm backdrop-blur-xl">
-            {allMarketingUsers.length > 0 && (
-              <>
-                <Filter className="h-4 w-4 text-slate-400" />
-                <span className="mr-1 text-xs font-medium text-slate-500 dark:text-slate-400">MCE:</span>
-              </>
-            )}
-            <button
-              onClick={() => { setShowAssigned((p) => !p); setPage(1); }}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
-                !showAssigned
-                  ? 'bg-fif-100 text-fif-700 ring-1 ring-fif-300 dark:bg-fif-900/30 dark:text-fif-300 dark:ring-fif-700'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
-              }`}
-            >
-              {!showAssigned ? (
-                <CheckCircle2 className="h-3.5 w-3.5" />
-              ) : (
-                <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 dark:border-slate-500" />
-              )}
-              {showAssigned ? 'Tampilkan semua' : 'Hanya unassigned'}
-            </button>
-            {allMarketingUsers.length > 0 && allMarketingUsers.map((u) => {
-              const checked = selectedMceIds.includes(u.id);
-              return (
-                <label
-                  key={u.id}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
-                    checked
-                      ? 'bg-fif-100 text-fif-700 ring-1 ring-fif-300 dark:bg-fif-900/30 dark:text-fif-300 dark:ring-fif-700'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
-                  }`}
+            <Filter className="h-4 w-4 text-slate-400" />
+                <select
+                  value={selectedMceId ?? ''}
+                  onChange={(e) => {
+                    setSelectedMceId(parseInt(e.target.value) || null);
+                    setPage(1);
+                    setSelectAllPages(false);
+                  }}
+                  className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                 >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => {
-                      setSelectedMceIds((prev) =>
-                        prev.includes(u.id) ? prev.filter((id) => id !== u.id) : [...prev, u.id]
-                      );
-                      setPage(1);
-                      setSelectAllPages(false);
-                    }}
-                    className="sr-only"
-                  />
-                  {checked ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <div className="h-3.5 w-3.5 rounded-full border-2 border-slate-400 dark:border-slate-500" />
-                  )}
-                  {u.name}
-                </label>
-              );
-            })}
-            {allMarketingUsers.length > 0 && selectedMceIds.length > 0 && (
-              <button
-                onClick={() => { setSelectedMceIds([]); setPage(1); }}
-                className="ml-1 rounded-md px-1.5 py-0.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
-              >
-                clear
-              </button>
-            )}
-
+                  <option value="">Semua MCE</option>
+                  {allMarketingUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
           </div>
         )}
       </div>
@@ -669,7 +634,16 @@ export function CustomerManagementPage() {
 
           {importTab === 'file' && (
             <div className="space-y-3">
-              <p className="text-sm text-slate-500">Upload file <strong>.csv</strong> atau <strong>.xlsx</strong> (maks 10MB)</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">Upload file <strong>.csv</strong> atau <strong>.xlsx</strong> (maks 10MB)</p>
+                <button
+                  onClick={() => customerService.downloadTemplate()}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-fif-600 dark:hover:text-fif-400"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download Template
+                </button>
+              </div>
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-5 transition-all hover:border-fif-400 hover:bg-fif-50/50 dark:hover:bg-fif-900/20 sm:gap-3 sm:px-6 sm:py-8">
                 <FileSpreadsheet className="h-8 w-8 text-slate-400 dark:text-slate-500 sm:h-10 sm:w-10" />
                 <div className="text-center">
@@ -739,7 +713,32 @@ export function CustomerManagementPage() {
                     </div>
                   )}
                   {importResult.failed.length > 0 && (
-                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{importResult.failed.length} baris gagal</p>
+                    <div className="mt-1">
+                      <p className="text-xs text-amber-700 dark:text-amber-400">{importResult.failed.length} baris gagal</p>
+                      <div className="mt-1 max-h-32 overflow-auto rounded-lg border border-amber-200 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10">
+                        <table className="w-full text-left text-xs">
+                          <thead>
+                            <tr className="border-b border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-300">
+                              <th className="px-2 py-1 font-semibold">Baris</th>
+                              <th className="px-2 py-1 font-semibold">Error</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-amber-100 dark:divide-amber-800">
+                            {importResult.failed.slice(0, 10).map((f, i) => (
+                              <tr key={i} className="text-amber-900 dark:text-amber-200">
+                                <td className="px-2 py-1 text-amber-600">{f.row}</td>
+                                <td className="px-2 py-1">{f.error}</td>
+                              </tr>
+                            ))}
+                            {importResult.failed.length > 10 && (
+                              <tr className="text-amber-600 dark:text-amber-400">
+                                <td className="px-2 py-1" colSpan={2}>...dan {importResult.failed.length - 10} error lainnya</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   )}
                   {'detected_columns' in importResult && importResult.detected_columns && (
                     <div className="mt-2">
@@ -764,8 +763,8 @@ export function CustomerManagementPage() {
             {!importResult && (
               <Button
                 onClick={handleImport}
+                loading={importing}
                 disabled={importing || (importTab === 'manual' && !manualRows.some((r) => Object.values(r).some(Boolean))) || (importTab === 'spreadsheet' && !spreadsheetUrl.trim()) || (importTab === 'file' && !importFile)}
-                icon={importing ? undefined : <Download className="h-4 w-4" />}
               >
                 {importing ? 'Mengimport...' : 'Import'}
               </Button>
@@ -938,31 +937,35 @@ export function CustomerManagementPage() {
             <Button
               onClick={async () => {
                 if (!selectedMarketingId) return;
+                setAssigning(true);
                 try {
                   if (selectedIds.length === 0) {
                     if (!autoCalc || autoCalc.unassigned_marketing_count === 0) return;
                     const res = await customerService.assignByUnit(selectedMarketingId, autoCalc.nmc_per_marketing, autoCalc.refi_per_marketing);
-                    toast('success', `${res.total} customer berhasil diassign`);
+                    toast('success', `${res.total} data berhasil dikirim`);
                   } else if (assignSplitNmcRefi) {
                     const nmc = Math.ceil(assignMaxData / 2);
                     const refi = Math.floor(assignMaxData / 2);
                     const res = await customerService.assignByUnit(selectedMarketingId, nmc, refi);
-                    toast('success', `${res.total} customer berhasil diassign`);
+                    toast('success', `${res.total} data berhasil dikirim`);
                   } else {
                     const idsToSend = selectedIds.slice(0, assignMaxData);
                     await customerService.assign(idsToSend, selectedMarketingId);
-                    toast('success', `${idsToSend.length} customer berhasil diassign`);
+                    toast('success', `${idsToSend.length} data berhasil dikirim`);
                   }
                   setSelectedIds([]);
                   setShowAssign(false);
                   fetchData();
                 } catch {
-                  toast('error', 'Gagal mengassign customer');
+                  toast('error', 'Gagal mengirim data');
+                } finally {
+                  setAssigning(false);
                 }
               }}
-              disabled={!selectedMarketingId || (selectedIds.length === 0 && (!autoCalc || autoCalc.unassigned_marketing_count === 0))}
+              loading={assigning}
+              disabled={!selectedMarketingId || (selectedIds.length === 0 && (!autoCalc || autoCalc.unassigned_marketing_count === 0)) || assigning}
             >
-              Assign
+              {assigning ? 'Mengirim...' : 'Kirim'}
             </Button>
           </div>
         </div>

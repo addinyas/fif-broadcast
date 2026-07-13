@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\Notification;
 use App\Models\User;
 use App\Services\AuthService;
 use App\Services\CustomerService;
@@ -30,6 +31,23 @@ class AssignmentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = $request->user();
+
+        // Kios scope: UH/marketing can only assign customers from their kios to marketing from same kios
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $marketing = User::find($request->marketing_id);
+            if (! $marketing || $marketing->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Marketing tidak berada di kios yang sama'], 422);
+            }
+
+            $customerKiosMismatch = Customer::whereIn('id', $request->customer_ids)
+                ->where('kios_id', '!=', $user->kios_id)
+                ->exists();
+            if ($customerKiosMismatch) {
+                return response()->json(['message' => 'Ada customer yang tidak berada di kios Anda'], 422);
+            }
+        }
+
         $results = [];
         foreach ($request->customer_ids as $customerId) {
             try {
@@ -37,6 +55,35 @@ class AssignmentController extends Controller
             } catch (\Exception $e) {
                 $results[] = ['customer_id' => $customerId, 'error' => $e->getMessage()];
             }
+        }
+
+        $successCount = count(array_filter($results, fn ($r) => ! isset($r['error'])));
+        if ($successCount > 0) {
+            $assigner = $request->user();
+            $marketing = User::find($request->marketing_id);
+
+            Notification::create([
+                'user_id' => $request->marketing_id,
+                'type' => 'assignment',
+                'title' => 'Data baru diassign',
+                'message' => "{$assigner->name} mengirim {$successCount} data kepada Anda.",
+                'data' => [
+                    'assigner_name' => $assigner->name,
+                    'count' => $successCount,
+                    'customer_ids' => array_map(fn ($r) => $r['customer_id'] ?? null, array_filter($results, fn ($r) => ! isset($r['error']))),
+                ],
+            ]);
+
+            Notification::create([
+                'user_id' => $assigner->id,
+                'type' => 'assignment',
+                'title' => 'Berhasil assign data',
+                'message' => "{$successCount} data berhasil dikirim ke {$marketing->name}.",
+                'data' => [
+                    'marketing_name' => $marketing->name,
+                    'count' => $successCount,
+                ],
+            ]);
         }
 
         return response()->json(['data' => $results]);
@@ -51,6 +98,18 @@ class AssignmentController extends Controller
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        // Kios scope: non-superadmin can only unassign customers from their kios
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $customerKiosMismatch = Customer::whereIn('id', $request->customer_ids)
+                ->where('kios_id', '!=', $user->kios_id)
+                ->exists();
+            if ($customerKiosMismatch) {
+                return response()->json(['message' => 'Ada customer yang tidak berada di kios Anda'], 422);
+            }
         }
 
         $results = [];
@@ -70,9 +129,12 @@ class AssignmentController extends Controller
         return response()->json($this->customerService->getDistributionReport());
     }
 
-    public function marketingUsers(): JsonResponse
+    public function marketingUsers(Request $request): JsonResponse
     {
-        return response()->json($this->authService->getMarketingUsers());
+        $user = $request->user();
+        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+
+        return response()->json($this->authService->getMarketingUsers($kiosId));
     }
 
     public function assignByUnit(Request $request): JsonResponse
@@ -87,17 +149,33 @@ class AssignmentController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $user = $request->user();
+        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+
+        // Kios scope: non-superadmin can only assign to marketing from same kios
+        if ($kiosId) {
+            $marketing = User::find($request->marketing_id);
+            if (! $marketing || $marketing->kios_id !== $kiosId) {
+                return response()->json(['message' => 'Marketing tidak berada di kios yang sama'], 422);
+            }
+        }
+
         $assigned = [];
 
-        foreach (['NMC' => 'nmc_count', 'REFI' => 'refi_count'] as $unit => $countField) {
+        foreach (['NMC' => ['nmc_count', '4020%'], 'REFI' => ['refi_count', '4029%']] as $unit => [$countField, $prefix]) {
             $count = (int) $request->$countField;
             if ($count <= 0) {
                 continue;
             }
 
-            $ids = Customer::where('assignment_status', 'unassigned')
-                ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = ?", [$unit])
-                ->inRandomOrder()
+            $query = Customer::where('assignment_status', 'unassigned')
+                ->where('no_contract', 'LIKE', $prefix);
+
+            if ($kiosId) {
+                $query->where('kios_id', $kiosId);
+            }
+
+            $ids = $query->inRandomOrder()
                 ->limit($count)
                 ->pluck('id')
                 ->toArray();
@@ -112,22 +190,64 @@ class AssignmentController extends Controller
             }
         }
 
+        $successCount = count(array_filter($assigned, fn ($a) => ! isset($a['error'])));
+        if ($successCount > 0) {
+            $assigner = $request->user();
+            $marketing = User::find($request->marketing_id);
+
+            Notification::create([
+                'user_id' => $request->marketing_id,
+                'type' => 'assignment',
+                'title' => 'Data baru diassign',
+                'message' => "{$assigner->name} mengirim {$successCount} data kepada Anda.",
+                'data' => [
+                    'assigner_name' => $assigner->name,
+                    'count' => $successCount,
+                    'customer_ids' => array_map(fn ($a) => $a['customer_id'] ?? null, array_filter($assigned, fn ($a) => ! isset($a['error']))),
+                ],
+            ]);
+
+            Notification::create([
+                'user_id' => $assigner->id,
+                'type' => 'assignment',
+                'title' => 'Berhasil assign data',
+                'message' => "{$successCount} data berhasil dikirim ke {$marketing->name}.",
+                'data' => [
+                    'marketing_name' => $marketing->name,
+                    'count' => $successCount,
+                ],
+            ]);
+        }
+
         return response()->json(['assigned' => $assigned, 'total' => count($assigned)]);
     }
 
-    public function autoCalculate(): JsonResponse
+    public function autoCalculate(Request $request): JsonResponse
     {
-        $totalNmc = Customer::where('assignment_status', 'unassigned')
-            ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = 'NMC'")
-            ->count();
+        $user = $request->user();
+        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
 
-        $totalRefi = Customer::where('assignment_status', 'unassigned')
-            ->whereRaw("json_extract(dynamic_data, '$.buss_unit') = 'REFI'")
-            ->count();
+        $nmcQuery = Customer::where('assignment_status', 'unassigned')
+            ->where('no_contract', 'LIKE', '4020%');
+        $refiQuery = Customer::where('assignment_status', 'unassigned')
+            ->where('no_contract', 'LIKE', '4029%');
 
-        $unassignedMarketingCount = User::where('role', 'marketing')
-            ->whereDoesntHave('assignedCustomers')
-            ->count();
+        if ($kiosId) {
+            $nmcQuery->where('kios_id', $kiosId);
+            $refiQuery->where('kios_id', $kiosId);
+        }
+
+        $totalNmc = $nmcQuery->count();
+        $totalRefi = $refiQuery->count();
+
+        $marketingQuery = User::where('role', 'marketing')
+            ->whereDoesntHave('assignedCustomers');
+
+        if ($kiosId) {
+            $marketingQuery->where('kios_id', $kiosId);
+        }
+
+        $unassignedMarketingCount = $marketingQuery->count();
 
         $nmcPerMarketing = $unassignedMarketingCount > 0
             ? (int) ceil($totalNmc / $unassignedMarketingCount)

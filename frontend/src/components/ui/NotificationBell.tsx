@@ -1,98 +1,140 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Bell, CheckCircle2, XCircle, Loader2, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, XCircle, UserPlus, Upload, Trash2, ArrowLeftRight } from 'lucide-react';
 import { getSocket } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
-
-interface Notification {
-  id: string;
-  customerId: number;
-  status: 'sent' | 'failed' | 'processing';
-  time: number;
-  read: boolean;
-}
+import { notificationService, type NotificationItem } from '../../services/notificationService';
 
 interface NotificationBellProps {
   variant?: 'default' | 'dark';
   placement?: 'left' | 'right';
 }
 
-const STORAGE_KEY = 'fif_notifications';
-const MAX_NOTIFICATIONS = 50;
-let notifCounter = 0;
-
-function loadNotifications(): Notification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveNotifications(items: Notification[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_NOTIFICATIONS)));
-}
-
-function timeAgo(ts: number): string {
-  const diff = Math.floor((Date.now() - ts) / 1000);
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (diff < 60) return `${diff}d lalu`;
   if (diff < 3600) return `${Math.floor(diff / 60)}m lalu`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}j lalu`;
   return `${Math.floor(diff / 86400)}h lalu`;
 }
 
+let audioCtx: AudioContext | null = null;
+
+function playNotificationSound() {
+  try {
+    if (!audioCtx) audioCtx = new AudioContext();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const now = audioCtx.currentTime;
+
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.15);
+
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1175, now + 0.1);
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0.3, now + 0.1);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.1);
+    osc2.stop(now + 0.3);
+  } catch {
+    // Web Audio not supported
+  }
+}
+
 export function NotificationBell({ variant = 'default', placement = 'right' }: NotificationBellProps) {
   const { token } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>(loadNotifications);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const prevUnreadRef = useRef(0);
+  const initialLoadRef = useRef(true);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const aggregateStats = {
-    sent: notifications.filter((n) => n.status === 'sent').length,
-    failed: notifications.filter((n) => n.status === 'failed').length,
-  };
-
-  const markAllRead = useCallback(() => {
-    setNotifications((prev) => {
-      const next = prev.map((n) => ({ ...n, read: true }));
-      saveNotifications(next);
-      return next;
-    });
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await notificationService.getAll();
+      setNotifications(res.notifications);
+      const newCount = res.unread_count;
+      if (!initialLoadRef.current && newCount > prevUnreadRef.current) {
+        playNotificationSound();
+      }
+      initialLoadRef.current = false;
+      prevUnreadRef.current = newCount;
+      setUnreadCount(newCount);
+    } catch {
+      // silent
+    }
   }, []);
 
-  const clearAll = useCallback(() => {
-    setNotifications([]);
-    localStorage.removeItem(STORAGE_KEY);
-  }, []);
+  useEffect(() => { fetchNotifications(); }, [fetchNotifications]);
 
+  // Poll setiap 10 detik untuk real-time
+  useEffect(() => {
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  // Socket event untuk instant update
   useEffect(() => {
     if (!token) return;
     const socket = getSocket();
     socket.auth = { token };
     socket.connect();
 
-    const handler = (msg: { customer_id: number; status: string }) => {
-      if (msg.status !== 'sent' && msg.status !== 'failed') return;
-      const item: Notification = {
-        id: `${msg.customer_id}-${Date.now()}-${++notifCounter}`,
-        customerId: msg.customer_id,
-        status: msg.status as 'sent' | 'failed',
-        time: Date.now(),
-        read: false,
-      };
-      setNotifications((prev) => {
-        const next = [item, ...prev].slice(0, MAX_NOTIFICATIONS);
-        saveNotifications(next);
+    const handler = () => { fetchNotifications(); };
+    socket.on('notification:new', handler);
+    return () => { socket.off('notification:new', handler); };
+  }, [token, fetchNotifications]);
+
+  const markAllRead = useCallback(async () => {
+    try {
+      await notificationService.markAllRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read_at: new Date().toISOString() })));
+      setUnreadCount(0);
+      prevUnreadRef.current = 0;
+    } catch {
+      // silent
+    }
+  }, []);
+
+  const markAsRead = useCallback(async (id: number) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read_at: new Date().toISOString() } : n));
+      setUnreadCount((prev) => {
+        const next = Math.max(0, prev - 1);
+        prevUnreadRef.current = next;
         return next;
       });
-    };
+    } catch {
+      // silent
+    }
+  }, []);
 
-    socket.on('broadcast:status', handler);
-    return () => { socket.off('broadcast:status', handler); };
-  }, [token]);
+  const clearAll = useCallback(async () => {
+    try {
+      await notificationService.deleteAll();
+      setNotifications([]);
+      setUnreadCount(0);
+      prevUnreadRef.current = 0;
+    } catch {
+      // silent
+    }
+  }, []);
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -109,10 +151,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
 
     left = Math.max(8, Math.min(left, window.innerWidth - panelWidth - 8));
 
-    setPanelPos({
-      top: rect.bottom + gap,
-      left,
-    });
+    setPanelPos({ top: rect.bottom + gap, left });
   }, [placement]);
 
   useEffect(() => {
@@ -142,23 +181,21 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  useEffect(() => {
-    if (open && unreadCount > 0) {
-      const timer = setTimeout(markAllRead, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [open, unreadCount, markAllRead]);
-
   const isDark = variant === 'dark';
 
   const buttonColors = isDark
     ? 'text-slate-300 hover:bg-slate-700/60 hover:text-white'
     : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200';
 
-  const statusConfig = {
-    sent: { icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />, label: 'Terkirim' },
-    failed: { icon: <XCircle className="h-4 w-4 text-red-500" />, label: 'Gagal' },
-    processing: { icon: <Loader2 className="h-4 w-4 animate-spin text-blue-500" />, label: 'Diproses' },
+  const typeIcon = (type: string) => {
+    switch (type) {
+      case 'assignment': return <UserPlus className="h-4 w-4 text-blue-500" />;
+      case 'import': return <Upload className="h-4 w-4 text-violet-500" />;
+      case 'rolling': return <ArrowLeftRight className="h-4 w-4 text-cyan-500" />;
+      case 'broadcast': return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+      case 'error': return <XCircle className="h-4 w-4 text-red-500" />;
+      default: return <CheckCircle2 className="h-4 w-4 text-emerald-500" />;
+    }
   };
 
   return (
@@ -214,13 +251,6 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
               </div>
             </div>
 
-            {notifications.length > 0 && (
-              <div className="flex items-center gap-4 border-b border-slate-50 px-4 py-2 text-xs text-slate-500 dark:border-slate-700/50 dark:text-slate-400">
-                <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" /> {aggregateStats.sent} terkirim</span>
-                {aggregateStats.failed > 0 && <span className="flex items-center gap-1"><span className="inline-block h-1.5 w-1.5 rounded-full bg-red-500" /> {aggregateStats.failed} gagal</span>}
-              </div>
-            )}
-
             <div className="max-h-80 overflow-y-auto overscroll-contain">
               {notifications.length === 0 ? (
                 <div className="px-4 py-10 text-center">
@@ -228,36 +258,31 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
                     <Bell className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                   </div>
                   <p className="mt-3 text-sm font-medium text-slate-500 dark:text-slate-400">Belum ada notifikasi</p>
-                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Notifikasi broadcast akan muncul di sini</p>
+                  <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Notifikasi akan muncul di sini</p>
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                  {notifications.map((n) => {
-                    const cfg = statusConfig[n.status];
-                    return (
-                      <div
-                        key={n.id}
-                        className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                          n.read
-                            ? 'bg-white dark:bg-slate-800'
-                            : 'bg-fif-50/40 dark:bg-fif-950/20'
-                        }`}
-                      >
-                        <div className="mt-0.5 shrink-0">{cfg.icon}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-slate-700 dark:text-slate-300">
-                            Pesan <span className="font-semibold">{cfg.label}</span>
-                          </p>
-                          <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
-                            Customer #{n.customerId} &middot; {timeAgo(n.time)}
-                          </p>
-                        </div>
-                        {!n.read && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-fif-500 shadow-sm shadow-fif-500/50" />
-                        )}
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => !n.read_at && markAsRead(n.id)}
+                      className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
+                        n.read_at
+                          ? 'bg-white dark:bg-slate-800'
+                          : 'bg-fif-50/40 dark:bg-fif-950/20'
+                      }`}
+                    >
+                      <div className="mt-0.5 shrink-0">{typeIcon(n.type)}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{n.title}</p>
+                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{n.message}</p>
+                        <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{timeAgo(n.created_at)}</p>
                       </div>
-                    );
-                  })}
+                      {!n.read_at && (
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-fif-500 shadow-sm shadow-fif-500/50" />
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

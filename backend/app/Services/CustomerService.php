@@ -54,9 +54,9 @@ class CustomerService
         return $this->customerRepository->getAssignedToMarketing($marketingId, $filters);
     }
 
-    public function bulkImport(array $customers, int $uploadedBy): array
+    public function bulkImport(array $customers, int $uploadedBy, ?string $kiosId = null): array
     {
-        return $this->customerRepository->bulkImport($customers, $uploadedBy);
+        return $this->customerRepository->bulkImport($customers, $uploadedBy, $kiosId);
     }
 
     public function normalizeHeaders(array $headers): array
@@ -93,33 +93,40 @@ class CustomerService
         ];
     }
 
-    public function importFromFile(UploadedFile $file, int $uploadedBy): array
+    public function importFromFile(UploadedFile $file, int $uploadedBy, ?string $kiosId = null): array
     {
         $extension = strtolower($file->getClientOriginalExtension());
-        $rows = [];
-        $rawHeader = [];
 
         if (in_array($extension, ['xlsx', 'xls'])) {
-            return $this->importFromExcel($file, $uploadedBy);
+            return $this->importFromExcel($file, $uploadedBy, $kiosId);
         }
 
         if ($extension !== 'csv') {
             return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Format file tidak didukung. Gunakan CSV atau Excel (.xlsx)']], 'detected_columns' => []];
         }
 
-        $contents = file_get_contents($file->getPathname());
-        if (str_starts_with($contents, "\xEF\xBB\xBF")) {
-            $contents = substr($contents, 3);
+        $handle = fopen($file->getPathname(), 'r');
+        if (! $handle) {
+            return ['imported' => 0, 'failed' => [['row' => 0, 'error' => 'Gagal membuka file']], 'detected_columns' => []];
         }
-        $firstLine = strtok($contents, "\n\r");
+
+        // Detect delimiter from first line
+        $firstLine = fgets($handle);
+        if (str_starts_with($firstLine, "\xEF\xBB\xBF")) {
+            $firstLine = substr($firstLine, 3);
+        }
         $commaCount = substr_count($firstLine, ',');
         $semicolonCount = substr_count($firstLine, ';');
         $delimiter = $semicolonCount > $commaCount ? ';' : ',';
-        $handle = fopen('php://temp', 'r+');
-        fwrite($handle, $contents);
+
         rewind($handle);
         $header = null;
+        $rawHeader = [];
+        $customers = [];
+        $rowNum = 0;
+
         while (($line = fgetcsv($handle, null, $delimiter)) !== false) {
+            $rowNum++;
             if (! $header) {
                 $rawHeader = $line;
                 $header = $this->normalizeHeaders($line);
@@ -129,27 +136,22 @@ class CustomerService
             if (count($header) === count($line)) {
                 $parsed = array_combine($header, $line);
                 if ($parsed !== false) {
-                    $rows[] = $parsed;
+                    $customer = $this->extractFromRow($parsed);
+                    if ($customer) {
+                        $customers[] = $customer;
+                    }
                 }
             }
         }
         fclose($handle);
 
-        $customers = [];
-        foreach ($rows as $row) {
-            $parsed = $this->extractFromRow($row);
-            if ($parsed) {
-                $customers[] = $parsed;
-            }
-        }
-
-        $result = $this->customerRepository->bulkImport($customers, $uploadedBy);
+        $result = $this->customerRepository->bulkImport($customers, $uploadedBy, $kiosId);
         $result['detected_columns'] = $rawHeader;
 
         return $result;
     }
 
-    protected function importFromExcel(UploadedFile $file, int $uploadedBy): array
+    protected function importFromExcel(UploadedFile $file, int $uploadedBy, ?string $kiosId = null): array
     {
         try {
             $spreadsheet = IOFactory::load($file->getPathname());
@@ -169,32 +171,27 @@ class CustomerService
         $rawHeader = array_map(fn ($h) => (string) ($h ?? ''), array_shift($rows));
         $header = $this->normalizeHeaders($rawHeader);
 
-        $parsedRows = [];
+        $customers = [];
         foreach ($rows as $row) {
             $row = array_map(fn ($v) => (string) ($v ?? ''), $row);
             if (count($header) === count($row)) {
                 $combined = array_combine($header, $row);
                 if ($combined !== false && array_filter($combined)) {
-                    $parsedRows[] = $combined;
+                    $parsed = $this->extractFromRow($combined);
+                    if ($parsed) {
+                        $customers[] = $parsed;
+                    }
                 }
             }
         }
 
-        $customers = [];
-        foreach ($parsedRows as $row) {
-            $parsed = $this->extractFromRow($row);
-            if ($parsed) {
-                $customers[] = $parsed;
-            }
-        }
-
-        $result = $this->customerRepository->bulkImport($customers, $uploadedBy);
+        $result = $this->customerRepository->bulkImport($customers, $uploadedBy, $kiosId);
         $result['detected_columns'] = $rawHeader;
 
         return $result;
     }
 
-    public function importFromSpreadsheetData(array $rows, int $uploadedBy): array
+    public function importFromSpreadsheetData(array $rows, int $uploadedBy, ?string $kiosId = null): array
     {
         $customers = [];
         foreach ($rows as $row) {
@@ -204,12 +201,12 @@ class CustomerService
             }
         }
 
-        return $this->customerRepository->bulkImport($customers, $uploadedBy);
+        return $this->customerRepository->bulkImport($customers, $uploadedBy, $kiosId);
     }
 
-    public function deleteAll(): int
+    public function deleteAll(?string $kiosId = null): int
     {
-        return $this->customerRepository->deleteAll();
+        return $this->customerRepository->deleteAll($kiosId);
     }
 
     public function batchDelete(array $ids): int

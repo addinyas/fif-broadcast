@@ -15,9 +15,9 @@ class TemplateService
         return $this->templateRepository->getAll($user);
     }
 
-    public function findById(int $id)
+    public function findById(int $id, $user = null)
     {
-        return $this->templateRepository->findById($id);
+        return $this->templateRepository->findById($id, $user);
     }
 
     public function create(array $data)
@@ -25,13 +25,13 @@ class TemplateService
         return $this->templateRepository->create($data);
     }
 
-    public function update(int $id, array $data)
+    public function update(int $id, array $data, $user = null)
     {
-        return $this->templateRepository->update($id, $data);
+        return $this->templateRepository->update($id, $data, $user);
     }
 
-    public function delete(int $id): void
+    public function delete(int $id, $user = null): void
     {
-        $this->templateRepository->delete($id);
+        $this->templateRepository->delete($id, $user);
     }
 }

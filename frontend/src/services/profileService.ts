@@ -43,6 +43,15 @@ export const profileService = {
     return data;
   },
 
+  async changePassword(payload: {
+    current_password: string;
+    password: string;
+    password_confirmation: string;
+  }): Promise<{ message: string }> {
+    const { data } = await api.put<{ message: string }>('/profile/password', payload);
+    return data;
+  },
+
   async clearCache(): Promise<ClearCacheResponse> {
     const { data } = await api.post<ClearCacheResponse>('/profile/clear-cache');
     return data;

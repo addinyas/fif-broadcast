@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Kios;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -54,6 +56,17 @@ class KiosController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $kios = Kios::findOrFail($id);
+
+        $userCount = User::where('kios_id', $kios->kios_id)->count();
+        if ($userCount > 0) {
+            return response()->json(['message' => "Tidak bisa menghapus kios — masih ada {$userCount} user di kios ini"], 422);
+        }
+
+        $customerCount = Customer::where('kios_id', $kios->kios_id)->count();
+        if ($customerCount > 0) {
+            return response()->json(['message' => "Tidak bisa menghapus kios — masih ada {$customerCount} customer di kios ini"], 422);
+        }
+
         $kios->delete();
 
         return response()->json(['message' => 'Kios dihapus']);

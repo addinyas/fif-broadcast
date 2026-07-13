@@ -16,6 +16,7 @@ import {
   X,
   FileText,
   Store,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,12 +34,12 @@ interface LinkItem {
 const adminLinks: LinkItem[] = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, feature: 'dashboard' },
   { to: '/admin/broadcast', label: 'Broadcast', icon: <SendHorizontal className="h-5 w-5" />, feature: 'prospect_list' },
-  { to: '/admin/customers', label: 'Customers', icon: <Users className="h-5 w-5" />, feature: 'customer_management' },
   { to: '/admin/connect', label: 'Connect', icon: <Smartphone className="h-5 w-5" />, feature: 'qr_scanner' },
+  { to: '/admin/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
+  { to: '/admin/rolling', label: 'Rolling Data', icon: <ArrowLeftRight className="h-5 w-5" />, feature: 'data_rolling' },
   { to: '/admin/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
   { to: '/admin/users', label: 'Users', icon: <Shield className="h-5 w-5" />, feature: 'user_management' },
   { to: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
-  { to: '/admin/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
 ];
 
 const superadminOnlyLinks: LinkItem[] = [
@@ -50,11 +51,11 @@ const superadminOnlyLinks: LinkItem[] = [
 const marketingLinks: LinkItem[] = [
   { to: '/marketing/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, feature: 'dashboard' },
   { to: '/marketing/broadcast', label: 'Broadcast', icon: <SendHorizontal className="h-5 w-5" />, feature: 'prospect_list' },
-  { to: '/marketing/customers', label: 'Customer', icon: <Users className="h-5 w-5" />, feature: 'customer_management' },
-  { to: '/marketing/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
   { to: '/marketing/connect', label: 'Connect', icon: <Smartphone className="h-5 w-5" />, feature: 'qr_scanner' },
-  { to: '/marketing/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+  { to: '/marketing/customers', label: 'Customer', icon: <Users className="h-5 w-5" />, feature: 'customer_management' },
   { to: '/marketing/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
+  { to: '/marketing/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
+  { to: '/marketing/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
 
 interface SidebarProps {

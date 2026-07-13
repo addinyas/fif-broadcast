@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -89,6 +90,28 @@ class ProfileController extends Controller
         }
 
         return response()->json(['message' => 'Avatar removed successfully']);
+    }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        if (! Hash::check($request->current_password, $user->password)) {
+            return response()->json(['message' => 'Password lama salah'], 422);
+        }
+
+        $user->update(['password' => $request->password]);
+
+        return response()->json(['message' => 'Password berhasil diubah']);
     }
 
     public function clearCache(Request $request): JsonResponse

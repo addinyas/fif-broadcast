@@ -36,28 +36,34 @@ class BroadcastService
         return $broadcast->toArray();
     }
 
-    public function getHistory(?int $marketingId, array $filters = []): LengthAwarePaginator
+    public function getHistory(?int $marketingId, array $filters = [], ?string $kiosId = null): LengthAwarePaginator
     {
-        return $this->broadcastRepository->getHistory($marketingId, $filters);
+        return $this->broadcastRepository->getHistory($marketingId, $filters, $kiosId);
     }
 
-    public function getStats(?int $marketingId = null): array
+    public function getStats(?int $marketingId = null, ?string $kiosId = null): array
     {
-        return $this->broadcastRepository->getStats($marketingId);
+        return $this->broadcastRepository->getStats($marketingId, $kiosId);
     }
 
-    public function marketingSummary(?int $marketingId): array
+    public function marketingSummary(?int $marketingId, ?string $kiosId = null): array
     {
         $customerQuery = Customer::where('assignment_status', 'assigned');
-        $historyQuery = BroadcastHistory::query();
+        $historyQuery = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id');
+
+        if ($kiosId) {
+            $customerQuery->where('customers.kios_id', $kiosId);
+            $historyQuery->where('customers.kios_id', $kiosId);
+        }
         if ($marketingId !== null) {
             $customerQuery->where('marketing_id', $marketingId);
-            $historyQuery->where('marketing_id', $marketingId);
+            $historyQuery->where('broadcast_histories.marketing_id', $marketingId);
         }
 
         $assignedCount = $customerQuery->count();
 
-        $stats = $this->getStats($marketingId);
+        $stats = $this->getStats($marketingId, $kiosId);
 
         // Count unique customers who received broadcasts (not total rows)
         $broadcastedCustomerQuery = (clone $historyQuery)->select('customer_id')->distinct();

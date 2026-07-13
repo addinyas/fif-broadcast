@@ -13,6 +13,7 @@ class RolePermissionSeeder extends Seeder
             'dashboard', 'customer_management', 'template_management',
             'user_management', 'prospect_list', 'broadcast',
             'broadcast_history', 'qr_scanner', 'broadcast_stats',
+            'data_rolling',
         ];
 
         $roles = ['UH', 'marketing'];
