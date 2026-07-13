@@ -244,7 +244,7 @@ export function CalculatorPage() {
               </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
-              <input value={formatAlphaNum(manual.nopol)}
+              <input type="text" inputMode="text" autoCapitalize="characters" autoCorrect="off" spellCheck={false} value={formatAlphaNum(manual.nopol)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
                   const formatted = formatAlphaNum(raw);
@@ -387,7 +387,7 @@ export function CalculatorPage() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Nopol <span className="text-red-500">*</span></label>
-                <input value={formatAlphaNum(nopol)}
+                <input type="text" inputMode="text" autoCapitalize="characters" autoCorrect="off" spellCheck={false} value={formatAlphaNum(nopol)}
                   onChange={(e) => {
                   const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
                     setNopol(formatAlphaNum(raw));
