@@ -9,6 +9,7 @@ const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
 const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 const connections = new Map();
 const reconnectState = new Map();
@@ -21,6 +22,33 @@ function ensureAuthDir(userId) {
   const dir = getAuthDir(userId);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function cleanupOldLidFiles() {
+  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+  const now = Date.now();
+  try {
+    if (!fs.existsSync(AUTH_BASE)) return;
+    const entries = fs.readdirSync(AUTH_BASE, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const dirPath = path.join(AUTH_BASE, entry.name);
+      const files = fs.readdirSync(dirPath);
+      for (const file of files) {
+        if (!file.endsWith('.lid')) continue;
+        const filePath = path.join(dirPath, file);
+        try {
+          const stat = fs.statSync(filePath);
+          if (now - stat.mtimeMs > maxAge) {
+            fs.unlinkSync(filePath);
+            console.log(`[WA] Cleaned old LID file: ${filePath}`);
+          }
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.error('[WA] Error cleaning LID files:', err.message);
   }
 }
 
@@ -146,6 +174,18 @@ async function createWAClientForUser(userId, onReady) {
 
       rs.reconnecting = true;
       rs.attempts++;
+
+      if (rs.attempts > MAX_RECONNECT_ATTEMPTS) {
+        console.log(`[WA] User ${userId} max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`);
+        rs.reconnecting = false;
+        try { sock.end(undefined); } catch {}
+        connections.delete(userId);
+        reconnectState.delete(userId);
+        saveConnectionStatus(userId, 'logged_out', null);
+        emitWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
+        return;
+      }
+
       const delay = Math.min(1000 * Math.pow(2, Math.min(rs.attempts, 5)), 30000);
       console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${rs.attempts})`);
       emitWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
@@ -220,4 +260,21 @@ function getConnectedUsers() {
   return connected;
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, isConnectedForUser, getConnectedUsers };
+function disconnectAllConnections() {
+  for (const [userId, entry] of connections) {
+    if (entry.disconnectTimer) {
+      clearTimeout(entry.disconnectTimer);
+      entry.disconnectTimer = null;
+    }
+    if (entry.sock) {
+      try {
+        entry.sock.ev.removeAllListeners();
+        entry.sock.end(undefined);
+      } catch {}
+    }
+  }
+  connections.clear();
+  reconnectState.clear();
+}
+
+module.exports = { createWAClientForUser, sendWAMessageForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles };

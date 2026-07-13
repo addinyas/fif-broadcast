@@ -7,10 +7,9 @@ require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
-const { createSocketServer } = require('./socket-server');
-const { getOrCreateClient } = require('./wa-manager');
-const { startQueue } = require('./queue-consumer');
-const { closeDb } = require('./db');
+const { createSocketServer, getIO } = require('./socket-server');
+const { startQueue, stopQueue } = require('./queue-consumer');
+const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
 
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
@@ -41,6 +40,13 @@ async function main() {
     logger.error('[Worker] Failed to clean stale connections:', err.message);
   }
 
+  // Clean old LID files (> 7 days) from auth directories
+  try {
+    cleanupOldLidFiles();
+  } catch (err) {
+    logger.error('[Worker] Failed to clean LID files:', err.message);
+  }
+
   // Reset stuck 'processing' messages to 'pending' on startup
   try {
     const db = new Database(DB_PATH);
@@ -67,14 +73,26 @@ async function main() {
 
 function gracefulShutdown(signal) {
   logger.info(`[Worker] Received ${signal}, shutting down gracefully...`);
-  closeDb();
+
+  // Stop queue from processing new messages
+  stopQueue();
+
+  // Disconnect all WhatsApp connections cleanly
+  disconnectAllConnections();
+
+  // Close socket.io server
+  const io = getIO();
+  if (io) {
+    io.close();
+  }
+
   if (httpServer) {
     httpServer.close(() => {
       logger.info('[Worker] HTTP server closed');
-      process.exit(1);
+      process.exit(0);
     });
   }
-  setTimeout(() => process.exit(1), 5000);
+  setTimeout(() => process.exit(0), 5000);
 }
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -87,7 +105,6 @@ process.on('uncaughtException', (err) => {
 
 process.on('unhandledRejection', (reason) => {
   logger.error('[Worker] Unhandled rejection:', reason);
-  gracefulShutdown('unhandledRejection');
 });
 
 main().catch((err) => {
