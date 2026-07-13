@@ -102,10 +102,17 @@ export function QRScannerPage() {
   }, []);
 
   const handleRequestPairingCode = useCallback(() => {
-    const clean = phoneNumber.replace(/\D/g, '');
+    let clean = phoneNumber.replace(/\D/g, '');
     if (!clean || clean.length < 8) {
       setPairingError('Masukkan nomor telepon yang valid');
       return;
+    }
+    if (clean.startsWith('08')) {
+      clean = '62' + clean.slice(1);
+    } else if (clean.startsWith('62')) {
+      // already correct
+    } else if (clean.startsWith('8')) {
+      clean = '62' + clean;
     }
     const socket = getSocket();
     setPairingError(null);
@@ -189,7 +196,7 @@ export function QRScannerPage() {
                       <input
                         type="tel"
                         inputMode="numeric"
-                        placeholder="628xxxxxxxxxx"
+                        placeholder="08xxxxxxxxxx"
                         value={phoneNumber}
                         onChange={(e) => { setPhoneNumber(e.target.value.replace(/\D/g, '')); setPairingError(null); }}
                         className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
@@ -199,6 +206,7 @@ export function QRScannerPage() {
                         Dapatkan Kode
                       </Button>
                     </div>
+                    <p className="text-xs text-slate-400 dark:text-slate-500">Format: 08xxx atau 628xxx — otomatis dikonversi</p>
                     {pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
                   </>
                 ) : (
