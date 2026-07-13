@@ -43,6 +43,8 @@ export interface Customer {
   uploader?: User;
   marketing?: User;
   broadcast_histories?: BroadcastHistory[];
+  from_marketing_name?: string;
+  share_group?: string;
 }
 
 export interface Template {

@@ -3,6 +3,7 @@ import { Bell, CheckCircle2, XCircle, UserPlus, Upload, Trash2, ArrowLeftRight }
 import { getSocket } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
 import { notificationService, type NotificationItem } from '../../services/notificationService';
+import { customerService } from '../../services/customerService';
 
 interface NotificationBellProps {
   variant?: 'default' | 'dark';
@@ -54,7 +55,7 @@ function playNotificationSound() {
 }
 
 export function NotificationBell({ variant = 'default', placement = 'right' }: NotificationBellProps) {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -63,6 +64,10 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
   const buttonRef = useRef<HTMLButtonElement>(null);
   const prevUnreadRef = useRef(0);
   const initialLoadRef = useRef(true);
+  const [rollingAction, setRollingAction] = useState<NotificationItem | null>(null);
+  const [rollingLoading, setRollingLoading] = useState(false);
+
+  const canApprove = user?.role === 'UH' || user?.role === 'superadmin';
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -100,6 +105,13 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
     return () => { socket.off('notification:new', handler); };
   }, [token, fetchNotifications]);
 
+  // Close rolling toast if notification no longer exists
+  useEffect(() => {
+    if (rollingAction && !notifications.find(n => n.id === rollingAction.id)) {
+      setRollingAction(null);
+    }
+  }, [notifications, rollingAction]);
+
   const markAllRead = useCallback(async () => {
     try {
       await notificationService.markAllRead();
@@ -128,13 +140,77 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
   const clearAll = useCallback(async () => {
     try {
       await notificationService.deleteAll();
-      setNotifications([]);
-      setUnreadCount(0);
-      prevUnreadRef.current = 0;
+      // Refresh to get remaining notifications (pending rolling are kept server-side)
+      await fetchNotifications();
     } catch {
       // silent
     }
-  }, []);
+  }, [fetchNotifications]);
+
+  const handleNotificationClick = useCallback(async (n: NotificationItem) => {
+    if (!n.read_at) {
+      await markAsRead(n.id);
+    }
+
+    // UH/superadmin clicking "Rolling Data" notification → show approve toast
+    if (canApprove && n.type === 'rolling' && n.title === 'Rolling Data' && n.data) {
+      setRollingAction(n);
+      setOpen(false);
+      return;
+    }
+
+    // Other rolling notifications → no-op (just mark as read)
+    if (n.type === 'rolling') {
+      setOpen(false);
+      return;
+    }
+  }, [canApprove, markAsRead]);
+
+  const handleRollingApprove = useCallback(async () => {
+    if (!rollingAction?.data) return;
+    setRollingLoading(true);
+    try {
+      const pendingShares = await customerService.getPendingShares();
+      const shareGroup = (rollingAction.data as Record<string, unknown>).share_group as string;
+      const match = pendingShares.find(s => {
+        const sg = `${s.requested_by?.id}_${s.from_marketing?.id}`;
+        return sg === shareGroup;
+      });
+      if (match) {
+        await customerService.approveShare(match.id);
+      }
+      await markAsRead(rollingAction.id);
+      await fetchNotifications();
+      setRollingAction(null);
+    } catch {
+      // silent
+    } finally {
+      setRollingLoading(false);
+    }
+  }, [rollingAction, markAsRead, fetchNotifications]);
+
+  const handleRollingReject = useCallback(async () => {
+    if (!rollingAction?.data) return;
+    setRollingLoading(true);
+    try {
+      const pendingShares = await customerService.getPendingShares();
+      const shareGroup = (rollingAction.data as Record<string, unknown>).share_group as string;
+      const match = pendingShares.find(s => {
+        const sg = `${s.requested_by?.id}_${s.from_marketing?.id}`;
+        return sg === shareGroup;
+      });
+      if (match) {
+        await customerService.revokeShare(match.id);
+      }
+      await markAsRead(rollingAction.id);
+      await fetchNotifications();
+      setRollingAction(null);
+    } catch {
+      // silent
+    } finally {
+      setRollingLoading(false);
+    }
+  }, [rollingAction, markAsRead, fetchNotifications]);
 
   const updatePosition = useCallback(() => {
     if (!buttonRef.current) return;
@@ -242,7 +318,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
                     <button
                       onClick={clearAll}
                       className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
-                      title="Hapus semua"
+                      title="Hapus yang sudah lama"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -265,7 +341,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
                   {notifications.map((n) => (
                     <div
                       key={n.id}
-                      onClick={() => !n.read_at && markAsRead(n.id)}
+                      onClick={() => handleNotificationClick(n)}
                       className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
                         n.read_at
                           ? 'bg-white dark:bg-slate-800'
@@ -288,6 +364,50 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
             </div>
           </div>
         </>
+      )}
+
+      {/* Floating Rolling Approval Toast */}
+      {rollingAction && (
+        <div className="fixed bottom-4 right-4 z-[70] w-80 sm:w-96 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-2xl dark:border-cyan-800 dark:bg-slate-800">
+          <div className="flex items-center gap-3 border-b border-cyan-100 bg-cyan-50 px-4 py-3 dark:border-cyan-900/50 dark:bg-cyan-950/30">
+            <ArrowLeftRight className="h-5 w-5 shrink-0 text-cyan-600 dark:text-cyan-400" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-cyan-800 dark:text-cyan-200">Rolling Data</p>
+              <p className="mt-0.5 text-xs text-cyan-600 dark:text-cyan-400">{rollingAction.message}</p>
+            </div>
+            {!rollingLoading && (
+              <button
+                onClick={() => setRollingAction(null)}
+                className="shrink-0 rounded-lg p-1 text-cyan-400 transition-colors hover:bg-cyan-100 hover:text-cyan-600 dark:hover:bg-cyan-900/30 dark:hover:text-cyan-300"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 px-4 py-3">
+            <button
+              onClick={handleRollingApprove}
+              disabled={rollingLoading}
+              className="flex-1 rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-600 disabled:opacity-50"
+            >
+              {rollingLoading ? 'Memproses...' : 'Approve'}
+            </button>
+            <button
+              onClick={handleRollingReject}
+              disabled={rollingLoading}
+              className="flex-1 rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+            >
+              {rollingLoading ? 'Memproses...' : 'Reject'}
+            </button>
+            <button
+              onClick={() => setRollingAction(null)}
+              disabled={rollingLoading}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

@@ -984,6 +984,7 @@ export function ProspectListPage() {
                 <tr className="border-b border-purple-200 dark:border-purple-800 bg-purple-100/50 dark:bg-purple-900/20">
                   <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No Contract</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Nama</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Pinjam Dari</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No. WhatsApp</th>
                   <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Status</th>
                 </tr>
@@ -995,6 +996,7 @@ export function ProspectListPage() {
                     <tr key={c.id} className="border-b border-purple-100 dark:border-purple-800/50 last:border-0">
                       <td className="px-4 py-2 font-mono text-xs font-semibold text-purple-900 dark:text-purple-100">{c.no_contract}</td>
                       <td className="px-4 py-2 text-purple-800 dark:text-purple-200">{c.name}</td>
+                      <td className="px-4 py-2 text-xs text-purple-600 dark:text-purple-400">{c.from_marketing_name || '—'}</td>
                       <td className="px-4 py-2 font-mono text-xs text-purple-700 dark:text-purple-300">{c.phone_number}</td>
                       <td className="px-4 py-2">
                         {latest ? (

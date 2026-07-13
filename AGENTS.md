@@ -736,6 +736,28 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — chunk IDs into batches of 500 before `whereIn`. SQLite has a hard limit of ~999 variables per query. With 8221 customers, the unchunked `whereIn('customer_id', $customerIds)` exceeded the limit. Same fix applied to `batchDelete()`.
 - `backend/app/Repositories/CustomerRepository.php`: `batchDelete()` — same chunking pattern, returns correct total deleted count across chunks.
 
+### 2026-07-14 — 5 bug fixes: Connect race condition + UH cleanup + rolling permission + nopol
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Bug 1 — Connect race condition (HIGH):**
+- `worker/src/socket-server.js`: tambah `wa:request_status` event handler — frontend bisa request status terkini setelah listener terpasang
+- `worker/src/socket-server.js`: tambah `await` sebelum `disconnect(userId)` di `wa:reconnect` handler — cegah race condition antara old/new Baileys client
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: emit `wa:request_status` setelah setup listener — fix QR expired karena event terkirim sebelum listener siap; tambah `connect_error` + `disconnect` socket handlers — tampilkan error ke user
+
+**Bug 2 — Auto-calculate NMC/REFI:**
+- ✅ TIDAK ADA BUG — NMC=`4020%`, REFI=`4029%` konsisten di semua layer (autoCalculate, assignByUnit, CustomerRepository, frontend filter)
+
+**Bug 4 — Calculator nopol:**
+- `frontend/src/pages/CalculatorPage.tsx`: tambah `autoComplete="off" pattern="[A-Za-z0-9]*"` ke 2 input nopol — hint tambahan untuk mobile browser agar menampilkan text keyboard (bukan numeric)
+
+**Bug 5 — UH delete data cleanup (MEDIUM):**
+- `backend/app/Http/Controllers/Api/UserController.php`: tambah explicit `WhatsappConnection::where('user_id', ...)->delete()` dan `Notification::where('user_id', ...)->delete()` sebelum `$user->delete()` — sebelumnya relies on SQLite CASCADE yang bisa gagal
+
+**Bug 6 — UH rolling data approval (HIGH):**
+- VPS database: seed `role_permissions` rows untuk `data_rolling` (UH + marketing) — sebelumnya tidak ada di DB karena seeder belum dijalankan ulang
+- `frontend/src/services/permissionService.ts`: tambah `data_rolling: 'Rolling Data'` ke `FEATURE_LABELS` — fix label di Permission Management page
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

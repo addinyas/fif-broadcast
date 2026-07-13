@@ -120,10 +120,11 @@ class CustomerShareController extends Controller
         }
 
         $fromMarketing = User::find($fromMarketingId);
+        $shareGroup = $user->id.'_'.$fromMarketingId;
         $this->notifyUhsForShare(
             'Rolling Data',
             "{$user->name} meminta {$count} data dari {$fromMarketing->name}",
-            ['requested_by' => $user->id, 'from_marketing_id' => $fromMarketingId]
+            ['requested_by' => $user->id, 'from_marketing_id' => $fromMarketingId, 'share_group' => $shareGroup]
         );
 
         Notification::create([
@@ -131,7 +132,7 @@ class CustomerShareController extends Controller
             'type' => 'rolling',
             'title' => 'Data Anda Akan Dipinjam',
             'message' => "{$user->name} meminta {$count} data dari Anda. Menunggu approval UH.",
-            'data' => ['requested_by' => $user->id, 'count' => $count],
+            'data' => ['requested_by' => $user->id, 'count' => $count, 'share_group' => $shareGroup],
         ]);
 
         Notification::create([
@@ -139,7 +140,7 @@ class CustomerShareController extends Controller
             'type' => 'rolling',
             'title' => 'Request Rolling Data Dikirim',
             'message' => "Anda meminta {$count} data dari {$fromMarketing->name}. Menunggu approval UH.",
-            'data' => ['from_marketing_id' => $fromMarketingId, 'count' => $count],
+            'data' => ['from_marketing_id' => $fromMarketingId, 'count' => $count, 'share_group' => $shareGroup],
         ]);
 
         return response()->json([
@@ -237,12 +238,13 @@ class CustomerShareController extends Controller
             ->where('status', 'approved')
             ->count();
 
+        $shareGroup = $firstShare->requested_by.'_'.$firstShare->from_marketing_id;
         Notification::create([
             'user_id' => $firstShare->requested_by,
             'type' => 'rolling',
             'title' => 'Rolling Data Disetujui',
             'message' => "Request {$shareCount} data dari {$firstShare->fromMarketing->name} telah disetujui UH",
-            'data' => ['approved_by' => $user->id, 'from_marketing_id' => $firstShare->from_marketing_id],
+            'data' => ['approved_by' => $user->id, 'from_marketing_id' => $firstShare->from_marketing_id, 'share_group' => $shareGroup],
         ]);
 
         Notification::create([
@@ -250,13 +252,13 @@ class CustomerShareController extends Controller
             'type' => 'rolling',
             'title' => 'Data Anda Dipinjam',
             'message' => "{$shareCount} data Anda telah disetujui UH untuk {$firstShare->requestedBy->name}",
-            'data' => ['approved_by' => $user->id, 'requested_by' => $firstShare->requested_by],
+            'data' => ['approved_by' => $user->id, 'requested_by' => $firstShare->requested_by, 'share_group' => $shareGroup],
         ]);
 
         $this->notifyUhsForShare(
             'Rolling Data Disetujui',
             "{$user->name} menyetujui {$shareCount} data dari {$firstShare->fromMarketing->name} untuk {$firstShare->requestedBy->name}",
-            ['approved_by' => $user->id, 'from_marketing_id' => $firstShare->from_marketing_id, 'requested_by' => $firstShare->requested_by]
+            ['approved_by' => $user->id, 'from_marketing_id' => $firstShare->from_marketing_id, 'requested_by' => $firstShare->requested_by, 'share_group' => $shareGroup]
         );
 
         return response()->json(['message' => 'Berhasil di-approve']);
@@ -282,12 +284,13 @@ class CustomerShareController extends Controller
             ->whereIn('status', ['pending', 'approved'])
             ->update(['status' => 'revoked']);
 
+        $shareGroup = $firstShare->requested_by.'_'.$firstShare->from_marketing_id;
         Notification::create([
             'user_id' => $firstShare->requested_by,
             'type' => 'rolling',
             'title' => 'Rolling Data Ditolak',
             'message' => "Request data dari {$firstShare->fromMarketing->name} ditolak oleh UH",
-            'data' => ['from_marketing_id' => $firstShare->from_marketing_id],
+            'data' => ['from_marketing_id' => $firstShare->from_marketing_id, 'share_group' => $shareGroup],
         ]);
 
         Notification::create([
@@ -295,13 +298,13 @@ class CustomerShareController extends Controller
             'type' => 'rolling',
             'title' => 'Data Anda Tidak Jadi Dipinjam',
             'message' => "Request data dari {$firstShare->requestedBy->name} ditolak oleh UH",
-            'data' => ['requested_by' => $firstShare->requested_by],
+            'data' => ['requested_by' => $firstShare->requested_by, 'share_group' => $shareGroup],
         ]);
 
         $this->notifyUhsForShare(
             'Rolling Data Ditolak',
             "{$user->name} menolak request data dari {$firstShare->requestedBy->name} ke {$firstShare->fromMarketing->name}",
-            ['requested_by' => $firstShare->requested_by, 'from_marketing_id' => $firstShare->from_marketing_id]
+            ['requested_by' => $firstShare->requested_by, 'from_marketing_id' => $firstShare->from_marketing_id, 'share_group' => $shareGroup]
         );
 
         return response()->json(['message' => 'Berhasil direvoke']);
@@ -311,16 +314,26 @@ class CustomerShareController extends Controller
     {
         $user = $request->user();
 
-        $sharedCustomerIds = CustomerShare::where('to_marketing_id', $user->id)
+        $shares = CustomerShare::where('to_marketing_id', $user->id)
             ->where('status', 'approved')
-            ->pluck('customer_id')
-            ->toArray();
+            ->get()
+            ->keyBy('customer_id');
+
+        $sharedCustomerIds = $shares->pluck('customer_id')->toArray();
 
         $customers = Customer::with(['marketing', 'broadcast_histories' => function ($q) {
             $q->latest('sent_at')->limit(1);
         }])
             ->whereIn('id', $sharedCustomerIds)
-            ->get();
+            ->get()
+            ->map(function ($customer) use ($shares) {
+                $share = $shares->get($customer->id);
+                $fromMarketing = $share ? User::find($share->from_marketing_id) : null;
+                $customer->from_marketing_name = $fromMarketing?->name;
+                $customer->share_group = $share ? $share->requested_by.'_'.$share->from_marketing_id : null;
+
+                return $customer;
+            });
 
         return response()->json($customers);
     }
