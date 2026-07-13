@@ -468,14 +468,14 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-12 — Real-time broadcast history + superadmin kios/marketing filter
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 - `backend/app/Http/Controllers/Api/BroadcastController.php`: `history()` & `stats()` — superadmin bisa filter by `kios_id` dan `marketing_id` query params
 - `frontend/src/services/customerService.ts`: `getMarketingUsers(kiosId?)` — terima optional param untuk filter by kios
 - `frontend/src/pages/marketing/BroadcastHistoryPage.tsx`: ganti `setInterval` polling → Socket.IO `broadcast:status` event (real-time); superadmin dapat dropdown kios + dropdown marketing; marketing list berubah otomatis saat kios dipilih
 
 ### 2026-07-12 — NMC/REFI: ganti dari buss_unit → prefix no_contract + assignment kios-scoped
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 - `backend/app/Http/Controllers/Api/AssignmentController.php`: `autoCalculate()` & `assignByUnit()` — ganti filter dari `json_extract(dynamic_data, '$.buss_unit')` → `no_contract LIKE '4020%'` (NMC) / `'4029%'` (REFI); tambah kios scope untuk non-superadmin
 - `backend/app/Http/Controllers/Api/CustomerController.php`: param `buss_unit` → `customer_type`; `templateDownload()` hapus kolom `BUSS_UNIT`, sample data `CON001` → `40200001`
 - `backend/app/Repositories/CustomerRepository.php`: filter `customer_type` → `no_contract LIKE` di `getAll()` & `getAssignedToMarketing()`
@@ -484,13 +484,13 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-12 — Customer page: default assigned-only + search bypasses filter
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 - `frontend/src/pages/admin/CustomerManagementPage.tsx`: default `assignment_status=assigned` saat search kosong; search aktif bypass filter assignment (tampilkan semua hasil); hapus toggle `showAssigned` + tombol "Tampilkan Semua"
 - `frontend/src/pages/marketing/ProspectListPage.tsx`: sama — search bypasses assignment filter
 
 ### 2026-07-13 — Data Rolling: pinjam data antar marketing + customer_shares
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Backend:**
 - `backend/database/migrations/2026_07_13_000001_create_customer_shares_table.php`: tabel `customer_shares` (customer_id, from_marketing_id, to_marketing_id, status, share_type, shared_count, requested_by, approved_by, timestamps)
@@ -514,7 +514,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-13 — Notification bell untuk assignment + toast diperlama
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Backend:**
 - `backend/database/migrations/2026_07_13_000002_create_notifications_table.php`: tabel `notifications` (user_id, type, title, message, data JSON, read_at, timestamps) + index `[user_id, read_at]`
@@ -530,7 +530,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-13 — Notification sound + UH notification + real-time polling
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Backend:**
 - `backend/app/Http/Controllers/Api/AssignmentController.php`: `assign()` & `assignByUnit()` — tambah notification ke assigner (UH) sebagai konfirmasi, sehingga BOTH marketing DAN UH dapat notifikasi
@@ -591,7 +591,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-13 — Additional fixes: socket-server crash + PHP memory + notification cleanup + LID cleanup
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Worker — socket-server.js crash fix (CRITICAL):**
 - `worker/src/socket-server.js`: fix duplicate `const DB_PATH` declaration, tambah missing `require('path')`, `require('crypto')`, `const { Server } = require('socket.io')`, hapus redundant `require()` di dalam `createSocketServer()`
@@ -612,7 +612,7 @@ Ketik: `lanjut yang tadi`
 - `worker/src/index.js`: panggil `cleanupOldLidFiles()` saat startup
 
 ### Next steps when resuming
-Ketik: `lanjut yang tadi` — commit & push per fitur ke GitHub, lalu deploy ke VPS.
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ## Push & Deploy Workflow
 
