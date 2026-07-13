@@ -34,6 +34,7 @@ interface LinkItem {
 const adminLinks: LinkItem[] = [
   { to: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, feature: 'dashboard' },
   { to: '/admin/broadcast', label: 'Broadcast', icon: <SendHorizontal className="h-5 w-5" />, feature: 'prospect_list' },
+  { to: '/admin/customers', label: 'Customers', icon: <Users className="h-5 w-5" />, feature: 'customer_management' },
   { to: '/admin/connect', label: 'Connect', icon: <Smartphone className="h-5 w-5" />, feature: 'qr_scanner' },
   { to: '/admin/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
   { to: '/admin/rolling', label: 'Rolling Data', icon: <ArrowLeftRight className="h-5 w-5" />, feature: 'data_rolling' },
@@ -151,7 +152,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-slate-100">{user?.name}</div>
+            <div className="truncate text-sm font-semibold text-slate-100 uppercase">{user?.name}</div>
             <div className="truncate text-xs text-slate-400">{user?.email}</div>
             {(user?.kios_name || user?.kios_id) && (
               <div className="truncate text-[11px] font-medium text-slate-500">

@@ -33,7 +33,7 @@ function Greeting() {
       <div className="relative">
         <p className="text-sm font-medium text-fif-200">{greeting}</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-          {user?.name || 'Marketing'}
+          <span className="uppercase">{user?.name || 'Marketing'}</span>
         </h1>
         <p className="mt-2 max-w-xl text-sm text-fif-200">
           Pantau progress broadcast WhatsApp Anda di sini
