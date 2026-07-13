@@ -60,8 +60,8 @@ rm -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/ssl.conf
 
 cat > /etc/nginx/conf.d/fif.conf <<EOF
 server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    listen 80 default_server;
+    server_name $DOMAIN www.$DOMAIN _;
 
     client_max_body_size 20M;
 
