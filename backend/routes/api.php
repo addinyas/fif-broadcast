@@ -148,8 +148,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('admin/kios/{id}', [KiosController::class, 'destroy']);
         Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
-        Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     });
+
+    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
