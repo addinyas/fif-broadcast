@@ -908,6 +908,20 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Fix: pairing code "WA client not found" race condition
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+`wa:request_pairing_code` handler di socket-server memanggil `getOrCreateClient()` lalu menunggu 8 detik via `setTimeout`. Selama jeda 8 detik, Baileys bisa gagal connect (QR timeout, WS error), disconnect handler menghapus entry dari `connections` Map → `requestPairingCodeForUser()` dapat "WA client not found for user".
+
+**Fix — atomic pairing flow:**
+- `worker/src/wa-client.js`: `requestPairingCodeForUser()` sekarang self-contained — jika client belum ada atau sudah hilang dari Map, **buat baru sendiri** (`createWAClientForUser`), tunggu `wsReadyPromise`, langsung request pairing code. Tidak ada timeout terpisah.
+- `worker/src/socket-server.js`: `wa:request_pairing_code` handler disederhanakan — langsung panggil `requestPairingCode(userId, phoneNumber)`. Hapus `getOrCreateClient` + `setTimeout` + promise race.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

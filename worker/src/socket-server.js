@@ -143,11 +143,9 @@ function createSocketServer(httpServer) {
         return;
       }
       try {
-        if (!isConnectedForUser(userId)) {
-          await new Promise((resolve) => {
-            getOrCreateClient(userId, resolve).catch(() => resolve());
-            setTimeout(resolve, 8000);
-          });
+        if (isConnectedForUser(userId)) {
+          socket.emit('wa:pairing_code', { error: 'WhatsApp sudah terhubung' });
+          return;
         }
         await requestPairingCode(userId, phoneNumber);
       } catch (err) {
