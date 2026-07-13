@@ -860,6 +860,38 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Broadcast lock: WA connection status gating + phone input fix
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Feature: Lock broadcast ke koneksi WhatsApp**
+- Sebelumnya: broadcast bisa di-queue meskipun WA tidak connect (fire-and-forget). Pesan stuck di pending sampai WA connect.
+- Sekarang: **3 layer protection** — tidak bisa kirim pesan jika WA tidak connected.
+
+**Backend:**
+- `backend/app/Services/BroadcastService.php`: `prepare()` cek `whatsapp_connections.status === 'connected'` sebelum insert broadcast. Reject dengan pesan jelas jika belum connect.
+
+**Frontend:**
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: 
+  - Listen `wa:status` via socket, track `waStatus` state
+  - Tampilkan amber warning banner jika WA tidak connect (link ke /marketing/connect)
+  - Disable tombol "Kirim" jika `waStatus !== 'connected'`
+- `frontend/src/pages/marketing/BroadcastFormPage.tsx`:
+  - Listen `wa:status` via socket, track `waStatus` state
+  - Tampilkan amber warning banner jika WA tidak connect
+  - Pass `disabled` + `disabledReason` ke DynamicFormEditor
+- `frontend/src/components/forms/DynamicFormEditor.tsx`:
+  - Tambah `disabled` + `disabledReason` props
+  - Tombol "Kirim Broadcast" disabled + hover tooltip menjelaskan alasan
+
+**Bug fix: Phone input pairing code**
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: auto-convert `08xxx` → `628xxx` (user bisa input format lokal)
+- Placeholder diubah dari `628xxx` ke `08xxx`
+- Helper text: "Format: 08xxx atau 628xxx — otomatis dikonversi"
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
