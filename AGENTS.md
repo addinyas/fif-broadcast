@@ -892,6 +892,22 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Fix: pairing code gagal karena WebSocket belum siap
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+`requestPairingCode()` dipanggil SEBELUM Baileys WebSocket terbuka ke WhatsApp servers. Node `link_code_companion_reg` dikirim lewat WS yang belum open → WhatsApp tidak menerimanya. Kode di-generate client-side dan ditampilkan ke user, tapi pairing selalu gagal karena WhatsApp tidak pernah menerima registration node.
+
+**Fix:**
+- `worker/src/wa-client.js`: `createWAClientForUser` sekarang buat `wsReadyPromise` yang resolve saat `connection === 'open'`. Disimpan di `connections` Map.
+- `worker/src/wa-client.js`: `requestPairingCodeForUser` tunggu `wsReadyPromise` resolve sebelum panggil `sock.requestPairingCode()`.
+- `worker/src/socket-server.js`: timeout client creation naik dari 3s ke 15s (WS butuh waktu handshake + noise).
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: loading state "Menyiapkan koneksi..." saat menunggu kode, tombol "Ganti Nomor / Kode Baru" untuk retry.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
