@@ -793,7 +793,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 | # | Bug | Priority | Status |
 |---|-----|----------|--------|
-| 1 | Connect feature tidak bisa terhubung | HIGH | ⚠️ WhatsApp rate-limit (bukan code bug) |
+| 1 | Connect feature tidak bisa terhubung | HIGH | ✅ Code fix deployed, WA rate-limit perlu cooldown |
 | 2 | Auto-calculate pool: NMC harus 4020, REFI harus 4029 | HIGH | ✅ Tidak ada bug, code konsisten |
 | 4 | Calculator nopol tidak bisa input angka+huruf | HIGH | ✅ Sudah fix di code, user perlu hard refresh |
 | 5 | UH delete: solusi hapus data | MEDIUM | ✅ Cleanup sudah lengkap |
@@ -832,6 +832,33 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - Daily limit: 150 pesan/hari
 - Batch pause: worker otomatis delay antar pesan
 - Jika perlu lebih aman: naikkan ke 120-300 detik (2-3 pesan/jam, ~70-100/hari)
+
+### 2026-07-14 — WhatsApp connect stabilization: reconnect loop fix + DB status recovery
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root causes fixed:**
+1. QR/pairing timeout → Baileys triggers `connection.close` with `DisconnectReason.timedOut` → auto-reconnect loop → new QR → timeout → loop endlessly
+2. Socket reconnect (page refresh / tab switch) → frontend loses WA status → worker auto-creates new WA client, killing old one
+3. No status recovery — socket-server relied on in-memory state only
+
+**Worker:**
+- `worker/src/wa-client.js`: detect `DisconnectReason.timedOut` — stop reconnect loop, clear reconnect state, save `awaiting_scan` status, emit to frontend, wait for user manual retry
+- `worker/src/wa-client.js`: `softResetForUser()` — kill WA socket + clear in-memory state WITHOUT deleting auth dir (for retry scenarios)
+- `worker/src/wa-manager.js`: export `softReset()` wrapper
+- `worker/src/socket-server.js`: `getWAStatusFromDB()` — read WA status + QR from SQLite on new socket connection
+- `worker/src/socket-server.js`: on new socket connect, read DB status first (don't auto-create WA client). Show `awaiting_scan` + QR from DB, `connected`, or `disconnected`
+- `worker/src/socket-server.js`: `wa:request_status` handler also reads from DB
+- `worker/src/socket-server.js`: `wa:reconnect` — use `softReset()` when retrying (status is `awaiting_scan`/`connected`), only `disconnect()` when status is `logged_out`/`disconnected`
+
+**Frontend:**
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: don't set `disconnected` on socket disconnect/error — keep last known status so WA doesn't restart unnecessarily
+
+**Deploy:**
+- `deploy/deploy-vps.sh`: runs `npm install` + `npm run build` + `systemctl restart fif-worker`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
