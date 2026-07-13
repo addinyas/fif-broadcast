@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\CustomerShare;
 use App\Models\Kios;
 use App\Models\Template;
 use App\Models\User;
@@ -85,7 +86,14 @@ class UserController extends Controller
                 BroadcastHistory::whereIn('customer_id', $uploadedIds)->delete();
             }
 
-            Customer::where('uploaded_by', $user->id)->delete();
+            CustomerShare::where(function ($q) use ($user) {
+                $q->where('from_marketing_id', $user->id)
+                  ->orWhere('to_marketing_id', $user->id)
+                  ->orWhere('requested_by', $user->id)
+                  ->orWhere('approved_by', $user->id);
+            })->delete();
+
+            Customer::where('uploaded_by', $user->id)->forceDelete();
             Customer::where('manual_sent_by', $user->id)->update(['manual_sent_by' => null]);
             $user->delete();
         });
