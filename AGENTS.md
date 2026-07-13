@@ -718,6 +718,16 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Fix: deleteAll SQLite subquery + toast responsive mobile
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — ganti `$query->toBase()` (returns all 14 columns) → `pluck('id')` lalu `whereIn` with ID collection. Fix SQLite error "sub-select returns 14 columns - expected 1"
+
+**Frontend:**
+- `frontend/src/components/ui/Toast.tsx`: responsive — `left-4 sm:left-auto sm:max-w-sm`, `break-words` untuk pesan error panjang di mobile, `shrink-0` untuk icon/close button
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
