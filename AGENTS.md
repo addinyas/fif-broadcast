@@ -712,6 +712,9 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - `worker/src/wa-client.js`: tambah `busy_timeout = 5000` ke `saveConnectionStatus()` — cegah SQLITE_BUSY saat wa-client + queue-consumer write bersamaan
 - `worker/src/socket-server.js`: tambah `busy_timeout = 5000` ke readonly token validation connection
 
+**Deploy:**
+- `deploy/deploy-vps.sh`: fix SQLite permissions — `chmod 666` database.sqlite + SHM/WAL files, `chown apache:apache` SHM/WAL, `setfacl` full rwx untuk apache di database directory. Fix "attempt to write a readonly database" saat throttle middleware coba write cache ke SQLite.
+
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
