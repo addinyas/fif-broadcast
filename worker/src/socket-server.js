@@ -146,7 +146,7 @@ function createSocketServer(httpServer) {
         if (!isConnectedForUser(userId)) {
           await new Promise((resolve) => {
             getOrCreateClient(userId, resolve).catch(() => resolve());
-            setTimeout(resolve, 15000);
+            setTimeout(resolve, 8000);
           });
         }
         await requestPairingCode(userId, phoneNumber);

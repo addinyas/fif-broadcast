@@ -90,19 +90,27 @@ async function createWAClientForUser(userId, onReady) {
     emitOwnEvents: false,
     browser: ['FIF Broadcast', 'Chrome', '1.0.0'],
     markOnlineOnConnect: false,
-    connectTimeoutMs: 60_000,
+    connectTimeoutMs: 15_000,
     keepAliveIntervalMs: 25_000,
   });
 
   const wsReadyPromise = new Promise((resolve) => {
     const check = (update) => {
-      if (update.connection === 'open') {
+      const { connection, qr } = update;
+      if (connection) {
+        console.log(`[WA] User ${userId} connection.update: ${connection}`);
+      }
+      if (connection === 'open') {
         sock.ev.off('connection.update', check);
         resolve(true);
       }
     };
     sock.ev.on('connection.update', check);
-    setTimeout(() => { sock.ev.off('connection.update', check); resolve(false); }, 60_000);
+    setTimeout(() => {
+      sock.ev.off('connection.update', check);
+      console.log(`[WA] User ${userId} WS ready timeout (readyState=${sock.ws?.readyState})`);
+      resolve(false);
+    }, 8_000);
   });
 
   connections.set(userId, { sock, wsReadyPromise });
@@ -245,14 +253,17 @@ async function requestPairingCodeForUser(userId, phoneNumber) {
   if (!entry || !entry.sock) throw new Error('WA client not found for user');
   if (entry.connected) throw new Error('WA already connected');
 
-  if (entry.wsReadyPromise) {
-    const ready = await entry.wsReadyPromise;
-    if (!ready) {
-      throw new Error('WhatsApp socket belum siap. Silakan coba lagi dalam beberapa detik.');
+  const sock = entry.sock;
+
+  const ready = await entry.wsReadyPromise;
+  if (!ready) {
+    const wsState = sock.ws?.readyState;
+    if (wsState !== 1) {
+      throw new Error('WhatsApp socket belum terbuka. Pastikan VPS tidak terkena rate-limit WhatsApp. Coba lagi dalam 30 detik.');
     }
+    console.log(`[WA] WS readyState=${wsState} for user ${userId}, proceeding`);
   }
 
-  const sock = entry.sock;
   const code = await sock.requestPairingCode(phoneNumber);
   console.log(`[WA] Pairing code for user ${userId}: ${code}`);
   emitPairingCode(userId, { code, message: `Masukkan kode ${code} di WhatsApp Anda` });
