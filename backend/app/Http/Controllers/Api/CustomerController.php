@@ -316,7 +316,11 @@ class CustomerController extends Controller
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal menghapus semua customer'], 400);
+            \Log::error('deleteAll failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['message' => 'Gagal menghapus semua customer: ' . $e->getMessage()], 500);
         }
     }
 
