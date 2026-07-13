@@ -41,7 +41,8 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'npo_mce_id' => 'required|string',
+            'npo_mce_id' => 'required_without:email|string',
+            'email' => 'required_without:npo_mce_id|email',
             'password' => 'required|string',
         ]);
 
@@ -49,8 +50,10 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        $identifier = $request->input('npo_mce_id') ?? $request->input('email');
+
         try {
-            $result = $this->authService->login($request->only('npo_mce_id', 'password'));
+            $result = $this->authService->login(['npo_mce_id' => $identifier, 'password' => $request->password]);
 
             return response()->json($result);
         } catch (\Exception $e) {

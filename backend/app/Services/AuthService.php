@@ -32,10 +32,13 @@ class AuthService
 
     public function login(array $credentials): array
     {
-        $user = User::where('npo_mce_id', $credentials['npo_mce_id'])->first();
+        $identifier = $credentials['npo_mce_id'];
+        $user = User::where('npo_mce_id', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw new Exception('ID NPO MCE atau password salah', 401);
+            throw new Exception('ID NPO MCE / email atau password salah', 401);
         }
 
         Auth::login($user);

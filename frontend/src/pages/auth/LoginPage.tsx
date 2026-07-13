@@ -75,12 +75,11 @@ export function LoginPage() {
               type="text"
               name="username"
               value={npoMceId}
-              onChange={(e) => setNpoMceId(e.target.value.toUpperCase())}
+              onChange={(e) => setNpoMceId(e.target.value)}
               required
               autoComplete="username"
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white uppercase outline-none backdrop-blur-sm transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
-              placeholder="ID NPO / MCE"
-              autoCapitalize="characters"
+              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-3 pl-11 pr-4 text-sm text-white outline-none backdrop-blur-sm transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
+              placeholder="ID NPO / MCE atau Email"
               spellCheck={false}
             />
           </div>
