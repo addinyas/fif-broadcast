@@ -4,6 +4,7 @@ const Database = require('better-sqlite3');
 const { Server } = require('socket.io');
 const { getOrCreateClient, disconnect } = require('./wa-manager');
 const { isConnectedForUser } = require('./wa-client');
+const { setIO } = require('./events');
 
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
@@ -40,6 +41,8 @@ function createSocketServer(httpServer) {
       methods: ['GET', 'POST'],
     },
   });
+
+  setIO(io);
 
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
@@ -98,26 +101,8 @@ function createSocketServer(httpServer) {
   return io;
 }
 
-function emitWAStatus(userId, data) {
-  if (io) {
-    io.to(`user:${userId}`).emit('wa:status', data);
-  }
-}
-
-function emitBroadcastStatus(userId, data) {
-  if (io) {
-    io.to(`user:${userId}`).emit('broadcast:status', data);
-  }
-}
-
-function emitPendingStuck(userId, data) {
-  if (io) {
-    io.to(`user:${userId}`).emit('broadcast:pending_stuck', data);
-  }
-}
-
 function getIO() {
   return io;
 }
 
-module.exports = { createSocketServer, getIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck };
+module.exports = { createSocketServer, getIO };

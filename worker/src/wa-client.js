@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const { emitWAStatus } = require('./socket-server');
+const { emitWAStatus } = require('./events');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));

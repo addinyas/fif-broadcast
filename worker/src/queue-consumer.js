@@ -1,7 +1,7 @@
 const { getWritableDb } = require('./db');
 const { isConnectedForUser, getConnectedUsers } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
-const { emitBroadcastStatus, emitPendingStuck } = require('./socket-server');
+const { emitBroadcastStatus, emitPendingStuck } = require('./events');
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
 const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '180', 10);
