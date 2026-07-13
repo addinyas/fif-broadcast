@@ -614,6 +614,49 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-13 — Security hardening: 29 vulnerabilities patched
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Critical (Backend):**
+- `backend/routes/api.php`: login `throttle:10,1`, register `throttle:5,1` (superadmin-only)
+- `backend/routes/api.php`: `admin/permissions` restricted to superadmin
+- `backend/routes/api.php`: `admin/kios/*` restricted to superadmin
+- `backend/routes/api.php`: register moved to superadmin-only group (was public)
+- `backend/routes/api.php`: `deleteAll` route changed to POST (for confirmation token)
+- `backend/config/sanctum.php`: token expiry set to 1440 min (24h)
+- `backend/app/Http/Controllers/Api/ProfileController.php`: clearCache restricted to superadmin, `Artisan::call()` replaces `exec()`, removed dead `rmdirRecursive()`
+- `backend/app/Http/Controllers/Api/ProfileController.php`: changePassword invalidates all tokens
+- `backend/app/Http/Controllers/Api/UserController.php`: resetPassword invalidates all tokens + password policy (uppercase+lowercase+digit)
+
+**High (Backend):**
+- `backend/app/Http/Controllers/Api/BroadcastController.php`: kios ownership check in prepare()
+- `backend/app/Http/Controllers/Api/CustomerShareController.php`: kios scoping for pendingRequests + approveShare + revokeShare + notifyUhsForShare
+- `backend/app/Http/Controllers/Api/CustomerController.php`: deleteAll requires confirmation token (`confirm: DELETE_ALL`)
+- `backend/app/Http/Controllers/Api/CustomerController.php`: marketingAdd uses `$request->only()` (mass assignment fix)
+- `backend/app/Http/Controllers/Api/TemplateController.php`: store/update uses `$request->only()` (mass assignment fix)
+- `backend/app/Http/Controllers/Api/AuthController.php`: login accepts email OR npo_mce_id, me() returns only safe fields
+
+**Medium (Backend):**
+- `backend/app/Http/Controllers/Api/KiosController.php`: kios_id regex validation + trim/sanitize
+- `backend/app/Models/User.php`: remove `google_id` from fillable
+
+**Frontend:**
+- `frontend/src/context/AuthContext.tsx`: PWA cache cleared on logout via `caches.keys()` + `caches.delete()`
+- `frontend/src/pages/SettingsPage.tsx`: password policy enforced (uppercase+lowercase+digit)
+- `frontend/src/pages/auth/RegisterPage.tsx`: password policy enforced client-side
+- `frontend/src/services/customerService.ts`: deleteAll uses POST with `{ confirm: 'DELETE_ALL' }`
+
+**Deploy/Infra:**
+- `deploy/deploy-vps.sh`: nginx security headers (X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, HSTS, server_tokens off)
+- `deploy/deploy-vps.sh`: non-root systemd (User=fif, Group=fif) + ACL permissions for worker DB access
+- `deploy/deploy-vps.sh`: auth_info permissions 700 (chmod) + chown fif:fif
+- `worker/src/socket-server.js`: CORS restricted to domain list (was `origin: '*'`)
+- `.gitattributes`: enforce LF line endings for shell scripts (fix CRLF heredoc corruption)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ## Push & Deploy Workflow
 
 ### Sebelum Push ke GitHub
