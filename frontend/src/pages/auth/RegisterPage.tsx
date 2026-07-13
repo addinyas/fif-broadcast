@@ -128,7 +128,6 @@ export function RegisterPage() {
                     className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-3 text-sm text-white uppercase outline-none transition-all placeholder:text-slate-600 focus:border-fif-500/50 focus:bg-fif-500/5 focus:ring-2 focus:ring-fif-500/15"
                     placeholder="Nama lengkap"
                     autoComplete="off"
-                    autoCapitalize="characters"
                     spellCheck={false} />
                 </div>
                 {errors.name && <p className="text-xs text-red-400">{errors.name}</p>}
