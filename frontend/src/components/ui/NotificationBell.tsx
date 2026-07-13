@@ -368,7 +368,8 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
 
       {/* Floating Rolling Approval Toast */}
       {rollingAction && (
-        <div className="fixed bottom-4 right-4 z-[70] w-80 sm:w-96 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-2xl dark:border-cyan-800 dark:bg-slate-800">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none">
+        <div className="pointer-events-auto w-80 sm:w-96 overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-2xl dark:border-cyan-800 dark:bg-slate-800">
           <div className="flex items-center gap-3 border-b border-cyan-100 bg-cyan-50 px-4 py-3 dark:border-cyan-900/50 dark:bg-cyan-950/30">
             <ArrowLeftRight className="h-5 w-5 shrink-0 text-cyan-600 dark:text-cyan-400" />
             <div className="min-w-0 flex-1">
@@ -407,6 +408,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
               Batal
             </button>
           </div>
+        </div>
         </div>
       )}
     </>
