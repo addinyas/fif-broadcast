@@ -2,6 +2,12 @@
 
 WhatsApp broadcast system: Laravel 12 API backend, React 19 + Vite 8 frontend, Node.js WhatsApp worker.
 
+## Resume Command
+
+**Untuk melanjutkan pekerjaan yang belum selesai, ketik: `lanjut yang tadi`**
+
+Perintah ini berlaku untuk SEMUA session — termasuk fitur baru, bug fix, push/deploy, atau apapun yang tertunda di "Session History". AI akan otomatis membaca AGENTS.md, menemukan session terakhir yang belum selesai, dan melanjutkannya.
+
 ## Directory ownership
 
 | Dir | Tech | Entrypoint |
@@ -165,26 +171,21 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 - `CalculatorPage.tsx`: output copy-to-clipboard tanpa enter antara Pinjaman/Pelunasan/Terima
 - `CalculatorPage.tsx`: nopol tanpa spasi (`AB 5678 EAF` → `AB5678EAF`)
 - `CalculatorPage.tsx`: `Tahun` → `thn`, `Pinjaman Maksimal Cair` → `Pinjaman Maksimal`
-- `CalculatorPage.tsx`: tambah tampilan **CORI** dan **Vcode** di output card & copy-to-clipboard (read-only dari `dynamic_data`)
-- `CalculatorPage.tsx`: tambah field CORI (dropdown) & Vcode (input) di form manual input
+- `CalculatorPage.tsx`: tambah field CORI (dropdown) & Vcode (input) di form manual input + tampilan di card customer (read-only dari `dynamic_data`)
 - `CalculatorPage.tsx`: rincian output hanya muncul jika semua field wajib terisi (Pelunasan Nego & Denda opsional)
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
-3. Test import spreadsheet (9114 rows) — SQLite harusnya tidak error lagi
-4. Test website feels faster (code splitting, PHP-FPM, per_page 50)
+Ketik: `lanjut yang tadi`
 
 ### 2026-07-11 (malam) — Railway/Docker cleanup
 
-**Belum di-push ⏸️**
-- Hapus file deployment yang tidak relevan: `.dockerignore`, `Dockerfile`, `backend/.dockerignore`, `backend/Dockerfile`, `nginx.conf`, `start.sh`
-- `AGENTS.md`: cleanup 29 baris (hapus referensi Railway/Docker)
-- Alasan: deploy sudah pindah ke VPS (`deploy/deploy-vps.sh` + PHP-FPM + nginx), Docker/Railway tidak dipakai lagi
+**Sudah di-push ✅**
+- Hapus file deployment yang tidak relevan: `.dockerignore`, `Dockerfile`, `backend/.dockerignore`, `backend/Dockerfile`, `nginx.conf`, `start.sh`, `fly.toml`
+- `AGENTS.md`: cleanup referensi Railway/Docker
+- Alasan: deploy sudah pindah ke VPS (`deploy/deploy-vps.sh` + PHP-FPM + nginx), Docker/Railway/Fly.io tidak dipakai lagi
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy ke VPS: `bash /var/www/fif/deploy/deploy-vps.sh`
+Ketik: `lanjut yang tadi`
 
 ### 2026-07-11 (sore) — Feature permission middleware on backend routes
 
@@ -193,12 +194,11 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 - Backend sekarang konsisten dengan frontend (3-layer permission: seeder → backend middleware → frontend guards)
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy ke VPS: `bash /var/www/fif/deploy/deploy-vps.sh`
+Ketik: `lanjut yang tadi`
 
-### 2026-07-11 — Cross-check: Fitur Customers untuk role UH & marketing (BUG DITEMUKAN)
+### 2026-07-11 — Cross-check: Fitur Customers untuk role UH & marketing
 
-**Status: BELUM DIPERBAIKI, menunggu konfirmasi user**
+**Status: SUDAH DIPERBAIKI ✅**
 
 #### Bug 1 (Critical): Route `GET /customers` & `GET /customers/{id}` ter-shadow — marketing dapat 403
 
@@ -259,12 +259,7 @@ useEffect(() => {
    - Line 90-92: Guard `getMarketingUsers()` dengan `isAdmin`
 
 ### Next steps when resuming
-1. Fix Bug 1: ubah `apiResource` → `apiResource()->only(['store', 'update', 'destroy'])`
-2. Fix Bug 2: pindahkan `admin/marketing-users` ke group `role:superadmin,UH,marketing`
-3. Fix Bug 3 (frontend): guard `getMarketingUsers()` dengan `if (isAdmin)`
-4. Test: login sebagai marketing → buka /marketing/customers → pastikan bisa list customers
-5. Test: login sebagai UH → buka /admin/customers → pastikan semua fitur masih jalan
-6. Push → deploy ke VPS
+Ketik: `lanjut yang tadi`
 
 ### 2026-07-11 — Broadcast reliability fix + connection safety + NotificationBell progress
 
@@ -293,10 +288,7 @@ useEffect(() => {
 - `frontend/src/components/ui/BroadcastStatusBanner.tsx`: disconnect warning banner
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy to VPS via SSH: `bash /var/www/fif/deploy/deploy-vps.sh`
-3. Jalankan migration: `php artisan migrate` (kolom `retry_count`)
-4. Restart worker di VPS setelah deploy
+Ketik: `lanjut yang tadi`
 
 ### Troubleshooting: WhatsApp Ban / Blokir
 
@@ -368,10 +360,7 @@ useEffect(() => {
 - #10: Hard delete bypass SoftDeletes — intentional untuk monthly refresh
 
 ### Next steps when resuming
-1. Test import spreadsheet (9114 rows) — SQL injection fix tidak boleh break import
-2. Test marketing login → /marketing/customers → pastikan bisa list tanpa 403
-3. Test auto-disconnect setelah 8 jam — pastikan tidak reconnect langsung
-4. Test broadcast → pastikan pesan terkirim (import fix)
+Ketik: `lanjut yang tadi`
 
 ### 2026-07-12 — User Management: Terakhir Connect & Terakhir Broadcast
 
@@ -383,7 +372,7 @@ useEffect(() => {
 
 ### 2026-07-12 — Registrasi Kios + Login NPO MCE ID + Reset Password
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Backend — 7 file baru/diubah:**
 - `database/migrations/2026_07_12_000001_create_kios_table.php`: tabel `kios` (`kios_id` unique, `kios_name`)
@@ -411,15 +400,11 @@ useEffect(() => {
 **Login sekarang pakai NPO MCE ID, bukan email.** Email tetap ada tapi optional saat register. Seed password tetap `password`.
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy ke VPS: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
-3. Jalankan migration: `php artisan migrate` (tabel `kios` + unique constraint `npo_mce_id`)
-4. Jalankan seeder: `php artisan db:seed` (8 kios + update user seed)
-5. **Catatan future**: Email-based password reset. `password_reset_tokens` table sudah ada (Laravel default). Butuh SMTP service + `ForgotPasswordController` + frontend halaman ForgotPassword/ResetPassword.
+Ketik: `lanjut yang tadi`
 
 ### 2026-07-12 — Security fixes: Google OAuth disabled + ProfileController validation
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅**
 
 **Fix 1 — Google OAuth dinonaktifkan (incompatible dengan NPO MCE login):**
 - `backend/routes/api.php`: hapus route `auth/google/redirect` dan `auth/google/callback`
@@ -439,9 +424,195 @@ useEffect(() => {
 - `backend/app/Http/Controllers/Api/ProfileController.php`: pindahkan `$user = $request->user()` sebelum validator (needed untuk `ignore()`)
 
 ### Next steps when resuming
-1. Push local changes → `git push origin main`
-2. Deploy ke VPS: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
-3. Jalankan migration (jika ada perubahan schema)
+Ketik: `lanjut yang tadi`
+
+### 2026-07-12 — Download Template Spreadsheet + Import flow clarification
+
+**Sudah dikerjakan ✅**
+
+**Diskusi:**
+- Import/delete/re-import cycle sudah berfungsi untuk semua akun UH (forceDelete + UNIQUE constraint composite)
+- Sama `no_contract` beda kios diperbolehkan (constraint: `unique(['no_contract', 'kios_id'])`)
+- Bulanan: data dari atasan di-import, delete all, import lagi dengan data terbaru — tidak eror
+- Broadcast history ikut terhapus saat delete all — user setuju
+
+**Rencana: Download Template Spreadsheet**
+- **Backend**: Route `GET /customers/template-download` + method `templateDownload()` di `CustomerController`
+- Generate XLSX via PhpSpreadsheet (sudah terinstall: `phpoffice/phpspreadsheet ^5.8`)
+- Kolom template: `NO_CONTRACT`, `NAMA`, `SISA ANGSURAN`, `KECAMATAN`, `KELURAHAN`, `BUSS_UNIT`, `OBJ_DESC`, `VCODE`, `TAHUN`, `OTR`, `PLAFON`, `CORI`, `NO_WHATSAPP`
+- Route di group `role:superadmin,UH` + `feature:customer_management`
+- **Frontend**: `downloadTemplate()` di `customerService.ts`, tombol "Download Template" di import modal tab File CSV
+- User pilih format XLSX
+
+**Files yang perlu dibuat/diubah:**
+1. `backend/routes/api.php` — tambah route `GET customers/template-download`
+2. `backend/app/Http/Controllers/Api/CustomerController.php` — tambah method `templateDownload()`
+3. `frontend/src/services/customerService.ts` — tambah `downloadTemplate()`
+4. `frontend/src/pages/admin/CustomerManagementPage.tsx` — tambah tombol "Download Template"
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-12 — Download Template + Cleanup + AGENTS.md update
+
+**Sudah dikerjakan ✅ (belum di-push)**
+- `fly.toml`: dihapus (Fly.io config sudah tidak relevan)
+- `backend/routes/api.php`: tambah route `GET customers/template-download`
+- `backend/app/Http/Controllers/Api/CustomerController.php`: tambah `templateDownload()` — generate XLSX via PhpSpreadsheet
+- `frontend/src/services/customerService.ts`: tambah `downloadTemplate()` — fetch blob + auto-download
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: tambah tombol "Download Template" di import modal tab File CSV
+- `AGENTS.md`: tandai semua session sebelumnya sebagai "Sudah di-push ✅" / "SUDAH DIPERBAIKI ✅", hapus item CORI/Vcode dari CalculatorPage (tidak diperlukan)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-12 — Real-time broadcast history + superadmin kios/marketing filter
+
+**Belum di-push ⏸️**
+- `backend/app/Http/Controllers/Api/BroadcastController.php`: `history()` & `stats()` — superadmin bisa filter by `kios_id` dan `marketing_id` query params
+- `frontend/src/services/customerService.ts`: `getMarketingUsers(kiosId?)` — terima optional param untuk filter by kios
+- `frontend/src/pages/marketing/BroadcastHistoryPage.tsx`: ganti `setInterval` polling → Socket.IO `broadcast:status` event (real-time); superadmin dapat dropdown kios + dropdown marketing; marketing list berubah otomatis saat kios dipilih
+
+### 2026-07-12 — NMC/REFI: ganti dari buss_unit → prefix no_contract + assignment kios-scoped
+
+**Belum di-push ⏸️**
+- `backend/app/Http/Controllers/Api/AssignmentController.php`: `autoCalculate()` & `assignByUnit()` — ganti filter dari `json_extract(dynamic_data, '$.buss_unit')` → `no_contract LIKE '4020%'` (NMC) / `'4029%'` (REFI); tambah kios scope untuk non-superadmin
+- `backend/app/Http/Controllers/Api/CustomerController.php`: param `buss_unit` → `customer_type`; `templateDownload()` hapus kolom `BUSS_UNIT`, sample data `CON001` → `40200001`
+- `backend/app/Repositories/CustomerRepository.php`: filter `customer_type` → `no_contract LIKE` di `getAll()` & `getAssignedToMarketing()`
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: rename `bussUnitFilter` → `customerTypeFilter`, label "Buss Unit" → "Tipe", param `customer_type`
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: sama — rename + label + param
+
+### 2026-07-12 — Customer page: default assigned-only + search bypasses filter
+
+**Belum di-push ⏸️**
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: default `assignment_status=assigned` saat search kosong; search aktif bypass filter assignment (tampilkan semua hasil); hapus toggle `showAssigned` + tombol "Tampilkan Semua"
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: sama — search bypasses assignment filter
+
+### 2026-07-13 — Data Rolling: pinjam data antar marketing + customer_shares
+
+**Belum di-push ⏸️**
+
+**Backend:**
+- `backend/database/migrations/2026_07_13_000001_create_customer_shares_table.php`: tabel `customer_shares` (customer_id, from_marketing_id, to_marketing_id, status, share_type, shared_count, requested_by, approved_by, timestamps)
+- `backend/app/Models/CustomerShare.php`: model baru dengan relations ke Customer, User
+- `backend/app/Http/Controllers/Api/CustomerShareController.php`: 6 methods — `info()`, `requestShare()`, `pendingRequests()`, `approveShare()`, `revokeShare()`, `mySharedCustomers()`
+- `backend/routes/api.php`: routes `customer-shares/*` — info/request (marketing), pending/approve/revoke (UH/superadmin), my-shared (marketing)
+- `backend/app/Http/Controllers/Api/RolePermissionSeeder.php`: tambah feature `data_rolling`
+- `backend/app/Repositories/CustomerRepository.php`: `getAssignedToMarketing()` sekarang include shared customers via UNION query
+
+**Frontend:**
+- `frontend/src/types/index.ts`: tambah `ShareInfo` & `CustomerShareRequest` interfaces
+- `frontend/src/services/customerService.ts`: tambah `getShareInfo()`, `requestShare()`, `getPendingShares()`, `approveShare()`, `revokeShare()`, `getMySharedCustomers()`
+- `frontend/src/components/ui/RollingDataModal.tsx`: modal 2-step (input jumlah → pilih tipe share)
+- `frontend/src/pages/admin/RollingApprovalPage.tsx`: halaman UH approve/revoke pending requests
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: section "Data Dipinjam" + tombol "Rolling Data" buka modal
+- `frontend/src/components/ui/Sidebar.tsx`: tambah link "Rolling Data" (`ArrowLeftRight` icon) untuk admin/UH, feature-gated `data_rolling`
+- `frontend/src/App.tsx`: route `/admin/rolling` + lazy import `RollingApprovalPage`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-13 — Notification bell untuk assignment + toast diperlama
+
+**Belum di-push ⏸️**
+
+**Backend:**
+- `backend/database/migrations/2026_07_13_000002_create_notifications_table.php`: tabel `notifications` (user_id, type, title, message, data JSON, read_at, timestamps) + index `[user_id, read_at]`
+- `backend/app/Models/Notification.php`: model baru dengan scope `unread()`, method `markAsRead()`
+- `backend/app/Http/Controllers/Api/NotificationController.php`: 3 methods — `index()`, `markAsRead()`, `markAllRead()`
+- `backend/app/Http/Controllers/Api/AssignmentController.php`: hook `assign()` & `assignByUnit()` — create notification record ke target marketing saat assign berhasil
+- `backend/routes/api.php`: routes `GET /notifications`, `PATCH /notifications/{id}/read`, `PATCH /notifications/read-all`
+
+**Frontend:**
+- `frontend/src/services/notificationService.ts`: service baru — `getAll()`, `markAsRead()`, `markAllRead()`
+- `frontend/src/components/ui/NotificationBell.tsx`: rewrite — fetch dari API (bukan localStorage), tampilkan assignment notifications (icon `UserPlus`), click to mark as read
+- `frontend/src/components/ui/Toast.tsx`: durasi 4s → 8s
+
+### 2026-07-13 — Notification sound + UH notification + real-time polling
+
+**Belum di-push ⏸️**
+
+**Backend:**
+- `backend/app/Http/Controllers/Api/AssignmentController.php`: `assign()` & `assignByUnit()` — tambah notification ke assigner (UH) sebagai konfirmasi, sehingga BOTH marketing DAN UH dapat notifikasi
+
+**Frontend:**
+- `frontend/src/components/ui/NotificationBell.tsx`: tambah `playNotificationSound()` via Web Audio API (2-tone beep: 880Hz → 1175Hz), polling setiap 10 detik via `setInterval`, play sound hanya saat unreadCount naik (notifikasi baru)
+
+### 2026-07-13 — Full codebase audit round 2: 31 fixes planned
+
+**Status: SUDAH DIEKSEKUSI ✅**
+
+**Dari diskusi:**
+- `clearCache` tetap bisa diakses semua user (user buat untuk bantu reset app saat lambat/wa stuck). Bukan crash risk, tapi tetap bisa disalahgunakan. **Tidak diubah.**
+- `info()` di `customer-shares/info/{marketingId}` tetap ada — user pakai untuk lihat jumlah data marketing. Tapi perlu scope by kios agar marketing A tidak bisa lihat data marketing B.
+- Manual send (markSent) bebas tanpa batas — by design, risk ditanggung pemilik akun.
+- Template visibility: marketing harusnya hanya lihat template sendiri, tapi superadmin bisa lihat semua.
+- UH kios A tidak boleh assign customer ke marketing kios B.
+- no_contract duplikat antar kios diizinkan (data lapangan), tapi single-creation duplikat check harus kios-scoped (bukan global).
+
+#### P0 CRITICAL (Worker)
+1. ✅ `worker/src/queue-consumer.js`: fix `processing` flag permanent lock — try-catch-finally sudah benar.
+
+#### P1 HIGH (Backend + Frontend)
+2. ✅ `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — sudah pakai subquery `$query->toBase()`
+3. ✅ `backend/app/Http/Controllers/Api/CustomerController.php`: `store()` + `marketingAdd()` — scope duplicate check by `kios_id`
+4. ✅ `backend/app/Http/Controllers/Api/AssignmentController.php`: `assign()` — cek kios customer DAN marketing
+5. ✅ `backend/app/Http/Controllers/Api/AssignmentController.php`: `assignByUnit()` — cek kios marketing target
+6. ✅ `backend/app/Http/Controllers/Api/AssignmentController.php`: `unassign()` — cek kios customer
+7. ✅ `backend/app/Http/Controllers/Api/CustomerController.php`: `update()` + `destroy()` — cek kios customer
+8. ✅ `backend/app/Repositories/TemplateRepository.php`: `findById/update/delete` — ownership check untuk marketing
+9. ✅ `backend/app/Repositories/TemplateRepository.php`: `getAll()` — superadmin lihat semua template
+10. ✅ `backend/app/Http/Controllers/Api/NotificationController.php`: auto-trim + cap 100 notifikasi + deleteAll method
+
+#### P2 MEDIUM (Worker + Frontend + Backend)
+11. ✅ `worker/src/index.js`: `gracefulShutdown()` — panggil `stopQueue()`, disconnect WA connections
+12. ✅ `worker/src/queue-consumer.js`: export `stopQueue`
+13. ✅ `worker/src/wa-client.js`: max reconnect attempts (10x) + emit `logged_out`
+14. ✅ `worker/src/wa-client.js`: cleanup `activeClients` saat auto-disconnect
+15. ✅ `frontend/src/components/ui/NotificationBell.tsx`: `clearAll()` panggil `DELETE /notifications` (bukan mark read)
+16. ✅ `frontend/src/context/AuthContext.tsx`: `disconnectSocket()` di `logout()`
+17. ✅ `frontend/src/hooks/usePermissions.ts`: TTL 5 menit ke permission cache
+18. ✅ `backend/routes/api.php`: `admin/permissions` tetap bisa diakses semua user (tidak diubah)
+19. ✅ `backend/app/Http/Controllers/Api/CustomerShareController.php`: `info()` — scope by kios
+20. ✅ `backend/app/Http/Controllers/Api/CustomerShareController.php`: `notifyUhsForShare()` — scope ke UH kios terkait
+
+#### P3 LOW (Worker + Frontend + Backend)
+21. ✅ `worker/src/queue-consumer.js`: deduplicate `pending_stuck` emit per poll cycle
+22. ✅ `worker/src/socket-server.js`: pindahkan `require()` ke top-level (juga fix duplicate DB_PATH + missing requires)
+23. ✅ `worker/src/db.js`: `closeDb()` tidak diperlukan (setiap call buat baru)
+24. ✅ `worker/src/index.js`: exit code 0 untuk SIGINT/SIGTERM
+25. ✅ `worker/src/index.js`: `unhandledRejection` — log saja, tidak shutdown
+26. ✅ `worker/src/wa-client.js`: cleanup LID files > 7 hari saat startup
+27. ✅ `frontend/src/components/ui/NotificationBell.tsx`: sembunyikan bell di mobile (`hidden lg:block`)
+28. ✅ `frontend/src/pages/admin/CustomerManagementPage.tsx`: debounce 300ms di search input
+29. ✅ `backend/app/Http/Controllers/Api/CustomerShareController.php`: `info()` — scope by kios
+30. ✅ `backend/app/Http/Controllers/Api/CustomerShareController.php`: `notifyUhsForShare()` — scope ke UH kios terkait
+31. ✅ `backend/app/Http/Controllers/Api/KiosController.php`: `destroy()` — cek ada user/customer sebelum hapus
+
+### 2026-07-13 — Additional fixes: socket-server crash + PHP memory + notification cleanup + LID cleanup
+
+**Belum di-push ⏸️**
+
+**Worker — socket-server.js crash fix (CRITICAL):**
+- `worker/src/socket-server.js`: fix duplicate `const DB_PATH` declaration, tambah missing `require('path')`, `require('crypto')`, `const { Server } = require('socket.io')`, hapus redundant `require()` di dalam `createSocketServer()`
+
+**Backend — PHP memory optimization:**
+- `backend/app/Services/CustomerService.php`: `importFromFile()` CSV sekarang pakai `fopen()` + `fgetcsv()` langsung dari file (bukan `file_get_contents()` + `php://temp`). Eliminasi `$rows` intermediate array.
+- `backend/app/Services/CustomerService.php`: `importFromExcel()` bangun `$customers` langsung dari `$rows` tanpa intermediate `$parsedRows`. Kurangi peak memory dari 3x ke 1x.
+
+**Backend + Frontend — Notification cleanup:**
+- `backend/app/Http/Controllers/Api/NotificationController.php`: tambah `deleteAll()` method — benar-benar DELETE dari database
+- `backend/app/Http/Controllers/Api/NotificationController.php`: auto-trim tambah cap 100 notifikasi total (hapus yang paling lama)
+- `backend/routes/api.php`: tambah `DELETE /notifications` route
+- `frontend/src/services/notificationService.ts`: tambah `deleteAll()` method
+- `frontend/src/components/ui/NotificationBell.tsx`: `clearAll` button panggil `DELETE /notifications` (bukan `PATCH /notifications/read-all`)
+
+**Worker — LID cleanup:**
+- `worker/src/wa-client.js`: tambah `cleanupOldLidFiles()` — scan `auth_info/` untuk file `.lid` > 7 hari, hapus saat startup
+- `worker/src/index.js`: panggil `cleanupOldLidFiles()` saat startup
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — commit & push per fitur ke GitHub, lalu deploy ke VPS.
 
 ## Push & Deploy Workflow
 
