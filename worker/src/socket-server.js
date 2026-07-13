@@ -24,6 +24,7 @@ function validateToken(token) {
   let db;
   try {
     db = new Database(DB_PATH, { readonly: true });
+    db.pragma('busy_timeout = 5000');
     const row = db.prepare('SELECT tokenable_id FROM personal_access_tokens WHERE id = ? AND token = ?').get(tokenId, hash);
     return row ? { userId: row.tokenable_id } : null;
   } catch (err) {

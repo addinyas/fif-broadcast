@@ -10,6 +10,7 @@ const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
 const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
+const { closeDb } = require('./db');
 
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
@@ -79,6 +80,9 @@ function gracefulShutdown(signal) {
 
   // Disconnect all WhatsApp connections cleanly
   disconnectAllConnections();
+
+  // Close singleton DB connection
+  closeDb();
 
   // Close socket.io server
   const io = getIO();

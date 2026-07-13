@@ -57,6 +57,7 @@ function saveConnectionStatus(userId, status, qrCode) {
   try {
     db = new Database(DB_PATH);
     db.pragma('journal_mode = WAL');
+    db.pragma('busy_timeout = 5000');
     const existing = db.prepare('SELECT id FROM whatsapp_connections WHERE user_id = ?').get(userId);
     if (existing) {
       db.prepare('UPDATE whatsapp_connections SET status = ?, qr_code = ?, updated_at = datetime(\'now\') WHERE user_id = ?').run(status, qrCode || null, userId);

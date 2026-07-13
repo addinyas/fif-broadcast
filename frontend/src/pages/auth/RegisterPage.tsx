@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, UserPlus, Fingerprint, Store } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -8,6 +8,7 @@ import type { Kios } from '../../types';
 
 export function RegisterPage() {
   const { register } = useAuth();
+  const navigate = useNavigate();
   const [kiosList, setKiosList] = useState<Kios[]>([]);
   const [selectedKiosId, setSelectedKiosId] = useState('');
   const [kiosName, setKiosName] = useState('');
@@ -49,7 +50,7 @@ export function RegisterPage() {
         npo_mce_id: npoMceId.toUpperCase(),
         kios_id: selectedKiosId,
       });
-      window.location.href = '/';
+      navigate('/login');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } };
       if (axiosErr?.response?.data?.errors) {

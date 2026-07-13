@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Fingerprint, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 
 export function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [npoMceId, setNpoMceId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -23,9 +24,15 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(npoMceId, password);
-      window.location.href = '/';
+      const freshUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+      navigate(freshUser.role === 'superadmin' || freshUser.role === 'UH' ? '/admin/dashboard' : '/marketing/dashboard');
     } catch (err: unknown) {
-      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Login gagal');
+      const axiosErr = err as { response?: { status?: number; data?: { message?: string } } };
+      if (axiosErr?.response?.status === 429) {
+        setError('Terlalu banyak percobaan, coba lagi 1 menit');
+      } else {
+        setError(axiosErr?.response?.data?.message || 'Login gagal');
+      }
       setLoading(false);
     }
   };

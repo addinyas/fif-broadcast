@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Kios;
 use App\Models\User;
 use Exception;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthService
@@ -41,7 +40,6 @@ class AuthService
             throw new Exception('ID NPO MCE / email atau password salah', 401);
         }
 
-        Auth::login($user);
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return ['user' => $user, 'token' => $token];

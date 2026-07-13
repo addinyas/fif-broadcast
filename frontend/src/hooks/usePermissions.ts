@@ -68,7 +68,7 @@ export function usePermissions() {
   const hasFeature = (feature: string): boolean => {
     if (!user) return false;
     if (user.role === 'superadmin') return true;
-    if (loading) return false;
+    if (loading) return true;
     if (!perms || !perms[user.role]) return false;
     const p = perms[user.role].find((item) => item.feature === feature);
     return p ? p.enabled : false;

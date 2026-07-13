@@ -18,7 +18,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       const currentPath = window.location.pathname;
-      if (currentPath !== '/login' && currentPath !== '/register') {
+      const hasToken = !!sessionStorage.getItem('token');
+      if (currentPath !== '/login' && currentPath !== '/register' && hasToken) {
         sessionStorage.removeItem('token');
         sessionStorage.removeItem('user');
         window.location.href = '/login';

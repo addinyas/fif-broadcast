@@ -20,9 +20,8 @@ function randomDelay() {
 
 async function sendPushNotification(userId, title, body) {
   if (!FCM_SERVER_KEY) return;
-  let db;
   try {
-    db = getWritableDb();
+    const db = getWritableDb();
     const user = db.prepare('SELECT fcm_token FROM users WHERE id = ?').get(userId);
     if (!user?.fcm_token) return;
     await fetch('https://fcm.googleapis.com/fcm/send', {
@@ -39,8 +38,6 @@ async function sendPushNotification(userId, title, body) {
     });
   } catch (err) {
     console.error(`[Push] Failed to send notification to user ${userId}:`, err.message);
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -48,16 +45,8 @@ async function processPending() {
   if (processing) return;
   processing = true;
 
-  let writeDb;
   try {
-    writeDb = getWritableDb();
-  } catch (err) {
-    console.error('[Queue] Failed to open writable DB:', err.message);
-    processing = false;
-    return;
-  }
-
-  try {
+    const writeDb = getWritableDb();
     const pending = writeDb.prepare(`
       SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, bh.retry_count, c.phone_number
       FROM broadcast_histories bh
@@ -156,7 +145,6 @@ async function processPending() {
     console.error('[Queue] Error:', err.message);
   } finally {
     processing = false;
-    writeDb.close();
   }
 }
 
