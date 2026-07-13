@@ -94,7 +94,18 @@ async function createWAClientForUser(userId, onReady) {
     keepAliveIntervalMs: 25_000,
   });
 
-  connections.set(userId, { sock });
+  const wsReadyPromise = new Promise((resolve) => {
+    const check = (update) => {
+      if (update.connection === 'open') {
+        sock.ev.off('connection.update', check);
+        resolve(true);
+      }
+    };
+    sock.ev.on('connection.update', check);
+    setTimeout(() => { sock.ev.off('connection.update', check); resolve(false); }, 60_000);
+  });
+
+  connections.set(userId, { sock, wsReadyPromise });
 
   sock.ev.on('creds.update', saveCreds);
 
@@ -233,6 +244,13 @@ async function requestPairingCodeForUser(userId, phoneNumber) {
   const entry = connections.get(userId);
   if (!entry || !entry.sock) throw new Error('WA client not found for user');
   if (entry.connected) throw new Error('WA already connected');
+
+  if (entry.wsReadyPromise) {
+    const ready = await entry.wsReadyPromise;
+    if (!ready) {
+      throw new Error('WhatsApp socket belum siap. Silakan coba lagi dalam beberapa detik.');
+    }
+  }
 
   const sock = entry.sock;
   const code = await sock.requestPairingCode(phoneNumber);

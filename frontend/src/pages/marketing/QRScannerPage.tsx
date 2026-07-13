@@ -16,6 +16,7 @@ export function QRScannerPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingError, setPairingError] = useState<string | null>(null);
+  const [pairingLoading, setPairingLoading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuth();
 
@@ -42,6 +43,7 @@ export function QRScannerPage() {
     };
 
     const handlePairingCode = (msg: { code?: string; error?: string; message?: string }) => {
+      setPairingLoading(false);
       if (msg.error) {
         setPairingError(msg.error);
         setPairingCode(null);
@@ -117,6 +119,7 @@ export function QRScannerPage() {
     const socket = getSocket();
     setPairingError(null);
     setPairingCode(null);
+    setPairingLoading(true);
     socket.emit('wa:request_pairing_code', { phoneNumber: clean });
   }, [phoneNumber]);
 
@@ -200,13 +203,20 @@ export function QRScannerPage() {
                         value={phoneNumber}
                         onChange={(e) => { setPhoneNumber(e.target.value.replace(/\D/g, '')); setPairingError(null); }}
                         className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                        onKeyDown={(e) => e.key === 'Enter' && handleRequestPairingCode()}
+                        onKeyDown={(e) => e.key === 'Enter' && !pairingLoading && handleRequestPairingCode()}
+                        disabled={pairingLoading}
                       />
-                      <Button variant="primary" onClick={handleRequestPairingCode} disabled={!phoneNumber || phoneNumber.length < 8}>
+                      <Button variant="primary" onClick={handleRequestPairingCode} disabled={!phoneNumber || phoneNumber.length < 8 || pairingLoading} loading={pairingLoading}>
                         Dapatkan Kode
                       </Button>
                     </div>
                     <p className="text-xs text-slate-400 dark:text-slate-500">Format: 08xxx atau 628xxx — otomatis dikonversi</p>
+                    {pairingLoading && !pairingCode && (
+                      <div className="flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Menyiapkan koneksi ke WhatsApp...
+                      </div>
+                    )}
                     {pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
                   </>
                 ) : (
@@ -218,6 +228,14 @@ export function QRScannerPage() {
                       <p className="text-4xl font-bold tracking-[0.3em] text-fif-600 dark:text-fif-400 font-mono">{pairingCode}</p>
                     </div>
                     <p className="text-xs text-slate-400">Kode akan expired dalam beberapa menit</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<RefreshCw className="h-3.5 w-3.5" />}
+                      onClick={() => { setPairingCode(null); setPairingError(null); }}
+                    >
+                      Ganti Nomor / Kode Baru
+                    </Button>
                   </div>
                 )}
               </div>
