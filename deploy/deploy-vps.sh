@@ -243,6 +243,10 @@ chown -R root:root "$APP_DIR"
 chown -R apache:apache "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache" "$APP_DIR/backend/database"
 chmod -R 775 "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
 chmod 664 "$APP_DIR/backend/database/database.sqlite"
+# Fix WAL/SHM files — worker (fif) creates them, PHP-FPM (apache) must also write
+chown apache:apache "$APP_DIR/backend/database/database.sqlite"-shm "$APP_DIR/backend/database/database.sqlite"-wal 2>/dev/null || true
+chmod 666 "$APP_DIR/backend/database/database.sqlite" "$APP_DIR/backend/database/database.sqlite"-shm "$APP_DIR/backend/database/database.sqlite"-wal 2>/dev/null || true
+setfacl -R -m u:apache:rwx "$APP_DIR/backend/database" 2>/dev/null || true
 chown -R fif:fif "$APP_DIR/worker/auth_info" 2>/dev/null || true
 chmod 700 "$APP_DIR/worker/auth_info" 2>/dev/null || true
 # Worker needs read-write access to SQLite DB + read access to bootstrap/cache
