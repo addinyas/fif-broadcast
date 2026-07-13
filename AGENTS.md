@@ -787,6 +787,18 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 **Frontend:**
 - `NotificationBell.tsx`: rolling approval toast dipindah ke tengah layar (fixed inset-0 + flex center)
 
+### 2026-07-14 — Daily Bug Report
+
+**Status: Dalam investigasi ⏳**
+
+| # | Bug | Priority | Status |
+|---|-----|----------|--------|
+| 1 | Connect feature tidak bisa terhubung | HIGH | ⏳ Investigating |
+| 2 | Auto-calculate pool: NMC harus 4020, REFI harus 4029 | HIGH | ⏳ Investigating |
+| 4 | Calculator nopol tidak bisa input angka+huruf | HIGH | ⏳ Investigating |
+| 5 | UH delete: solusi hapus data | MEDIUM | ⏳ Investigating |
+| 6 | UH rolling approval hilang | HIGH | ⏳ Investigating |
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
