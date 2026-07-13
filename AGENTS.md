@@ -691,6 +691,30 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Auth flow fix + Worker DB stability + 429 handling
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Frontend (High Priority):**
+- `frontend/src/pages/auth/LoginPage.tsx`: tambah `useNavigate` import (missing — sebelumnya crash runtime), ganti `window.location.href = '/'` → `navigate(role-based)` — superadmin/UH ke `/admin/dashboard`, marketing ke `/marketing/dashboard`, handle 429 rate limit dengan pesan spesifik
+- `frontend/src/pages/auth/RegisterPage.tsx`: tambah `useNavigate` import (fix dari session sebelumnya), ganti `window.location.href = '/'` → `navigate('/login')`
+- `frontend/src/hooks/usePermissions.ts`: `hasFeature()` return `true` saat `loading` (bukan `false`) — mencegah `RequireFeature` redirect ke `/login` selama permissions masih dimuat
+- `frontend/src/services/api.ts`: 401 interceptor — skip redirect kalau tidak ada `token` di sessionStorage (race condition: interceptor fire sebelum login selesai simpan token)
+- `frontend/src/context/AuthContext.tsx`: wrap `JSON.parse(sessionStorage.getItem('user'))` di try-catch — cegah crash karena sessionStorage korup
+
+**Backend (Low Priority):**
+- `backend/app/Services/AuthService.php`: hapus `Auth::login($user)` yang tidak perlu — app pakai Sanctum token-based auth, session login tidak diperlukan + buang unused import `Auth`
+
+**Worker (Medium Priority):**
+- `worker/src/db.js`: `getWritableDb()` sekarang singleton — buka 1 koneksi, reuse setiap poll cycle, tutup pas shutdown via `closeDb()`. Eliminasi SQLITE_BUSY dari频繁 open/close
+- `worker/src/queue-consumer.js`: gunakan singleton DB — hapus `getWritableDb()` open/close di `processPending()` dan `sendPushNotification()`. Singleton + busy_timeout handle concurrency
+- `worker/src/index.js`: panggil `closeDb()` di `gracefulShutdown()` — cleanup koneksi DB pas SIGTERM/SIGINT
+- `worker/src/wa-client.js`: tambah `busy_timeout = 5000` ke `saveConnectionStatus()` — cegah SQLITE_BUSY saat wa-client + queue-consumer write bersamaan
+- `worker/src/socket-server.js`: tambah `busy_timeout = 5000` ke readonly token validation connection
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
