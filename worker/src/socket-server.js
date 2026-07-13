@@ -8,7 +8,23 @@ const { setIO } = require('./events');
 
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
+const COOLDOWN_MS = 30_000;
+
 let io = null;
+const lastAttempt = new Map();
+
+function checkCooldown(userId) {
+  const last = lastAttempt.get(userId) || 0;
+  const elapsed = Date.now() - last;
+  if (elapsed < COOLDOWN_MS) {
+    return Math.ceil((COOLDOWN_MS - elapsed) / 1000);
+  }
+  return 0;
+}
+
+function recordAttempt(userId) {
+  lastAttempt.set(userId, Date.now());
+}
 
 function validateToken(token) {
   if (!token || !token.includes('|')) return null;
@@ -101,6 +117,12 @@ function createSocketServer(httpServer) {
 
     socket.on('wa:reconnect', async () => {
       console.log(`[Socket] Reconnect request from user ${userId}`);
+      const waitSec = checkCooldown(userId);
+      if (waitSec > 0) {
+        socket.emit('wa:status', { status: 'reconnecting', message: `Tunggu ${waitSec} detik sebelum coba lagi...` });
+        return;
+      }
+      recordAttempt(userId);
       try {
         const dbStatus = getWAStatusFromDB(userId);
         const isRetry = dbStatus && (dbStatus.status === 'awaiting_scan' || dbStatus.status === 'connected');
@@ -142,6 +164,12 @@ function createSocketServer(httpServer) {
         socket.emit('wa:pairing_code', { error: 'Nomor telepon tidak valid' });
         return;
       }
+      const waitSec = checkCooldown(userId);
+      if (waitSec > 0) {
+        socket.emit('wa:pairing_code', { error: `Tunggu ${waitSec} detik sebelum coba lagi...` });
+        return;
+      }
+      recordAttempt(userId);
       try {
         if (isConnectedForUser(userId)) {
           socket.emit('wa:pairing_code', { error: 'WhatsApp sudah terhubung' });
