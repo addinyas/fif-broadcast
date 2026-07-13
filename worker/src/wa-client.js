@@ -95,20 +95,35 @@ async function createWAClientForUser(userId, onReady) {
   });
 
   const wsReadyPromise = new Promise((resolve) => {
+    let resolved = false;
     const check = (update) => {
+      if (resolved) return;
       const { connection, qr } = update;
-      if (connection) {
-        console.log(`[WA] User ${userId} connection.update: ${connection}`);
-      }
       if (connection === 'open') {
+        resolved = true;
         sock.ev.off('connection.update', check);
         resolve(true);
+        return;
+      }
+      if (qr) {
+        resolved = true;
+        sock.ev.off('connection.update', check);
+        resolve(true);
+        return;
+      }
+      if (connection === 'close') {
+        resolved = true;
+        sock.ev.off('connection.update', check);
+        resolve(false);
+        return;
       }
     };
     sock.ev.on('connection.update', check);
     setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
       sock.ev.off('connection.update', check);
-      console.log(`[WA] User ${userId} WS ready timeout (readyState=${sock.ws?.readyState})`);
+      console.log(`[WA] User ${userId} WS ready timeout`);
       resolve(false);
     }, 8_000);
   });
@@ -257,11 +272,7 @@ async function requestPairingCodeForUser(userId, phoneNumber) {
 
   const ready = await entry.wsReadyPromise;
   if (!ready) {
-    const wsState = sock.ws?.readyState;
-    if (wsState !== 1) {
-      throw new Error('WhatsApp socket belum terbuka. Pastikan VPS tidak terkena rate-limit WhatsApp. Coba lagi dalam 30 detik.');
-    }
-    console.log(`[WA] WS readyState=${wsState} for user ${userId}, proceeding`);
+    throw new Error('WhatsApp socket belum terbuka. Coba hubungkan ulang.');
   }
 
   const code = await sock.requestPairingCode(phoneNumber);
