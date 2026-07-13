@@ -1,4 +1,4 @@
-const { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, isConnectedForUser } = require('./wa-client');
+const { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, isConnectedForUser, softResetForUser } = require('./wa-client');
 
 const activeClients = new Map();
 
@@ -35,4 +35,9 @@ async function disconnect(userId) {
   await disconnectWAForUser(userId);
 }
 
-module.exports = { getOrCreateClient, sendMessage, requestPairingCode, disconnect };
+function softReset(userId) {
+  activeClients.delete(userId);
+  softResetForUser(userId);
+}
+
+module.exports = { getOrCreateClient, sendMessage, requestPairingCode, disconnect, softReset };

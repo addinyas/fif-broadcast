@@ -157,8 +157,10 @@ async function createWAClientForUser(userId, onReady) {
         }
       }
 
-      const isLoggedOut = lastDisconnect?.error?.output?.statusCode === DisconnectReason.loggedOut;
-      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, reconnectAttempts: ${rs.attempts}`);
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+      const isTimedOut = statusCode === DisconnectReason.timedOut;
+      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, timedOut: ${isTimedOut}, reconnectAttempts: ${rs.attempts}`);
 
       if (isLoggedOut) {
         console.log(`[WA] User ${userId} logged out.`);
@@ -168,6 +170,18 @@ async function createWAClientForUser(userId, onReady) {
         reconnectState.delete(userId);
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
+        return;
+      }
+
+      if (isTimedOut) {
+        console.log(`[WA] User ${userId} connection timed out (QR/pairing expired), waiting for user action`);
+        rs.reconnecting = false;
+        rs.attempts = 0;
+        try { sock.end(undefined); } catch {}
+        connections.delete(userId);
+        reconnectState.delete(userId);
+        saveConnectionStatus(userId, 'awaiting_scan', null);
+        emitWAStatus(userId, { status: 'awaiting_scan', message: 'Koneksi expired — silakan coba lagi' });
         return;
       }
 
@@ -290,4 +304,20 @@ function disconnectAllConnections() {
   reconnectState.clear();
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles };
+function softResetForUser(userId) {
+  const entry = connections.get(userId);
+  if (entry) {
+    if (entry.disconnectTimer) {
+      clearTimeout(entry.disconnectTimer);
+      entry.disconnectTimer = null;
+    }
+    if (entry.sock) {
+      try { entry.sock.ev.removeAllListeners('connection.update'); } catch {}
+      try { entry.sock.end(undefined); } catch {}
+    }
+    connections.delete(userId);
+    reconnectState.delete(userId);
+  }
+}
+
+module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles, softResetForUser };

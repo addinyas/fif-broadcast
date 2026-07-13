@@ -2,7 +2,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 const { Server } = require('socket.io');
-const { getOrCreateClient, disconnect, requestPairingCode } = require('./wa-manager');
+const { getOrCreateClient, disconnect, requestPairingCode, softReset } = require('./wa-manager');
 const { isConnectedForUser } = require('./wa-client');
 const { setIO } = require('./events');
 
@@ -29,6 +29,20 @@ function validateToken(token) {
     return row ? { userId: row.tokenable_id } : null;
   } catch (err) {
     console.error('[Socket] Token validation error:', err.message);
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
+function getWAStatusFromDB(userId) {
+  let db;
+  try {
+    db = new Database(DB_PATH, { readonly: true });
+    db.pragma('busy_timeout = 5000');
+    const row = db.prepare('SELECT status, qr_code FROM whatsapp_connections WHERE user_id = ?').get(userId);
+    return row || null;
+  } catch (err) {
     return null;
   } finally {
     if (db) db.close();
@@ -66,12 +80,14 @@ function createSocketServer(httpServer) {
     if (isConnectedForUser(userId)) {
       socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
     } else {
-      socket.emit('wa:status', { status: 'disconnected', message: 'Menghubungkan...' });
-      getOrCreateClient(userId, () => {
-        console.log(`[Socket] WA client ready for user ${userId}`);
-      }).catch((err) => {
-        console.error(`[Socket] Failed to create WA client for user ${userId}:`, err.message);
-      });
+      const dbStatus = getWAStatusFromDB(userId);
+      if (dbStatus && dbStatus.status === 'connected') {
+        socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
+      } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
+        socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
+      } else {
+        socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+      }
     }
 
     socket.on('disconnect', () => {
@@ -86,7 +102,14 @@ function createSocketServer(httpServer) {
     socket.on('wa:reconnect', async () => {
       console.log(`[Socket] Reconnect request from user ${userId}`);
       try {
-        await disconnect(userId);
+        const dbStatus = getWAStatusFromDB(userId);
+        const isRetry = dbStatus && (dbStatus.status === 'awaiting_scan' || dbStatus.status === 'connected');
+        if (isRetry) {
+          console.log(`[Socket] Retrying connection for user ${userId} (keeping auth)`);
+          softReset(userId);
+        } else {
+          await disconnect(userId);
+        }
         await new Promise((r) => setTimeout(r, 500));
         getOrCreateClient(userId, () => {
           console.log(`[Socket] WA client re-created for user ${userId}`);
@@ -102,7 +125,14 @@ function createSocketServer(httpServer) {
       if (isConnectedForUser(userId)) {
         socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
       } else {
-        socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+        const dbStatus = getWAStatusFromDB(userId);
+        if (dbStatus && dbStatus.status === 'connected') {
+          socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
+        } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
+          socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
+        } else {
+          socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+        }
       }
     });
 

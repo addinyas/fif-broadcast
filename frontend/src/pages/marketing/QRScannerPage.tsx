@@ -57,11 +57,9 @@ export function QRScannerPage() {
 
     const handleSocketError = (err: Error) => {
       console.error('Socket connection error:', err.message);
-      setWaStatus('disconnected');
     };
     const handleDisconnect = (reason: string) => {
       console.warn('Socket disconnected:', reason);
-      if (reason === 'io server disconnect') setWaStatus('disconnected');
     };
 
     socket.on('connect_error', handleSocketError);
