@@ -929,7 +929,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-14 — Anti-Ban: Browser fix + Proxy support + Warmup + Cooldown upgrade
 
-**Sudah di-push ✅ (belum deploy)**
+**Sudah di-push ✅ & deployed ✅**
 
 **Worker:**
 - `worker/package.json`: tambah dependencies `socks-proxy-agent@^8.0.5` + `https-proxy-agent@^7.0.6`
@@ -1136,7 +1136,7 @@ WA_PROXY=socks5://127.0.0.1:1080
 Semua perubahan **backwards compatible** — tanpa `WA_PROXY`, behavior tetap sama.
 
 ### Next steps when resuming
-Ketik: `lanjut yang tadi` — push + deploy lalu setup Termux SSH tunnel dari HP Android.
+Ketik: `lanjut yang tadi` — setup Termux SSH tunnel dari HP Android untuk residential IP.
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
