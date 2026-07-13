@@ -10,9 +10,32 @@ const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..'
 
 const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 const MAX_RECONNECT_ATTEMPTS = 10;
+const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
+
+const WA_PROXY = process.env.WA_PROXY || '';
+let proxyAgent = undefined;
+let fetchAgent = undefined;
+
+if (WA_PROXY) {
+  try {
+    if (WA_PROXY.startsWith('socks')) {
+      const { SocksProxyAgent } = require('socks-proxy-agent');
+      proxyAgent = new SocksProxyAgent(WA_PROXY);
+      fetchAgent = proxyAgent;
+    } else {
+      const { HttpsProxyAgent } = require('https-proxy-agent');
+      proxyAgent = new HttpsProxyAgent(WA_PROXY);
+      fetchAgent = proxyAgent;
+    }
+    console.log(`[WA] Using proxy: ${WA_PROXY}`);
+  } catch (err) {
+    console.error(`[WA] Failed to load proxy agent: ${err.message}. Connecting directly.`);
+  }
+}
 
 const connections = new Map();
 const reconnectState = new Map();
+const lastConnectedAt = new Map();
 
 function getAuthDir(userId) {
   return path.join(AUTH_BASE, `user_${userId}`);
@@ -88,10 +111,12 @@ async function createWAClientForUser(userId, onReady) {
     printQRInTerminal: false,
     syncFullHistory: false,
     emitOwnEvents: false,
-    browser: ['FIF Broadcast', 'Chrome', '1.0.0'],
+    browser: ['WhatsApp', 'Chrome', '120.0.0.0'],
+    platform: 'Desktop',
     markOnlineOnConnect: false,
-    connectTimeoutMs: 15_000,
-    keepAliveIntervalMs: 25_000,
+    connectTimeoutMs: 30_000,
+    keepAliveIntervalMs: 20_000 + Math.floor(Math.random() * 10_000),
+    ...(proxyAgent ? { agent: proxyAgent, fetchAgent } : {}),
   });
 
   const wsReadyPromise = new Promise((resolve) => {
@@ -144,6 +169,7 @@ async function createWAClientForUser(userId, onReady) {
       console.log(`[WA] User ${userId} connected successfully!`);
       rs.attempts = 0;
       rs.reconnecting = false;
+      lastConnectedAt.set(userId, Date.now());
       const entry = connections.get(userId);
       if (entry) {
         entry.connected = true;
@@ -173,7 +199,9 @@ async function createWAClientForUser(userId, onReady) {
       }
       saveConnectionStatus(userId, 'connected', null);
       emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
-      if (onReady) onReady(sock);
+      setTimeout(() => {
+        if (onReady) onReady(sock);
+      }, WARMUP_MS);
     }
 
     if (connection === 'close') {
@@ -374,4 +402,4 @@ function softResetForUser(userId) {
   }
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles, softResetForUser };
+module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles, softResetForUser, lastConnectedAt };

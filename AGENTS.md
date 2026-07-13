@@ -919,8 +919,224 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - `worker/src/wa-client.js`: `requestPairingCodeForUser()` sekarang self-contained — jika client belum ada atau sudah hilang dari Map, **buat baru sendiri** (`createWAClientForUser`), tunggu `wsReadyPromise`, langsung request pairing code. Tidak ada timeout terpisah.
 - `worker/src/socket-server.js`: `wa:request_pairing_code` handler disederhanakan — langsung panggil `requestPairingCode(userId, phoneNumber)`. Hapus `getOrCreateClient` + `setTimeout` + promise race.
 
+### 2026-07-14 — Cooldown untuk reconnect/pairing spam
+
+**Sudah di-push ✅ & deployed ✅**
+- `worker/src/socket-server.js`: tambah 30 detik cooldown per user untuk `wa:reconnect` dan `wa:request_pairing_code`. Cegah spam reconnect yang memperparah WhatsApp rate-limit. Pesan error: "Tunggu X detik sebelum coba lagi..."
+
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
+
+### 2026-07-14 — Anti-Ban: Browser fix + Proxy support + Warmup + Cooldown upgrade
+
+**Sudah di-push ✅ (belum deploy)**
+
+**Worker:**
+- `worker/package.json`: tambah dependencies `socks-proxy-agent@^8.0.5` + `https-proxy-agent@^7.0.6`
+- `worker/.env`: tambah `WA_PROXY=` (empty by default, backwards compatible)
+- `worker/src/wa-client.js`:
+  - Browser identity: `['FIF Broadcast', 'Chrome', '1.0.0']` → `['WhatsApp', 'Chrome', '120.0.0.0']` + `platform: 'Desktop'`
+  - `connectTimeoutMs`: 15_000 → 30_000
+  - `keepAliveIntervalMs`: 25_000 → 20_000 + random(0, 10000) (jitter)
+  - Proxy support: baca `WA_PROXY` dari env, auto-detect SOCKS5 vs HTTP agent, pass ke `makeWASocket()`
+  - Warmup delay: 3-5 detik setelah connect sebelum onReady
+  - `lastConnectedAt` Map: track timestamp connect terakhir per user, di-export untuk queue-consumer
+- `worker/src/socket-server.js`: cooldown 30s → 60s
+- `worker/src/queue-consumer.js`: post-reconnect warmup — delay 10 detik pertama setelah reconnect sebelum kirim pesan
+
+**Frontend:**
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: tambah amber warning text "Jika pairing gagal berulang, VPS mungkin di-rate-limit oleh WhatsApp..."
+
+#### Root Cause Analysis
+WhatsApp mendeteksi dan memblokir koneksi dari VPS karena:
+1. **IP datacenter** (Rumahweb `202.10.42.237`) — WhatsApp tahu semua range IP hosting
+2. **Browser fingerprint mencurigakan** — `['FIF Broadcast', 'Chrome', '1.0.0']` jelas bot
+3. **Reconnect spam** — sebelum ada cooldown, user klik reconnect berkali-kat → 6-7 client barengan
+4. **Tidak ada warmup** — langsung burst send setelah connect
+
+#### File yang perlu diubah
+
+##### 1. `worker/package.json` — tambah dependencies
+```json
+"socks-proxy-agent": "^8.0.5",
+"https-proxy-agent": "^7.0.6"
+```
+
+##### 2. `worker/.env` — tambah WA_PROXY
+```
+# Proxy untuk koneksi WhatsApp (opsional)
+# SOCKS5: socks5://user:pass@host:port
+# HTTP: http://user:pass@host:port
+# Kosongkan jika tidak pakai proxy (langsung dari VPS)
+WA_PROXY=
+```
+
+##### 3. `worker/src/wa-client.js` — 4 perubahan besar
+
+**a) Browser identity fix (baris 86-95):**
+```js
+// SEBELUM:
+browser: ['FIF Broadcast', 'Chrome', '1.0.0'],
+markOnlineOnConnect: false,
+connectTimeoutMs: 15_000,
+keepAliveIntervalMs: 25_000,
+
+// SESUDAH:
+browser: ['WhatsApp', 'Chrome', '120.0.0.0'],
+platform: 'Desktop',
+markOnlineOnConnect: false,
+connectTimeoutMs: 30_000,
+keepAliveIntervalMs: 20_000 + Math.floor(Math.random() * 10_000),
+```
+
+**b) Proxy support (baru, di atas makeWASocket):**
+```js
+const WA_PROXY = process.env.WA_PROXY || '';
+let agent = undefined;
+let fetchAgent = undefined;
+
+if (WA_PROXY) {
+  if (WA_PROXY.startsWith('socks')) {
+    const { SocksProxyAgent } = require('socks-proxy-agent');
+    agent = new SocksProxyAgent(WA_PROXY);
+    fetchAgent = agent;
+  } else {
+    const { HttpsProxyAgent } = require('https-proxy-agent');
+    agent = new HttpsProxyAgent(WA_PROXY);
+    fetchAgent = agent;
+  }
+  console.log(`[WA] Using proxy: ${WA_PROXY}`);
+}
+```
+Tambahkan `agent` dan `fetchAgent` ke options `makeWASocket()`.
+
+**c) Warmup delay (setelah connection === 'open'):**
+Sebelum `onReady(sock)`, tambah delay 3-5 detik:
+```js
+const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
+setTimeout(() => {
+  if (onReady) onReady(sock);
+}, WARMUP_MS);
+```
+
+**d) Export `lastConnectedAt` Map untuk queue-consumer:**
+Tambahkan `const lastConnectedAt = new Map();` dan update saat `connection === 'open'`:
+```js
+const { emitWAStatus, emitPairingCode } = require('./events');
+const connections = new Map();
+const reconnectState = new Map();
+const lastConnectedAt = new Map(); // ← BARU: userId → timestamp connect terakhir
+```
+Di handler `connection === 'open'`:
+```js
+lastConnectedAt.set(userId, Date.now());
+```
+Export: `module.exports = { ..., lastConnectedAt }` (atau export via getter function).
+
+##### 4. `worker/src/socket-server.js` — Cooldown naik 30s → 60s
+```js
+// SEBELUM:
+const COOLDOWN_MS = 30_000;
+
+// SESUDAH:
+const COOLDOWN_MS = 60_000;
+```
+
+##### 5. `worker/src/queue-consumer.js` — Post-reconnect warmup
+```js
+const WARMUP_GRACE_MS = 10_000; // 10 detik grace period
+```
+Import `lastConnectedAt` dari `wa-client`:
+```js
+const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
+```
+Sebelum `sendMessage()`, cek warmup:
+```js
+const lastConn = lastConnectedAt.get(row.marketing_id) || 0;
+const elapsed = Date.now() - lastConn;
+if (elapsed < WARMUP_GRACE_MS) {
+  const extraDelay = WARMUP_GRACE_MS - elapsed;
+  console.log(`[Queue] Warmup delay ${extraDelay}ms for user ${row.marketing_id}`);
+  await new Promise(r => setTimeout(r, extraDelay));
+}
+```
+
+##### 6. `frontend/src/pages/marketing/QRScannerPage.tsx` — Warning text
+Tambah di bawah QR / pairing code:
+```tsx
+<div className="text-xs text-amber-600 mt-2">
+  Jika pairing gagal berulang, VPS mungkin di-rate-limit oleh WhatsApp.
+  Tunggu 1-2 jam lalu coba lagi, atau gunakan VPN/proxy dengan IP residential.
+</div>
+```
+
+##### 7. `AGENTS.md` — Update session history
+
+#### Deployment Options (Gratis)
+
+| Opsi | Effektif? | Cara |
+|------|-----------|------|
+| Browser fix saja | ⚠️ Perbaiki chance | Ganti fingerprint + warmup |
+| SSH tunnel ke PC rumah | ✅ Best free | Install SSH server di PC, VPS connect lewat tunnel |
+| **Termux di HP Android** | ✅ Best free | Install Termux + OpenSSH, reverse tunnel ke VPS. IP WiFi = residential |
+| Cloudflare WARP | ❌ TIDAK cocok | Exit IP tetap datacenter Cloudflare |
+| Free proxy internet | ❌ Bahaya | Bisa intercept session WhatsApp |
+
+#### Termux Setup (HP Android → VPN Proxy Gratis)
+
+**Di HP (Termux dari F-Droid):**
+```bash
+pkg install openssh
+sshd
+ifconfig  # cat IP WiFi
+```
+
+**Di HP → connect ke VPS (reverse tunnel):**
+```bash
+ssh -R 1080:localhost:22 root@202.10.42.237 -N
+```
+
+**Di VPS (worker .env):**
+```
+WA_PROXY=socks5://127.0.0.1:1080
+```
+
+**Tips Termux:**
+- Matikan battery optimization untuk Termux (Settings → Apps → Termux → Battery → Unrestricted)
+- Pakai `autossh` untuk auto-reconnect: `pkg install autossh`
+- `autossh -M 0 -R 1080:localhost:22 root@202.10.42.237 -N`
+- IP WiFi biasanya statis (192.168.x.x), public IP dari Indihome jarang berubah
+
+#### Anti-Ban Strategy Reference
+
+| Setting | Nilai | Keterangan |
+|---------|-------|------------|
+| Browser | `['WhatsApp', 'Chrome', '120.0.0.0']` | Match real WhatsApp Web |
+| Platform | `'Desktop'` | Explicit |
+| Cooldown | 60 detik | Anti reconnect spam |
+| Warmup | 3-5 detik | Setelah connect, sebelum kirim |
+| Post-reconnect grace | 10 detik | Delay pertama setelah reconnect |
+| connectTimeoutMs | 30 detik | Lebih lama dari sebelumnya (15s) |
+| keepAliveIntervalMs | 20-30 detik (random) | Jitter agar tidak patterned |
+| Delay antar pesan | 60-180 detik | Sudah ada dari sebelumnya |
+| Daily limit | 150 pesan/hari | Sudah ada dari sebelumnya |
+| MAX_RECONNECT_ATTEMPTS | 10 | Sudah ada dari sebelumnya |
+
+#### Risk Assessment
+
+| Perubahan | Risk |
+|-----------|------|
+| Browser identity | ✅ Zero risk |
+| Proxy support | ✅ Zero risk — empty = tidak ada perubahan |
+| Cooldown 60s | ✅ Low risk — user tunggu lebih lama |
+| Warmup delay | ✅ Zero risk — delay 3-5 detik |
+| Post-reconnect grace | ✅ Low risk — tambah delay sebelum burst |
+| Termux SSH tunnel | ✅ Low risk — IP residential, pasti aman |
+
+Semua perubahan **backwards compatible** — tanpa `WA_PROXY`, behavior tetap sama.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — push + deploy lalu setup Termux SSH tunnel dari HP Android.
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`

@@ -8,7 +8,7 @@ const { setIO } = require('./events');
 
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
-const COOLDOWN_MS = 30_000;
+const COOLDOWN_MS = 60_000;
 
 let io = null;
 const lastAttempt = new Map();

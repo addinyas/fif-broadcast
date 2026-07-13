@@ -156,6 +156,12 @@ export function QRScannerPage() {
               <Badge variant={cfg.variant}>{cfg.label}</Badge>
             </div>
 
+            {effectiveStatus !== 'connected' && (
+              <div className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                Jika pairing gagal berulang, VPS mungkin di-rate-limit oleh WhatsApp. Tunggu 1-2 jam lalu coba lagi, atau gunakan VPN/proxy dengan IP residential.
+              </div>
+            )}
+
             {effectiveStatus !== 'connected' && effectiveStatus !== 'logged_out' && (
               <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700 dark:bg-slate-800">
                 <button

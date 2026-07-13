@@ -1,5 +1,5 @@
 const { getWritableDb } = require('./db');
-const { isConnectedForUser, getConnectedUsers } = require('./wa-client');
+const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
 const { emitBroadcastStatus, emitPendingStuck } = require('./events');
 
@@ -9,6 +9,7 @@ const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const MAX_RETRY = 3;
 const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
+const WARMUP_GRACE_MS = 10_000;
 
 let running = false;
 let processing = false;
@@ -91,6 +92,15 @@ async function processPending() {
 
       try {
         if (!stats[row.marketing_id]) stats[row.marketing_id] = { sent: 0, failed: 0 };
+
+        const lastConn = lastConnectedAt.get(row.marketing_id) || 0;
+        const elapsed = Date.now() - lastConn;
+        if (elapsed < WARMUP_GRACE_MS) {
+          const extraDelay = WARMUP_GRACE_MS - elapsed;
+          console.log(`[Queue] Warmup delay ${extraDelay}ms for user ${row.marketing_id}`);
+          await new Promise(r => setTimeout(r, extraDelay));
+        }
+
         const raw = row.phone_number.replace(/[^0-9]/g, '');
         const normalized = raw.startsWith('0') ? '62' + raw.slice(1) : raw;
         const jid = `${normalized}@s.whatsapp.net`;
