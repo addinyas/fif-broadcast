@@ -150,10 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
     });
 
-    Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::patch('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllRead']);
     Route::delete('notifications', [NotificationController::class, 'deleteAll']);
 });
+
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
