@@ -15,63 +15,53 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
-        // Collect share_groups that still have pending shares
-        $pendingGroups = CustomerShare::where('status', 'pending')
-            ->pluck('requested_by')
-            ->unique()
-            ->values()
-            ->all();
-        $pendingShareGroups = [];
-        if (! empty($pendingGroups)) {
-            $pendingShareGroups = CustomerShare::where('status', 'pending')
-                ->selectRaw('requested_by || \'_\' || from_marketing_id as share_group')
-                ->pluck('share_group')
-                ->toArray();
-        }
+        // Collect share_groups that have active (pending or approved) shares
+        $activeShareGroups = CustomerShare::whereIn('status', ['pending', 'approved'])
+            ->selectRaw('requested_by || \'_\' || from_marketing_id as share_group')
+            ->pluck('share_group')
+            ->toArray();
+        $activeGroupSet = array_flip($activeShareGroups);
 
-        // Auto-trim: delete read notifications older than the latest 50, skip pending rolling
+        // Auto-trim: delete read notifications older than the latest 50, skip active rolling
         $cutoffId = Notification::where('user_id', $user->id)
             ->whereNotNull('read_at')
             ->latest()->skip(50)->value('id') ?? PHP_INT_MAX;
 
-        $pendingGroupSet = array_flip($pendingShareGroups);
-
         Notification::where('user_id', $user->id)
             ->whereNotNull('read_at')
             ->where('id', '<', $cutoffId)
-            ->where(function ($q) use ($pendingGroupSet) {
-                if (empty($pendingGroupSet)) {
+            ->where(function ($q) use ($activeGroupSet) {
+                if (empty($activeGroupSet)) {
                     return;
                 }
-                // Skip rolling notifications with pending shares
                 $q->where('type', '!=', 'rolling')
-                    ->orWhere(function ($q2) use ($pendingGroupSet) {
+                    ->orWhere(function ($q2) use ($activeGroupSet) {
                         $q2->where('type', 'rolling')
-                            ->where(function ($q3) use ($pendingGroupSet) {
+                            ->where(function ($q3) use ($activeGroupSet) {
                                 $q3->whereNull('data->share_group')
-                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($pendingGroupSet))."')");
+                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                             });
                     });
             })
             ->delete();
 
-        // Cap total notifications at 100 — delete oldest if exceeded, skip pending rolling
+        // Cap total notifications at 100 — delete oldest if exceeded, skip active rolling
         $totalCount = Notification::where('user_id', $user->id)->count();
         if ($totalCount > 100) {
             $oldestToKeep = Notification::where('user_id', $user->id)->latest()->skip(100)->value('id');
             if ($oldestToKeep) {
                 Notification::where('user_id', $user->id)
                     ->where('id', '<', $oldestToKeep)
-                    ->where(function ($q) use ($pendingGroupSet) {
-                        if (empty($pendingGroupSet)) {
+                    ->where(function ($q) use ($activeGroupSet) {
+                        if (empty($activeGroupSet)) {
                             return;
                         }
                         $q->where('type', '!=', 'rolling')
-                            ->orWhere(function ($q2) use ($pendingGroupSet) {
+                            ->orWhere(function ($q2) use ($activeGroupSet) {
                                 $q2->where('type', 'rolling')
-                                    ->where(function ($q3) use ($pendingGroupSet) {
+                                    ->where(function ($q3) use ($activeGroupSet) {
                                         $q3->whereNull('data->share_group')
-                                            ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($pendingGroupSet))."')");
+                                            ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                                     });
                             });
                     })
@@ -118,26 +108,26 @@ class NotificationController extends Controller
         $user = $request->user();
         $today = Carbon::today();
 
-        // Collect pending rolling share_groups
-        $pendingShareGroups = CustomerShare::where('status', 'pending')
+        // Collect active rolling share_groups (pending or approved)
+        $activeShareGroups = CustomerShare::whereIn('status', ['pending', 'approved'])
             ->selectRaw('requested_by || \'_\' || from_marketing_id as share_group')
             ->pluck('share_group')
             ->toArray();
-        $pendingGroupSet = array_flip($pendingShareGroups);
+        $activeGroupSet = array_flip($activeShareGroups);
 
-        // Only delete notifications from before today, skip pending rolling
+        // Only delete notifications from before today, skip active rolling
         Notification::where('user_id', $user->id)
             ->where('created_at', '<', $today)
-            ->where(function ($q) use ($pendingGroupSet) {
-                if (empty($pendingGroupSet)) {
+            ->where(function ($q) use ($activeGroupSet) {
+                if (empty($activeGroupSet)) {
                     return;
                 }
                 $q->where('type', '!=', 'rolling')
-                    ->orWhere(function ($q2) use ($pendingGroupSet) {
+                    ->orWhere(function ($q2) use ($activeGroupSet) {
                         $q2->where('type', 'rolling')
-                            ->where(function ($q3) use ($pendingGroupSet) {
+                            ->where(function ($q3) use ($activeGroupSet) {
                                 $q3->whereNull('data->share_group')
-                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($pendingGroupSet))."')");
+                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                             });
                     });
             })

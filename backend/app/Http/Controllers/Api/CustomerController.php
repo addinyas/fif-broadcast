@@ -9,6 +9,7 @@ use App\Services\CustomerService;
 use App\Services\GoogleSheetsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -320,7 +321,8 @@ class CustomerController extends Controller
                 'user_id' => $request->user()->id,
                 'error' => $e->getMessage(),
             ]);
-            return response()->json(['message' => 'Gagal menghapus semua customer: ' . $e->getMessage()], 500);
+
+            return response()->json(['message' => 'Gagal menghapus semua customer: '.$e->getMessage()], 500);
         }
     }
 
@@ -404,6 +406,15 @@ class CustomerController extends Controller
         }
 
         $customers = $this->customerService->getAssignedToMarketing($marketingId, $filters);
+
+        Log::info('assignedToMe', [
+            'user_id' => $user->id,
+            'role' => $user->role,
+            'marketing_id' => $marketingId,
+            'kios_id' => $filters['kios_id'] ?? null,
+            'total' => $customers->total(),
+            'page_count' => $customers->count(),
+        ]);
 
         return response()->json($customers);
     }
