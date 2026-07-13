@@ -59,7 +59,7 @@ Perintah ini berlaku untuk SEMUA session — termasuk fitur baru, bug fix, push/
 | `/customers/assigned-to-me` | `role:marketing` | marketing |
 | `/broadcast/history`, `/broadcast/stats` | `role:superadmin,UH,marketing` | all roles |
 | `/broadcast/prepare` | `role:marketing` | marketing only |
-| `/admin/permissions` | `role:superadmin` | superadmin |
+| `/admin/permissions` | `role:superadmin` (GET open to all, PUT superadmin-only) | superadmin (write), all (read) |
 
 ## Feature permissions
 
@@ -77,7 +77,7 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 | `frontend/src/hooks/` | `usePermissions.ts` |
 | `frontend/src/pages/admin/` | `DashboardPage`, `CustomerManagementPage`, `TemplateManagementPage`, `UserManagementPage`, `PermissionManagementPage` |
 | `frontend/src/pages/marketing/` | `ProspectListPage`, `BroadcastFormPage`, `BroadcastHistoryPage`, `QRScannerPage` |
-| `worker/src/` | `index.js` (entry), `wa-client.js` (Baileys), `queue-consumer.js` (poll + send), `db.js` (SQLite), `socket-server.js` (Socket.IO) |
+| `worker/src/` | `index.js` (entry), `wa-client.js` (Baileys), `queue-consumer.js` (poll + send), `db.js` (SQLite), `socket-server.js` (Socket.IO), `events.js` (emit functions, breaks circular dep) |
 
 ## Testing quirks
 
@@ -620,7 +620,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 **Critical (Backend):**
 - `backend/routes/api.php`: login `throttle:10,1`, register `throttle:5,1` (superadmin-only)
-- `backend/routes/api.php`: `admin/permissions` restricted to superadmin
+- `backend/routes/api.php`: `admin/permissions` restricted to superadmin (was open, later changed: GET open to all for permission checking)
 - `backend/routes/api.php`: `admin/kios/*` restricted to superadmin
 - `backend/routes/api.php`: register moved to superadmin-only group (was public)
 - `backend/routes/api.php`: `deleteAll` route changed to POST (for confirmation token)
@@ -654,10 +654,42 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - `worker/src/socket-server.js`: CORS restricted to domain list (was `origin: '*'`)
 - `.gitattributes`: enforce LF line endings for shell scripts (fix CRLF heredoc corruption)
 
+### 2026-07-13 — POST-deploy security hardening bug fixes
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Fix 1 — Register redirect loop (CRITICAL):**
+- `backend/routes/api.php`: `GET /admin/permissions` — hapus `role:superadmin` middleware. Marketing/UH users yang baru register mengalami infinite redirect loop (berkedip) karena `RequireFeature` → `usePermissions()` → 403 → `hasFeature()=false` → redirect `/login` → `PublicRoute` lihat user exists → redirect balik ke dashboard → loop
+- Route GET sekarang terbuka untuk semua role yang login. PUT tetap superadmin-only.
+
+**Fix 2 — Sidebar Customers link missing:**
+- `frontend/src/components/ui/Sidebar.tsx`: tambah `{ to: '/admin/customers', label: 'Customers', icon: <Users />, feature: 'customer_management' }` ke `adminLinks`. Route `/admin/customers` sudah ada di App.tsx tapi link sidebar belum ditambahkan.
+
+**Fix 3 — Nama display uppercase:**
+- `frontend/src/components/ui/Sidebar.tsx:154`: tambah `uppercase` CSS class ke user name display
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx:36`: tambah `<span className="uppercase">` ke greeting
+
+### 2026-07-13 — 4 bug fixes: Connect, DeleteAll, Nopol, UH delete cascade
+
+**Sudah di-push ✅ & deployed ✅ (4 commits bertahap)**
+
+#### Fix 1: Connect feature crash (CRITICAL)
+- **Root cause**: Circular dependency `wa-client.js` → `socket-server.js` → `wa-manager.js` → `wa-client.js`. `emitWAStatus` di `wa-client.js` selalu `undefined` karena `socket-server.js` belum selesai load saat di-require. Setiap WA status event (QR, connected, disconnected) → TypeError → worker crash → frontend tidak pernah dapat QR code.
+- **Fix**: `worker/src/events.js` (baru) — extract `emitWAStatus`, `emitBroadcastStatus`, `emitPendingStuck` ke file terpisah. `socket-server.js` panggil `setIO(io)` saat init. `wa-client.js` dan `queue-consumer.js` import dari `events.js` (bukan `socket-server.js`).
+- **Bonus fix**: `setfacl -m u:fif:rwx` di `/var/www/fif/backend/database/` — fix "attempt to write a readonly database" error di queue consumer (directory butuh write access untuk WAL/SHM files)
+
+#### Fix 2: DeleteAll error + SQLite stability
+- `backend/config/database.php`: set `busy_timeout => 5000`, `journal_mode => 'WAL'` (sebelumnya `null`)
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `deleteAll()` error sekarang return detail message (`$e->getMessage()`) + log ke `Log::error()`
+
+#### Fix 3: Nopol input tidak bisa alphanumeric di HP
+- `frontend/src/pages/CalculatorPage.tsx`: tambah `type="text" inputMode="text" autoCapitalize="characters" autoCorrect="off" spellCheck={false}` ke 2 input nopol. Tanpa `inputMode="text"`, mobile browser menampilkan keyboard numeric karena input di atasnya (plafon, angsuran) bernumeric.
+
+#### Fix 4: Hapus UH → data import ikut terhapus bersih
+- `backend/app/Http/Controllers/Api/UserController.php`: `destroy()` — tambah cleanup `customer_shares` (FROM/TO/REQUESTED/APPROVED) sebelum `$user->delete()`. Tanpa ini, FK constraint `customer_shares.*_marketing_id` → `users.id` (RESTRICT) akan crash. Ganti `Customer::where('uploaded_by', ...)->delete()` → `forceDelete()` agar uploaded customers benar-benar hilang (bukan soft-delete yang masih exist dengan FK ke user terhapus).
+
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
-
-## Push & Deploy Workflow
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
