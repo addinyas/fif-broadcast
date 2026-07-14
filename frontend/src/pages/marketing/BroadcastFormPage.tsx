@@ -46,7 +46,8 @@ export function BroadcastFormPage() {
     if (customer?.dynamic_data && templateBody) {
       const dd = customer.dynamic_data;
       let body = templateBody;
-      for (const field of FORM_FIELDS) {
+      const sorted = [...FORM_FIELDS].sort((a, b) => b.key.length - a.key.length);
+      for (const field of sorted) {
         if (dd[field.key]) {
           body = body.replaceAll(`#${field.key}`, dd[field.key]);
         }
@@ -61,7 +62,8 @@ export function BroadcastFormPage() {
       setSelectedTemplate(t);
       let body = t.message_body;
       if (customer?.dynamic_data) {
-        for (const field of FORM_FIELDS) {
+        const sorted = [...FORM_FIELDS].sort((a, b) => b.key.length - a.key.length);
+        for (const field of sorted) {
           if (customer.dynamic_data[field.key]) {
             body = body.replaceAll(`#${field.key}`, customer.dynamic_data[field.key]);
           }

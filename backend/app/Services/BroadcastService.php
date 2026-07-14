@@ -160,6 +160,7 @@ class BroadcastService
         ];
 
         $message = $templateBody;
+        uksort($map, fn($a, $b) => strlen($b) - strlen($a));
         foreach ($map as $key => $value) {
             $message = str_replace($key, $value, $message);
         }
