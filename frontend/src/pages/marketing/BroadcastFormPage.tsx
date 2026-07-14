@@ -118,9 +118,6 @@ export function BroadcastFormPage() {
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Nama Panggilan belum diatur</p>
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Isi nama yang muncul di broadcast (#namapanggilanakun) di halaman Settings.
-            </p>
           </div>
           <button
             onClick={() => navigate('/settings')}
@@ -137,9 +134,6 @@ export function BroadcastFormPage() {
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Nomor Telepon belum diisi</p>
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Nomor telepon diperlukan agar pesan bisa dikirim dari akun Anda.
-            </p>
           </div>
           <button
             onClick={() => navigate('/settings')}
