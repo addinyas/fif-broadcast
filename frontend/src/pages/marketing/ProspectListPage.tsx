@@ -768,10 +768,15 @@ export function ProspectListPage() {
                     <option key={t.id} value={t.id}>{t.title}{t.is_default ? ' (Default)' : ''}</option>
                   ))}
                 </select>
-                <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-all hover:bg-slate-50 has-checked:border-fif-500 has-checked:bg-fif-50 has-checked:text-fif-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:has-checked:border-fif-400 dark:has-checked:bg-fif-900/20 dark:has-checked:text-fif-300 cursor-pointer">
+                <label className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all cursor-pointer ${
+                  !user?.broadcast_sender_name
+                    ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed dark:border-slate-600 dark:bg-slate-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 has-checked:border-fif-500 has-checked:bg-fif-50 has-checked:text-fif-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:has-checked:border-fif-400 dark:has-checked:bg-fif-900/20 dark:has-checked:text-fif-300'
+                }`}>
                   <input
                     type="checkbox"
                     checked={useDefaultTemplate}
+                    disabled={!user?.broadcast_sender_name}
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setUseDefaultTemplate(checked);
