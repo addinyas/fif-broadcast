@@ -298,13 +298,25 @@ class CustomerRepository implements CustomerRepositoryInterface
         return $deleted;
     }
 
-    public function getDistributionReport(): array
+    public function getDistributionReport(?string $viewerRole = null, ?string $kiosId = null): array
     {
-        $totalCustomers = Customer::count();
-        $assigned = Customer::where('assignment_status', 'assigned')->count();
-        $unassigned = Customer::where('assignment_status', 'unassigned')->count();
+        $query = Customer::query();
 
-        $byMarketing = Customer::where('assignment_status', 'assigned')
+        if (! empty($kiosId)) {
+            $query->where('kios_id', $kiosId);
+        }
+        if ($viewerRole !== 'superadmin') {
+            $superadminIds = User::where('role', 'superadmin')->pluck('id');
+            if ($superadminIds->isNotEmpty()) {
+                $query->whereNotIn('uploaded_by', $superadminIds);
+            }
+        }
+
+        $totalCustomers = (clone $query)->count();
+        $assigned = (clone $query)->where('assignment_status', 'assigned')->count();
+        $unassigned = (clone $query)->where('assignment_status', 'unassigned')->count();
+
+        $byMarketing = (clone $query)->where('assignment_status', 'assigned')
             ->selectRaw('marketing_id, count(*) as total')
             ->groupBy('marketing_id')
             ->with('marketing:id,name')

@@ -219,9 +219,9 @@ class CustomerService
         return $this->customerRepository->batchDelete($ids);
     }
 
-    public function getDistributionReport(): array
+    public function getDistributionReport(?string $viewerRole = null, ?string $kiosId = null): array
     {
-        $report = $this->customerRepository->getDistributionReport();
+        $report = $this->customerRepository->getDistributionReport($viewerRole, $kiosId);
 
         $byMarketing = $report['by_marketing'];
         $marketingIds = $byMarketing->pluck('marketing_id')->toArray();

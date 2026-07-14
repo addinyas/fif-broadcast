@@ -124,9 +124,11 @@ class AssignmentController extends Controller
         return response()->json(['data' => $results]);
     }
 
-    public function distribution(): JsonResponse
+    public function distribution(Request $request): JsonResponse
     {
-        return response()->json($this->customerService->getDistributionReport());
+        $user = $request->user();
+
+        return response()->json($this->customerService->getDistributionReport($user->role, $user->kios_id));
     }
 
     public function marketingUsers(Request $request): JsonResponse
