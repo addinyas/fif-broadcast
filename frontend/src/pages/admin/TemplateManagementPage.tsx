@@ -10,14 +10,14 @@ import { useAuth } from '../../context/AuthContext';
 import type { Template } from '../../types';
 
 const VARIABLE_BUTTONS = [
-  { key: '#no_contract', label: 'No Contract', color: 'violet' },
-  { key: '#nama', label: 'Nama Customer', color: 'blue' },
-  { key: '#namapanggilan', label: 'Nama Kamu', color: 'rose' },
-  { key: '#obj_desc', label: 'Tipe Motor', color: 'amber' },
-  { key: '#tahun', label: 'Tahun Motor', color: 'amber' },
-  { key: '#plafon', label: 'Plafon', color: 'emerald' },
-  { key: '#sisa_angsuran', label: 'Sisa Angsuran', color: 'emerald' },
-  { key: '#waktu', label: 'Waktu', color: 'cyan' },
+  { key: '#no_contract', label: 'No Contract' },
+  { key: '#nama', label: 'Nama Customer' },
+  { key: '#namapanggilan', label: 'Nama Kamu' },
+  { key: '#obj_desc', label: 'Tipe Motor' },
+  { key: '#tahun', label: 'Tahun Motor' },
+  { key: '#plafon', label: 'Plafon' },
+  { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
+  { key: '#waktu', label: 'Waktu' },
 ];
 
 export function TemplateManagementPage() {
@@ -152,27 +152,16 @@ export function TemplateManagementPage() {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Isi Pesan</label>
             <div className="flex flex-wrap gap-1.5">
-              {VARIABLE_BUTTONS.map((v) => {
-                const c: Record<string, string> = {
-                  violet: 'bg-violet-50 text-violet-600 hover:bg-violet-100 hover:shadow-violet-100',
-                  blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100 hover:shadow-blue-100',
-                  rose: 'bg-rose-50 text-rose-600 hover:bg-rose-100 hover:shadow-rose-100',
-                  amber: 'bg-amber-50 text-amber-600 hover:bg-amber-100 hover:shadow-amber-100',
-                  emerald: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:shadow-emerald-100',
-                  cyan: 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100 hover:shadow-cyan-100',
-                };
-                const cls = c[v.color] || c.violet;
-                return (
-                  <button
-                    key={v.key}
-                    type="button"
-                    onClick={() => insertVariable(v.key)}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium ${cls} transition-colors hover:shadow-sm active:scale-95`}
-                  >
-                    {v.label}
-                  </button>
-                );
-              })}
+              {VARIABLE_BUTTONS.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => insertVariable(v.key)}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-fif-50 px-2.5 py-1 text-xs font-medium text-fif-600 transition-colors hover:bg-fif-100 active:scale-95 dark:bg-fif-900/20 dark:text-fif-400 dark:hover:bg-fif-900/30"
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
             <textarea
               ref={textareaRef}
