@@ -298,7 +298,7 @@ export function ProspectListPage() {
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
-      .replace(/#namapanggilan/g, user?.broadcast_sender_name || user?.name || '')
+      .replace(/#namapanggilan/g, user?.display_name || user?.name || '')
       .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')
@@ -734,14 +734,14 @@ export function ProspectListPage() {
         </div>
       </div>
 
-      {(!user?.broadcast_sender_name || !user?.phone_number) && (
+      {(!user?.display_name || !user?.phone_number) && (
         <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-              {!user?.broadcast_sender_name && !user?.phone_number
+              {!user?.display_name && !user?.phone_number
                 ? 'Nama Panggilan & Nomor Telepon belum diisi'
-                : !user?.broadcast_sender_name
+                : !user?.display_name
                   ? 'Nama Panggilan belum diatur'
                   : 'Nomor Telepon belum diisi'}
             </p>
@@ -786,14 +786,14 @@ export function ProspectListPage() {
                   ))}
                 </select>
                 <label className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
-                  !user?.broadcast_sender_name || !user?.phone_number
+                  !user?.display_name || !user?.phone_number
                     ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed dark:border-slate-600 dark:bg-slate-700'
                     : 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:bg-slate-50 has-checked:border-fif-500 has-checked:bg-fif-50 has-checked:text-fif-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:has-checked:border-fif-400 dark:has-checked:bg-fif-900/20 dark:has-checked:text-fif-300'
                 }`}>
                   <input
                     type="checkbox"
                     checked={useDefaultTemplate}
-                    disabled={!user?.broadcast_sender_name || !user?.phone_number}
+                    disabled={!user?.display_name || !user?.phone_number}
                     onChange={(e) => {
                       const checked = e.target.checked;
                       setUseDefaultTemplate(checked);
