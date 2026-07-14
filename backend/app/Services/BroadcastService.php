@@ -127,6 +127,15 @@ class BroadcastService
 
     protected function mapFormToMessage(string $templateBody, array $values): string
     {
+        $hour = (int) now('Asia/Jakarta')->format('G');
+        if ($hour >= 4 && $hour < 12) {
+            $waktu = 'Pagi';
+        } elseif ($hour >= 12 && $hour < 17) {
+            $waktu = 'Siang';
+        } else {
+            $waktu = 'Malam';
+        }
+
         $map = [
             '#nomor_contract' => $values['nomor_contract'] ?? '',
             '#no_contract' => $values['no_contract'] ?? '',
@@ -145,6 +154,7 @@ class BroadcastService
             '#terima' => $values['terima'] ?? '',
             '#tenor' => $values['tenor'] ?? '',
             '#sisa_angsuran' => $values['sisa_angsuran'] ?? '',
+            '#waktu' => $waktu,
         ];
 
         $message = $templateBody;

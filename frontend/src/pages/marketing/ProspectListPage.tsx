@@ -23,6 +23,7 @@ const VARIABLE_BUTTONS = [
   { key: '#tahun', label: 'Tahun Motor' },
   { key: '#plafon', label: 'Plafon' },
   { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
+  { key: '#waktu', label: 'Waktu (Pagi/Siang/Malam)' },
 ];
 
 const MAX_BATCH = 100;
