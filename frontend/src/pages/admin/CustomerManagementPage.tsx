@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown } from 'lucide-react';
+import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown, User } from 'lucide-react';
 import { customerService } from '../../services/customerService';
+import { authService } from '../../services/authService';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -9,6 +10,7 @@ import { Badge } from '../../components/ui/Badge';
 import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import type { Customer } from '../../types';
+import type { Kios } from '../../types';
 interface MarketingUser { id: number; name: string; email: string; assigned_customers_count?: number; }
 type ImportTab = 'manual' | 'spreadsheet' | 'file';
 
@@ -38,7 +40,7 @@ function Pagination({ page, lastPage, onPageChange }: { page: number; lastPage: 
 
 export function CustomerManagementPage() {
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -66,6 +68,7 @@ export function CustomerManagementPage() {
   useEffect(() => {
     if (isAdmin) {
       customerService.getMarketingUsers().then(setAllMarketingUsers);
+      authService.getKios().then(setKiosList).catch(() => {});
     }
   }, [isAdmin]);
   const [assignSplitNmcRefi, setAssignSplitNmcRefi] = useState(false);
@@ -75,6 +78,12 @@ export function CustomerManagementPage() {
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
+  const [showDeleteMyDataConfirm, setShowDeleteMyDataConfirm] = useState(false);
+  const [deleteMyDataTotal, setDeleteMyDataTotal] = useState(0);
+  const [showDeletePerKiosConfirm, setShowDeletePerKiosConfirm] = useState(false);
+  const [deletePerKiosTotal, setDeletePerKiosTotal] = useState(0);
+  const [selectedDeleteKiosId, setSelectedDeleteKiosId] = useState('');
+  const [kiosList, setKiosList] = useState<Kios[]>([]);
   const [selectAllPages, setSelectAllPages] = useState(false);
   const [selectedMceId, setSelectedMceId] = useState<number | null>(null);
   const [allMarketingUsers, setAllMarketingUsers] = useState<MarketingUser[]>([]);
@@ -122,12 +131,6 @@ export function CustomerManagementPage() {
       setLoading(false);
     }
   }, [page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin]);
-
-  useEffect(() => {
-    if (isAdmin) {
-      customerService.getMarketingUsers().then(setAllMarketingUsers);
-    }
-  }, [isAdmin]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -446,7 +449,33 @@ export function CustomerManagementPage() {
               )}
             </>
           )}
-          {isAdmin && (
+          {isAdmin && user?.role === 'superadmin' && (
+            <>
+              <Button
+                variant="secondary"
+                icon={<User className="h-4 w-4" />}
+                onClick={async () => {
+                  const res = await customerService.getAll({ page: '1', per_page: '1' });
+                  setDeleteMyDataTotal(res.total);
+                  setShowDeleteMyDataConfirm(true);
+                }}
+              >
+                Hapus Data Saya
+              </Button>
+              <Button
+                variant="danger"
+                icon={<Trash2 className="h-4 w-4" />}
+                onClick={() => {
+                  setSelectedDeleteKiosId('');
+                  setDeletePerKiosTotal(0);
+                  setShowDeletePerKiosConfirm(true);
+                }}
+              >
+                Hapus Per Kios
+              </Button>
+            </>
+          )}
+          {isAdmin && user?.role !== 'superadmin' && (
             <Button
               variant="danger"
               icon={<Trash2 className="h-4 w-4" />}
@@ -804,6 +833,117 @@ export function CustomerManagementPage() {
               }}
             >
               Ya, Hapus Semua
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showDeleteMyDataConfirm} onClose={() => setShowDeleteMyDataConfirm(false)} title="Hapus Data Saya">
+        <div className="space-y-4">
+          <div className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+                {deleteMyDataTotal} data yang Anda upload akan dihapus permanen
+              </p>
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                Hanya data yang diupload oleh akun ini. Termasuk riwayat broadcast. Tindakan ini tidak bisa dibatalkan.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowDeleteMyDataConfirm(false)}>Batal</Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                try {
+                  const res = await customerService.deleteMyData();
+                  toast('success', res.message);
+                  setShowDeleteMyDataConfirm(false);
+                  setSelectedIds([]);
+                  fetchData();
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Gagal menghapus data';
+                  toast('error', msg);
+                }
+              }}
+            >
+              Ya, Hapus Data Saya
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={showDeletePerKiosConfirm} onClose={() => setShowDeletePerKiosConfirm(false)} title="Hapus Semua Data Per Kios">
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Pilih Kios</label>
+            <select
+              value={selectedDeleteKiosId}
+              onChange={async (e) => {
+                const kiosId = e.target.value;
+                setSelectedDeleteKiosId(kiosId);
+                if (kiosId) {
+                  const res = await customerService.getAll({ page: '1', per_page: '1', kios_id: kiosId });
+                  setDeletePerKiosTotal(res.total);
+                } else {
+                  const res = await customerService.getAll({ page: '1', per_page: '1' });
+                  setDeletePerKiosTotal(res.total);
+                }
+              }}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+            >
+              <option value="">Semua Kios</option>
+              {kiosList.map((k) => (
+                <option key={k.kios_id} value={k.kios_id}>{k.kios_name} ({k.kios_id})</option>
+              ))}
+            </select>
+          </div>
+          {selectedDeleteKiosId !== '' && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+              <div>
+                <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                  {deletePerKiosTotal} data dari kios ini akan dihapus permanen
+                </p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  Termasuk riwayat broadcast. Tindakan ini tidak bisa dibatalkan.
+                </p>
+              </div>
+            </div>
+          )}
+          {selectedDeleteKiosId === '' && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+              <div>
+                <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                  {deletePerKiosTotal} data SEMUA kios akan dihapus permanen
+                </p>
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  Termasuk riwayat broadcast. Tindakan ini tidak bisa dibatalkan.
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowDeletePerKiosConfirm(false)}>Batal</Button>
+            <Button
+              variant="danger"
+              disabled={!selectedDeleteKiosId}
+              onClick={async () => {
+                try {
+                  const res = await customerService.deleteAllByKios(selectedDeleteKiosId);
+                  toast('success', res.message);
+                  setShowDeletePerKiosConfirm(false);
+                  setSelectedIds([]);
+                  fetchData();
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || (err as Error)?.message || 'Gagal menghapus data';
+                  toast('error', msg);
+                }
+              }}
+            >
+              Ya, Hapus
             </Button>
           </div>
         </div>

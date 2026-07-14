@@ -209,6 +209,11 @@ class CustomerService
         return $this->customerRepository->deleteAll($kiosId);
     }
 
+    public function deleteMyData(int $userId): int
+    {
+        return $this->customerRepository->deleteMyData($userId);
+    }
+
     public function batchDelete(array $ids): int
     {
         return $this->customerRepository->batchDelete($ids);

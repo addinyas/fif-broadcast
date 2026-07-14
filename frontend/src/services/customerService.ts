@@ -73,6 +73,16 @@ export const customerService = {
     return data;
   },
 
+  async deleteAllByKios(kiosId: string): Promise<{ message: string }> {
+    const { data } = await api.post('/customers/delete-all', { confirm: 'DELETE_ALL', kios_id: kiosId });
+    return data;
+  },
+
+  async deleteMyData(): Promise<{ message: string }> {
+    const { data } = await api.post('/customers/delete-my-data', { confirm: 'DELETE_MY_DATA' });
+    return data;
+  },
+
   async updateCori(id: number, cori: string): Promise<Customer> {
     const { data } = await api.patch(`/customers/${id}/cori`, { cori });
     return data;

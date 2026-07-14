@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('customers/import-spreadsheet', [CustomerController::class, 'importSpreadsheet']);
             Route::get('customers/template-download', [CustomerController::class, 'templateDownload']);
             Route::post('customers/delete-all', [CustomerController::class, 'deleteAll']);
+            Route::post('customers/delete-my-data', [CustomerController::class, 'deleteMyData']);
             Route::get('customers/all-ids', [CustomerController::class, 'allIds']);
             Route::post('customers/batch-delete', [CustomerController::class, 'batchDelete']);
             Route::post('assignments/assign', [AssignmentController::class, 'assign']);

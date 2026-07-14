@@ -27,6 +27,7 @@ class CustomerController extends Controller
         $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'customer_type']);
 
         $user = $request->user();
+        $filters['viewer_role'] = $user->role;
         if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
             $filters['kios_id'] = $user->kios_id;
         }
@@ -303,6 +304,7 @@ class CustomerController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'confirm' => 'required|in:DELETE_ALL',
+            'kios_id' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -311,18 +313,47 @@ class CustomerController extends Controller
 
         try {
             $user = $request->user();
-            $count = $this->customerService->deleteAll(
-                $user->role === 'superadmin' ? null : $user->kios_id
-            );
+            $kiosId = null;
+            if ($user->role !== 'superadmin') {
+                $kiosId = $user->kios_id;
+            } elseif ($request->has('kios_id') && $request->kios_id !== '') {
+                $kiosId = $request->kios_id;
+            }
+            $count = $this->customerService->deleteAll($kiosId);
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
-            \Log::error('deleteAll failed', [
+            Log::error('deleteAll failed', [
                 'user_id' => $request->user()->id,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json(['message' => 'Gagal menghapus semua customer: '.$e->getMessage()], 500);
+        }
+    }
+
+    public function deleteMyData(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'confirm' => 'required|in:DELETE_MY_DATA',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Konfirmasi diperlukan. Kirim confirm: "DELETE_MY_DATA"'], 422);
+        }
+
+        try {
+            $user = $request->user();
+            $count = $this->customerService->deleteMyData($user->id);
+
+            return response()->json(['message' => "{$count} customer milik Anda berhasil dihapus"]);
+        } catch (\Exception $e) {
+            Log::error('deleteMyData failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Gagal menghapus data: '.$e->getMessage()], 500);
         }
     }
 
@@ -404,6 +435,8 @@ class CustomerController extends Controller
         if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
             $filters['kios_id'] = $user->kios_id;
         }
+
+        $filters['viewer_role'] = $user->role;
 
         $customers = $this->customerService->getAssignedToMarketing($marketingId, $filters);
 

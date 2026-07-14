@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Interfaces\CustomerRepositoryInterface;
 use App\Models\Customer;
 use App\Models\CustomerShare;
+use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -49,6 +50,13 @@ class CustomerRepository implements CustomerRepositoryInterface
         if (! empty($filters['customer_type'])) {
             $prefix = $filters['customer_type'] === 'NMC' ? '4020%' : '4029%';
             $query->where('no_contract', 'LIKE', $prefix);
+        }
+
+        if (($filters['viewer_role'] ?? '') !== 'superadmin') {
+            $superadminIds = User::where('role', 'superadmin')->pluck('id');
+            if ($superadminIds->isNotEmpty()) {
+                $query->whereNotIn('uploaded_by', $superadminIds);
+            }
         }
 
         return $query->latest()->paginate($filters['per_page'] ?? 50);
@@ -149,6 +157,13 @@ class CustomerRepository implements CustomerRepositoryInterface
             });
         }
 
+        if (($filters['viewer_role'] ?? '') !== 'superadmin') {
+            $superadminIds = User::where('role', 'superadmin')->pluck('id');
+            if ($superadminIds->isNotEmpty()) {
+                $query->whereNotIn('uploaded_by', $superadminIds);
+            }
+        }
+
         return $query->latest()->paginate($filters['per_page'] ?? 50);
     }
 
@@ -236,6 +251,25 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         $customerIds = Customer::query()
             ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
+            ->pluck('id')
+            ->toArray();
+
+        $count = count($customerIds);
+
+        if ($count > 0) {
+            $chunks = array_chunk($customerIds, 500);
+            foreach ($chunks as $chunk) {
+                DB::table('broadcast_histories')->whereIn('customer_id', $chunk)->delete();
+                Customer::whereIn('id', $chunk)->forceDelete();
+            }
+        }
+
+        return $count;
+    }
+
+    public function deleteMyData(int $userId): int
+    {
+        $customerIds = Customer::where('uploaded_by', $userId)
             ->pluck('id')
             ->toArray();
 

@@ -28,5 +28,7 @@ interface CustomerRepositoryInterface
 
     public function deleteAll(?string $kiosId = null): int;
 
+    public function deleteMyData(int $userId): int;
+
     public function batchDelete(array $ids): int;
 }
