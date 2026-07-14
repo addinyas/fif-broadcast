@@ -1276,6 +1276,49 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-15 — Font upgrade + variable button redesign + #namapanggilan prefix fix + #nomor variable
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Font upgrade:**
+- `frontend/index.html`: ganti Google Fonts `Inter` → `Plus Jakarta Sans` (geometric, modern, populer di produk tech Indonesia)
+- `frontend/src/index.css`: `--font-sans` → `"Plus Jakarta Sans"`
+
+**Variable button redesign:**
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: tombol variabel pakai tema fif — `bg-fif-50 text-fif-600 hover:bg-fif-100` (konsisten dengan website, tidak rainbow)
+- `frontend/src/pages/admin TemplateManagementPage.tsx`: sama — warna fif konsisten
+- Hapus `color` property dari `VARIABLE_BUTTONS` (tidak diperlukan lagi)
+
+**Critical fix — `#namapanggilan` corrupted by `#nama` prefix match:**
+- **Root cause**: `replaceAll('#nama', customer_name)` match di dalam `#namapanggilan` karena `#nama` adalah prefix dari `#namapanggilan`. Hasil: `SRI ENI SUPRAPTIpanggilan`
+- **Fix 3 layer:**
+  - `frontend/src/pages/marketing/ProspectListPage.tsx`: `interpolateMessage()` — reorder: `#namapanggilan` di-replace **SEBELUM** `#nama`
+  - `frontend/src/pages/marketing/BroadcastFormPage.tsx`: `handleTemplateSelect()` + useEffect — sort `FORM_FIELDS` by key length descending sebelum replace loop (`[...FORM_FIELDS].sort((a, b) => b.key.length - a.key.length)`)
+  - `backend/app/Services/BroadcastService.php`: `mapFormToMessage()` — `uksort($map, fn($a, $b) => strlen($b) - strlen($a))` sebelum `str_replace` loop
+
+**New variable `#nomor` (phone_number dari Settings):**
+- **Flow sama kayak `#namapanggilan`**: user isi phone_number di Settings → `#nomor` resolve ke `phone_number` user yang login
+- `backend/app/Services/BroadcastService.php`: `prepare()` tambah `$formValues['_nomor'] = $marketingUser?->phone_number ?? '';` + `mapFormToMessage()` tambah `'#nomor' => $values['_nomor'] ?? ''`
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: tambah `#nomor` ke `VARIABLE_BUTTONS` + `interpolateMessage()` `.replace(/#nomor/g, user?.phone_number || '')` (setelah `#nomor_contract`, sebelum `#namapanggilan`)
+- `frontend/src/pages/admin/TemplateManagementPage.tsx`: tambah `#nomor` ke `VARIABLE_BUTTONS`
+- `frontend/src/components/forms/DynamicFormEditor.tsx`: tambah `'nomor'` ke `READ_ONLY_FIELDS`
+
+**Template variables reference (lengkap):**
+| Variabel | Sumber | Read-only |
+|----------|--------|-----------|
+| `#no_contract` | customer dynamic_data | Yes |
+| `#nama` | customer dynamic_data | Yes |
+| `#nomor` | user phone_number (Settings) | Yes |
+| `#namapanggilan` | user display_name ?? name (Settings) | Yes |
+| `#obj_desc` | customer dynamic_data | No |
+| `#tahun` | customer dynamic_data | No |
+| `#plafon` | customer dynamic_data | No |
+| `#sisa_angsuran` | customer dynamic_data | No |
+| `#waktu` | auto (Pagi/Siang/Sore/Malam based on WIB) | Yes |
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
