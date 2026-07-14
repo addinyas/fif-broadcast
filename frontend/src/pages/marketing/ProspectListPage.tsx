@@ -171,6 +171,16 @@ export function ProspectListPage() {
 
   useEffect(() => { adjustHeight(); }, [templateBody]);
 
+  const previewMessage = (() => {
+    if (!templateBody) return '';
+    const hour = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false });
+    const h = parseInt(hour, 10);
+    const waktu = h >= 4 && h < 11 ? 'Pagi' : h >= 11 && h < 15 ? 'Siang' : h >= 15 && h < 18 ? 'Sore' : 'Malam';
+    return templateBody
+      .replace(/#namapanggilan/g, user?.display_name || user?.name || '...')
+      .replace(/#waktu/g, waktu);
+  })();
+
   useEffect(() => {
     if (useDefaultTemplate) {
       const defaultT = templates.find((t) => t.is_default);
@@ -843,6 +853,12 @@ export function ProspectListPage() {
             className="mt-2 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
+          {templateBody && (
+            <div className="mt-2 rounded-lg border border-dashed border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Preview:</span>
+              <p className="mt-1 whitespace-pre-wrap">{previewMessage}</p>
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>
             {VARIABLE_BUTTONS.map((v) => (
