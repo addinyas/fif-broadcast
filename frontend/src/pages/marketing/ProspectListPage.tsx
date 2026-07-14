@@ -16,14 +16,14 @@ import { useToast } from '../../components/ui/Toast';
 import type { Customer, Template, User } from '../../types';
 
 const VARIABLE_BUTTONS = [
-  { key: '#no_contract', label: 'No Contract' },
-  { key: '#nama', label: 'Nama Customer' },
-  { key: '#namapanggilan', label: 'Nama Kamu' },
-  { key: '#obj_desc', label: 'Tipe Motor' },
-  { key: '#tahun', label: 'Tahun Motor' },
-  { key: '#plafon', label: 'Plafon' },
-  { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
-  { key: '#waktu', label: 'Waktu (Pagi/Siang/Sore/Malam)' },
+  { key: '#no_contract', label: 'No Contract', color: 'violet' },
+  { key: '#nama', label: 'Nama Customer', color: 'blue' },
+  { key: '#namapanggilan', label: 'Nama Kamu', color: 'rose' },
+  { key: '#obj_desc', label: 'Tipe Motor', color: 'amber' },
+  { key: '#tahun', label: 'Tahun Motor', color: 'amber' },
+  { key: '#plafon', label: 'Plafon', color: 'emerald' },
+  { key: '#sisa_angsuran', label: 'Sisa Angsuran', color: 'emerald' },
+  { key: '#waktu', label: 'Waktu', color: 'cyan' },
 ];
 
 const MAX_BATCH = 100;
@@ -846,17 +846,28 @@ export function ProspectListPage() {
         <div className="p-5">
           <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Pesan</label>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {VARIABLE_BUTTONS.map((v) => (
-              <button
-                key={v.key}
-                type="button"
-                onClick={() => insertVariable(v.key)}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-fif-200/60 bg-gradient-to-r from-fif-50 to-white px-3 py-1.5 font-mono text-xs font-medium text-fif-600 shadow-sm transition-all hover:border-fif-400 hover:from-fif-100 hover:to-fif-50 hover:text-fif-700 hover:shadow-md active:scale-95 dark:border-fif-800/40 dark:from-fif-900/20 dark:to-transparent dark:text-fif-400 dark:hover:border-fif-500 dark:hover:from-fif-900/30 dark:hover:text-fif-300"
-              >
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-fif-400 transition-colors group-hover:bg-fif-600 dark:group-hover:bg-fif-300" />
-                {v.label}
-              </button>
-            ))}
+            {VARIABLE_BUTTONS.map((v) => {
+              const c: Record<string, { base: string; hover: string; ring: string; dot: string; dotHover: string }> = {
+                violet: { base: 'bg-violet-50 text-violet-600 border-violet-200/80', hover: 'hover:bg-violet-600 hover:text-white hover:border-violet-600 hover:shadow-violet-200', ring: 'hover:ring-violet-100', dot: 'bg-violet-400', dotHover: 'group-hover:bg-white' },
+                blue: { base: 'bg-blue-50 text-blue-600 border-blue-200/80', hover: 'hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-200', ring: 'hover:ring-blue-100', dot: 'bg-blue-400', dotHover: 'group-hover:bg-white' },
+                rose: { base: 'bg-rose-50 text-rose-600 border-rose-200/80', hover: 'hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-rose-200', ring: 'hover:ring-rose-100', dot: 'bg-rose-400', dotHover: 'group-hover:bg-white' },
+                amber: { base: 'bg-amber-50 text-amber-600 border-amber-200/80', hover: 'hover:bg-amber-500 hover:text-white hover:border-amber-500 hover:shadow-amber-200', ring: 'hover:ring-amber-100', dot: 'bg-amber-400', dotHover: 'group-hover:bg-white' },
+                emerald: { base: 'bg-emerald-50 text-emerald-600 border-emerald-200/80', hover: 'hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-emerald-200', ring: 'hover:ring-emerald-100', dot: 'bg-emerald-400', dotHover: 'group-hover:bg-white' },
+                cyan: { base: 'bg-cyan-50 text-cyan-600 border-cyan-200/80', hover: 'hover:bg-cyan-500 hover:text-white hover:border-cyan-500 hover:shadow-cyan-200', ring: 'hover:ring-cyan-100', dot: 'bg-cyan-400', dotHover: 'group-hover:bg-white' },
+              };
+              const s = c[v.color] || c.violet;
+              return (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => insertVariable(v.key)}
+                  className={`group inline-flex items-center gap-1.5 rounded-lg border ${s.base} ${s.hover} ${s.ring} px-2.5 py-1 text-[11px] font-semibold shadow-sm ring-0 transition-all duration-200 hover:shadow-md hover:ring-2 active:scale-95`}
+                >
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.dot} transition-colors ${s.dotHover}`} />
+                  {v.label}
+                </button>
+              );
+            })}
           </div>
           <textarea
             ref={textareaRef}
