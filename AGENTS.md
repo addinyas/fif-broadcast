@@ -1168,6 +1168,28 @@ Ketik: `lanjut yang tadi` — setup Termux SSH tunnel dari HP Android untuk resi
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Hide superadmin test data + split delete buttons
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `CustomerRepositoryInterface.php`: tambah `deleteMyData(int $userId): int`
+- `CustomerRepository.php`: `getAll()` & `getAssignedToMarketing()` — filter `whereNotIn('uploaded_by', superadminIds)` untuk non-superadmin viewers. Test data superadmin tidak terlihat di UH/marketing.
+- `CustomerRepository.php`: tambah `deleteMyData(int $userId)` — force delete customers where `uploaded_by = $userId` + cascade broadcast_histories
+- `CustomerService.php`: tambah `deleteMyData()` delegasi ke repository
+- `CustomerController.php`: `index()` & `assignedToMe()` — pass `viewer_role` ke repository filters
+- `CustomerController.php`: `deleteAll()` — terima optional `kios_id` untuk superadmin per-kios deletion
+- `CustomerController.php`: tambah `deleteMyData()` — requires `confirm: DELETE_MY_DATA`, superadmin only
+- `routes/api.php`: tambah `POST customers/delete-my-data` di group `role:superadmin,UH` + `feature:customer_management`
+
+**Frontend:**
+- `customerService.ts`: tambah `deleteMyData()` → `POST /customers/delete-my-data` + `deleteAllByKios(kiosId)` → `POST /customers/delete-all` with kios_id
+- `CustomerManagementPage.tsx`: superadmin dapat 2 tombol — "Hapus Data Saya" (orange, `User` icon) + "Hapus Per Kios" (red, dropdown kios). UH tetap "Hapus Semua" (red). Hapus duplicate useEffect.
+- Import `User` icon dari lucide-react + `authService` + `Kios` type
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
