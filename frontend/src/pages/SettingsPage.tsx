@@ -77,7 +77,7 @@ export function SettingsPage() {
     try {
       const res = await profileService.updateProfile({
         name,
-        display_name: user?.role === 'superadmin' ? (displayName || null) : undefined,
+        display_name: displayName || null,
         gender: gender || null,
         npo_mce_id: npoMceId || null,
       });
@@ -274,23 +274,21 @@ export function SettingsPage() {
             />
           </div>
 
-          {user?.role === 'superadmin' && (
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Nama Panggilan (Broadcast)
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
-                placeholder="Contoh: Admin FIF"
-              />
-              <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-                Nama yang muncul di broadcast sebagai #namapanggilanakun
-              </p>
-            </div>
-          )}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Nama Panggilan (Broadcast)
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+              placeholder="Contoh: Admin FIF"
+            />
+            <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+              Nama yang muncul di broadcast sebagai #namapanggilanakun
+            </p>
+          </div>
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">

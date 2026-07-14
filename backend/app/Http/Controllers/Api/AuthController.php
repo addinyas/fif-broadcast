@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,14 +71,13 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        $superadmin = User::where('role', 'superadmin')->first();
 
         return response()->json(array_merge(
             $user->only([
                 'id', 'name', 'display_name', 'email', 'avatar_url', 'role',
                 'gender', 'npo_mce_id', 'kios_name', 'kios_id',
             ]),
-            ['broadcast_sender_name' => $superadmin?->display_name ?? $superadmin?->name ?? '']
+            ['broadcast_sender_name' => $user->display_name ?? $user->name ?? '']
         ));
     }
 

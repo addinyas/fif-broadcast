@@ -33,8 +33,7 @@ class BroadcastService
         }
 
         $marketingUser = User::find($marketingId);
-        $superadmin = User::where('role', 'superadmin')->first();
-        $formValues['_namapanggilanakun'] = $superadmin->display_name ?? $superadmin->name ?? '';
+        $formValues['_namapanggilanakun'] = $marketingUser?->display_name ?? $marketingUser?->name ?? '';
 
         $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);
 

@@ -28,6 +28,7 @@ class ProfileController extends Controller
 
         $rules = [
             'name' => 'sometimes|string|max:255',
+            'display_name' => 'sometimes|nullable|string|max:255',
             'gender' => 'sometimes|nullable|in:L,P',
             'npo_mce_id' => [
                 'sometimes', 'nullable', 'string', 'max:100', 'min:1',
@@ -35,20 +36,16 @@ class ProfileController extends Controller
             ],
         ];
 
-        if ($user->role === 'superadmin') {
-            $rules['display_name'] = 'sometimes|nullable|string|max:255';
-        }
-
         $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name', 'gender', 'npo_mce_id']);
+        $data = $request->only(['name', 'display_name', 'gender', 'npo_mce_id']);
         $data = array_filter($data, fn ($v) => $v !== null && $v !== '');
 
-        if ($user->role === 'superadmin' && $request->has('display_name')) {
+        if ($request->has('display_name')) {
             $data['display_name'] = $request->input('display_name') ?: null;
         }
 

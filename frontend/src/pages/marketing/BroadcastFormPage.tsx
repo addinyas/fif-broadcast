@@ -113,13 +113,13 @@ export function BroadcastFormPage() {
         </div>
       )}
 
-      {!user?.broadcast_sender_name && user?.role === 'superadmin' && (
+      {!user?.broadcast_sender_name && (
         <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1">
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Nama Panggilan belum diatur</p>
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Atur nama yang muncul di broadcast (#namapanggilanakun) di halaman Settings.
+              Isi nama yang muncul di broadcast (#namapanggilanakun) di halaman Settings.
             </p>
           </div>
           <button
