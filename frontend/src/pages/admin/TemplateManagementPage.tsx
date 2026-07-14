@@ -24,7 +24,7 @@ const VARIABLE_BUTTONS = [
   { key: '#tenor', label: 'Tenor' },
   { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
   { key: '#namapanggilanakun', label: 'Nama Kamu' },
-  { key: '#waktu', label: 'Waktu (Pagi/Siang/Malam)' },
+  { key: '#waktu', label: 'Waktu (Pagi/Siang/Sore/Malam)' },
 ];
 
 export function TemplateManagementPage() {

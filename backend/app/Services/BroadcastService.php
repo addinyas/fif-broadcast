@@ -128,10 +128,12 @@ class BroadcastService
     protected function mapFormToMessage(string $templateBody, array $values): string
     {
         $hour = (int) now('Asia/Jakarta')->format('G');
-        if ($hour >= 4 && $hour < 12) {
+        if ($hour >= 4 && $hour < 11) {
             $waktu = 'Pagi';
-        } elseif ($hour >= 12 && $hour < 17) {
+        } elseif ($hour >= 11 && $hour < 15) {
             $waktu = 'Siang';
+        } elseif ($hour >= 15 && $hour < 18) {
+            $waktu = 'Sore';
         } else {
             $waktu = 'Malam';
         }
