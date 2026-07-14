@@ -34,6 +34,7 @@ class BroadcastService
 
         $marketingUser = User::find($marketingId);
         $formValues['_namapanggilan'] = $marketingUser?->display_name ?? $marketingUser?->name ?? '';
+        $formValues['_nomor'] = $marketingUser?->phone_number ?? '';
 
         $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);
 
@@ -141,6 +142,7 @@ class BroadcastService
         $map = [
             '#nomor_contract' => $values['nomor_contract'] ?? '',
             '#no_contract' => $values['no_contract'] ?? '',
+            '#nomor' => $values['_nomor'] ?? '',
             '#nama' => $values['nama'] ?? '',
             '#namapanggilan' => $values['_namapanggilan'] ?? '',
             '#motor_dan_tahun' => $values['motor_dan_tahun'] ?? '',

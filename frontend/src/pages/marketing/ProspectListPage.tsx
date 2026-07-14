@@ -18,6 +18,7 @@ import type { Customer, Template, User } from '../../types';
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama Customer' },
+  { key: '#nomor', label: 'Nomor Kamu' },
   { key: '#namapanggilan', label: 'Nama Kamu' },
   { key: '#obj_desc', label: 'Tipe Motor' },
   { key: '#tahun', label: 'Tahun Motor' },
@@ -307,6 +308,7 @@ export function ProspectListPage() {
     return templateBody
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
+      .replace(/#nomor/g, user?.phone_number || '')
       .replace(/#namapanggilan/g, user?.display_name || user?.name || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
       .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')

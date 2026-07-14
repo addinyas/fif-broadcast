@@ -12,6 +12,7 @@ import type { Template } from '../../types';
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama Customer' },
+  { key: '#nomor', label: 'Nomor Kamu' },
   { key: '#namapanggilan', label: 'Nama Kamu' },
   { key: '#obj_desc', label: 'Tipe Motor' },
   { key: '#tahun', label: 'Tahun Motor' },
