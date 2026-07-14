@@ -10,20 +10,13 @@ import { useAuth } from '../../context/AuthContext';
 import type { Template } from '../../types';
 
 const VARIABLE_BUTTONS = [
-  { key: '#nomor_contract', label: 'No Contract' },
+  { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama Customer' },
+  { key: '#namapanggilanakun', label: 'Nama Kamu' },
   { key: '#obj_desc', label: 'Tipe Motor' },
   { key: '#tahun', label: 'Tahun Motor' },
-  { key: '#plat', label: 'Plat Nomor' },
-  { key: '#angsuran_kurang', label: 'Angsuran Kurang' },
-  { key: '#input_angsuran', label: 'Input Angsuran' },
-  { key: '#dinego_jadi', label: 'Nego Jadi' },
-  { key: '#pinjaman', label: 'Pinjaman' },
-  { key: '#pelunasan', label: 'Pelunasan' },
-  { key: '#terima', label: 'Terima' },
-  { key: '#tenor', label: 'Tenor' },
+  { key: '#plafon', label: 'Plafon' },
   { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
-  { key: '#namapanggilanakun', label: 'Nama Kamu' },
   { key: '#waktu', label: 'Waktu (Pagi/Siang/Sore/Malam)' },
 ];
 
