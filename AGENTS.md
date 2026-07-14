@@ -1192,7 +1192,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### 2026-07-14 — 6 tasks: template default + calculator fix + delete preserve + UH dashboard + hide superadmin data
 
-**Belum di-push ⏸️** — user instruksi: simpan dulu lokal, jangan deploy dulu.
+**Sudah di-push ✅ & deployed ✅**
 
 **Task 1 — Rolling approval:** Tidak ada perubahan — sudah 1 approval, UH klik Approve → batch approve via `approveShare()`.
 
@@ -1218,8 +1218,18 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 **Task 5 — Delete all preserve marketing manual entries (HIGH):**
 - `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — tambah filter `whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'")`. Marketing entries tidak ikut terhapus.
 
+### 2026-07-14 — Fix: dashboard 500 error (getDistributionReport array access)
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+`CustomerRepository::getDistributionReport()` direfactor dari Eloquent Collection (object) ke plain array (via `map()`). Tapi `CustomerService::getDistributionReport()` masih akses `$item->marketing_id` (object syntax) → PHP error `Attempt to read property "marketing_id" on array`. Semua dashboard semua role return 500.
+
+**Fix:**
+- `backend/app/Services/CustomerService.php`: `$item->marketing_id` → `$item['marketing_id']` (array syntax). `foreach` diganti `->map()` dengan return item yang sudah di-enrich broadcast stats. `$report['by_marketing']` di-reassign dengan collection yang sudah di-update.
+
 ### Next steps when resuming
-Ketik: `lanjut yang tadi` — semua perubahan masih lokal, belum di-push. User akan approve push + deploy setelah semua task selesai.
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
