@@ -38,6 +38,15 @@ export function TemplateManagementPage() {
   const [form, setForm] = useState({ title: '', message_body: '' });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const adjustHeight = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  };
+
+  useEffect(() => { adjustHeight(); }, [form.message_body]);
+
   const insertVariable = (variable: string) => {
     const ta = textareaRef.current;
     if (!ta) {
@@ -154,8 +163,8 @@ export function TemplateManagementPage() {
               value={form.message_body}
               onChange={(e) => setForm({ ...form, message_body: e.target.value })}
               placeholder="Tulis isi pesan di sini..."
-              rows={5}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              rows={6}
+              className="w-full resize-none overflow-hidden rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
             />
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>

@@ -46,6 +46,13 @@ export function ProspectListPage() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = `${ta.scrollHeight}px`;
+  };
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -161,6 +168,8 @@ export function ProspectListPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+
+  useEffect(() => { adjustHeight(); }, [templateBody]);
 
   useEffect(() => {
     if (useDefaultTemplate) {
@@ -826,8 +835,8 @@ export function ProspectListPage() {
             ref={textareaRef}
             value={templateBody}
             onChange={(e) => setTemplateBody(e.target.value)}
-            rows={5}
-            className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
+            rows={6}
+            className="mt-2 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
