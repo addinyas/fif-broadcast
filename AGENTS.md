@@ -1250,6 +1250,32 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — display_name global + default template checkbox + read-only fields + warning banners
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/database/migrations/2026_07_14_000002_add_display_name_to_users_table.php`: new — tambah kolom `display_name` nullable ke users
+- `backend/app/Models/User.php`: tambah `display_name` ke `$fillable`
+- `backend/app/Http/Controllers/Api/AuthController.php`: `me()` return `display_name` + `broadcast_sender_name` (superadmin's `display_name ?? name`)
+- `backend/app/Http/Controllers/Api/ProfileController.php`: superadmin-only update `display_name` di profile
+- `backend/app/Services/BroadcastService.php`: `prepare()` resolve `#namapanggilanakun` dari superadmin's `display_name` (bukan marketing user's `name`)
+- `backend/database/seeders/DatabaseSeeder.php`: tambah `display_name` ke seed users (superadmin → "Admin FIF")
+
+**Frontend:**
+- `frontend/src/types/index.ts`: tambah `display_name` + `broadcast_sender_name` ke User interface
+- `frontend/src/services/profileService.ts`: tambah `display_name` ke `updateProfile()` payload
+- `frontend/src/pages/SettingsPage.tsx`: superadmin-only input "Nama Panggilan (Broadcast)" + helper text
+- `frontend/src/components/forms/DynamicFormEditor.tsx`: `nomor_contract`, `no_contract`, `namapanggilanakun` masuk `READ_ONLY_FIELDS`
+- `frontend/src/pages/marketing/ProspectListPage.tsx`:
+  - Default template checkbox (Settings icon) di sebelah kanan dropdown template tersimpan
+  - Fix `#namapanggilanakun` resolve: `user?.broadcast_sender_name` (bukan `user?.name`)
+  - Amber warning banner jika `broadcast_sender_name` kosong (superadmin only) dengan tombol "Ke Settings"
+- `frontend/src/pages/marketing/BroadcastFormPage.tsx`: amber warning banner jika `broadcast_sender_name` kosong (superadmin only)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
