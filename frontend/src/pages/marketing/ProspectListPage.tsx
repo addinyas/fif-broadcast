@@ -91,7 +91,6 @@ export function ProspectListPage() {
   const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'own' | 'shared'>('all');
   const [showOwnershipDropdown, setShowOwnershipDropdown] = useState(false);
   const ownershipRef = useRef<HTMLDivElement>(null);
-  const [useDefaultTemplate, setUseDefaultTemplate] = useState(false);
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -160,16 +159,6 @@ export function ProspectListPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
-
-  useEffect(() => {
-    if (useDefaultTemplate) {
-      const defaultT = templates.find((t) => t.is_default);
-      if (defaultT) {
-        setSelectedTemplateId(defaultT.id);
-        setTemplateBody(defaultT.message_body);
-      }
-    }
-  }, [useDefaultTemplate, templates]);
 
   const fetchMarketingUsers = useCallback(async () => {
     try {
@@ -744,53 +733,16 @@ export function ProspectListPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
               <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Tersimpan</label>
-              <div className="mt-1.5 flex items-center gap-2">
-                <select
-                  value={useDefaultTemplate ? 'default' : (selectedTemplateId ?? '')}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === 'default') {
-                      setUseDefaultTemplate(true);
-                    } else if (v) {
-                      setUseDefaultTemplate(false);
-                      const id = parseInt(v);
-                      setSelectedTemplateId(id);
-                      loadTemplate(id);
-                    } else {
-                      setUseDefaultTemplate(false);
-                      setSelectedTemplateId(null);
-                    }
-                  }}
-                  className="w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
-                >
-                  <option value="">-- Pilih Template --</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>{t.title}{t.is_default ? ' (Default)' : ''}</option>
-                  ))}
-                </select>
-                <label className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all cursor-pointer ${
-                  !user?.broadcast_sender_name
-                    ? 'border-slate-200 bg-slate-100 text-slate-400 opacity-50 cursor-not-allowed dark:border-slate-600 dark:bg-slate-700'
-                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 has-checked:border-fif-500 has-checked:bg-fif-50 has-checked:text-fif-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:has-checked:border-fif-400 dark:has-checked:bg-fif-900/20 dark:has-checked:text-fif-300'
-                }`}>
-                  <input
-                    type="checkbox"
-                    checked={useDefaultTemplate}
-                    disabled={!user?.broadcast_sender_name}
-                    onChange={(e) => {
-                      const checked = e.target.checked;
-                      setUseDefaultTemplate(checked);
-                      if (!checked) {
-                        setSelectedTemplateId(null);
-                        setTemplateBody('');
-                      }
-                    }}
-                    className="sr-only"
-                  />
-                  {useDefaultTemplate ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
-                  Default
-                </label>
-              </div>
+              <select
+                value={selectedTemplateId ?? ''}
+                onChange={(e) => { const v = e.target.value; if (v) { const id = parseInt(v); setSelectedTemplateId(id); loadTemplate(id); } else { setSelectedTemplateId(null); } }}
+                className="mt-1.5 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
+              >
+                <option value="">-- Pilih Template --</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}{t.is_default ? ' (Default)' : ''}</option>
+                ))}
+              </select>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -802,7 +754,7 @@ export function ProspectListPage() {
               >
                 Simpan
               </Button>
-              {selectedTemplateId && (
+              {selectedTemplateId && (user?.role === 'superadmin' || !templates.find((t) => t.id === selectedTemplateId)?.is_default) && (
                 <Button
                   variant="danger"
                   size="sm"
