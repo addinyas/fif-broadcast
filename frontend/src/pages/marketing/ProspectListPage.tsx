@@ -291,6 +291,9 @@ export function ProspectListPage() {
 
   const interpolateMessage = (customer: Customer): string => {
     const dd = customer.dynamic_data || {};
+    const hour = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false });
+    const h = parseInt(hour, 10);
+    const waktu = h >= 4 && h < 11 ? 'Pagi' : h >= 11 && h < 15 ? 'Siang' : h >= 15 && h < 18 ? 'Sore' : 'Malam';
     return templateBody
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
@@ -308,7 +311,8 @@ export function ProspectListPage() {
       .replace(/#pelunasan/g, dd.pelunasan || '')
       .replace(/#terima/g, dd.terima || '')
       .replace(/#tenor/g, dd.tenor || '')
-      .replace(/#sisa_angsuran/g, dd.sisa_angsuran || '');
+      .replace(/#sisa_angsuran/g, dd.sisa_angsuran || '')
+      .replace(/#waktu/g, waktu);
   };
 
   const handleDeleteManual = async (customer: Customer) => {
