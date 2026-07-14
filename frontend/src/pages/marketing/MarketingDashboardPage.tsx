@@ -108,7 +108,7 @@ export function MarketingDashboardPage() {
         )}
       </div>
 
-      {(summary?.shared_data?.total_shared ?? 0) > 0 && (
+      {(summary?.shared_data?.total_shared ?? 0) > 0 && summary?.shared_data && (
         <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-800 dark:from-cyan-950/30 dark:to-blue-950/30">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 dark:bg-cyan-900/40">
