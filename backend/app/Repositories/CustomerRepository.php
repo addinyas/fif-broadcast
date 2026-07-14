@@ -110,23 +110,40 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function getAssignedToMarketing(?int $marketingId, array $filters = []): LengthAwarePaginator
     {
         $sharedIds = [];
+        $sharedMap = [];
         if ($marketingId !== null) {
-            $sharedIds = CustomerShare::where('to_marketing_id', $marketingId)
+            $shares = CustomerShare::where('to_marketing_id', $marketingId)
                 ->where('status', 'approved')
-                ->pluck('customer_id')
-                ->toArray();
+                ->get(['customer_id', 'from_marketing_id']);
+            $sharedIds = $shares->pluck('customer_id')->toArray();
+            foreach ($shares as $s) {
+                $sharedMap[$s->customer_id] = $s->from_marketing_id;
+            }
         }
+
+        $ownership = $filters['ownership'] ?? 'all';
 
         $query = Customer::with(['broadcastHistories' => function ($q) {
             $q->latest();
         }]);
 
         if ($marketingId !== null) {
-            $query->where(function ($q) use ($marketingId, $sharedIds) {
-                $q->where('marketing_id', $marketingId)
-                    ->where('assignment_status', 'assigned');
-                if (! empty($sharedIds)) {
-                    $q->orWhereIn('id', $sharedIds);
+            $query->where(function ($q) use ($marketingId, $sharedIds, $ownership) {
+                if ($ownership === 'shared') {
+                    if (! empty($sharedIds)) {
+                        $q->whereIn('id', $sharedIds);
+                    } else {
+                        $q->whereRaw('0 = 1');
+                    }
+                } elseif ($ownership === 'own') {
+                    $q->where('marketing_id', $marketingId)
+                        ->where('assignment_status', 'assigned');
+                } else {
+                    $q->where('marketing_id', $marketingId)
+                        ->where('assignment_status', 'assigned');
+                    if (! empty($sharedIds)) {
+                        $q->orWhereIn('id', $sharedIds);
+                    }
                 }
             });
         }
@@ -164,7 +181,26 @@ class CustomerRepository implements CustomerRepositoryInterface
             }
         }
 
-        return $query->latest()->paginate($filters['per_page'] ?? 50);
+        $paginator = $query->latest()->paginate($filters['per_page'] ?? 50);
+
+        if ($marketingId !== null && ! empty($sharedMap)) {
+            $fromMarketingIds = array_unique(array_values($sharedMap));
+            $fromMarketingNames = User::whereIn('id', $fromMarketingIds)
+                ->pluck('name', 'id')
+                ->toArray();
+
+            $paginator->getCollection()->transform(function ($customer) use ($sharedMap, $fromMarketingNames) {
+                if (isset($sharedMap[$customer->id])) {
+                    $fromId = $sharedMap[$customer->id];
+                    $customer->from_marketing_name = $fromMarketingNames[$fromId] ?? null;
+                    $customer->from_marketing_id = $fromId;
+                }
+
+                return $customer;
+            });
+        }
+
+        return $paginator;
     }
 
     public function bulkImport(array $customers, int $uploadedBy, ?string $kiosId = null): array

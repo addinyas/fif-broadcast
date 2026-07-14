@@ -425,7 +425,7 @@ class CustomerController extends Controller
 
     public function assignedToMe(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran']);
+        $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran', 'ownership']);
         $user = $request->user();
 
         // Marketing: only their assigned customers. Superadmin/UH: all (scoped by kios below).

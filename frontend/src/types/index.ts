@@ -44,6 +44,7 @@ export interface Customer {
   marketing?: User;
   broadcast_histories?: BroadcastHistory[];
   from_marketing_name?: string;
+  from_marketing_id?: number;
   share_group?: string;
 }
 

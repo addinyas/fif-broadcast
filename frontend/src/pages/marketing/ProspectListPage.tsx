@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -85,11 +85,12 @@ export function ProspectListPage() {
   const [showSisaAngsuranDropdown, setShowSisaAngsuranDropdown] = useState(false);
   const sisaAngsuranRef = useRef<HTMLDivElement>(null);
   const lookupTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const [sharedCustomers, setSharedCustomers] = useState<Customer[]>([]);
-  const [_loadingShared, setLoadingShared] = useState(true);
   const [showRollingModal, setShowRollingModal] = useState(false);
   const [marketingUsers, setMarketingUsers] = useState<User[]>([]);
   const [waStatus, setWaStatus] = useState<string>('disconnected');
+  const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'own' | 'shared'>('all');
+  const [showOwnershipDropdown, setShowOwnershipDropdown] = useState(false);
+  const ownershipRef = useRef<HTMLDivElement>(null);
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -129,7 +130,7 @@ export function ProspectListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter });
+      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter, ownership: ownershipFilter });
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
       setSentIds(res.data.filter((c) => c.manual_sent_at).map((c) => c.id));
@@ -145,7 +146,7 @@ export function ProspectListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, customerTypeFilter, sisaAngsuranFilter]);
+  }, [page, search, customerTypeFilter, sisaAngsuranFilter, ownershipFilter]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -159,18 +160,6 @@ export function ProspectListPage() {
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
-  const fetchSharedCustomers = useCallback(async () => {
-    setLoadingShared(true);
-    try {
-      const data = await customerService.getMySharedCustomers();
-      setSharedCustomers(data);
-    } catch {
-      setSharedCustomers([]);
-    } finally {
-      setLoadingShared(false);
-    }
-  }, []);
-
   const fetchMarketingUsers = useCallback(async () => {
     try {
       const data = await customerService.getMarketingUsers();
@@ -180,7 +169,6 @@ export function ProspectListPage() {
     }
   }, []);
 
-  useEffect(() => { fetchSharedCustomers(); }, [fetchSharedCustomers]);
   useEffect(() => { fetchMarketingUsers(); }, [fetchMarketingUsers]);
   useEffect(() => () => { if (lookupTimerRef.current) clearTimeout(lookupTimerRef.current); }, []);
 
@@ -197,7 +185,7 @@ export function ProspectListPage() {
     return () => { socket.off('wa:status', handler); };
   }, [token]);
 
-  useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter]);
+  useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter, ownershipFilter]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -206,6 +194,9 @@ export function ProspectListPage() {
       }
       if (sisaAngsuranRef.current && !sisaAngsuranRef.current.contains(e.target as Node)) {
         setShowSisaAngsuranDropdown(false);
+      }
+      if (ownershipRef.current && !ownershipRef.current.contains(e.target as Node)) {
+        setShowOwnershipDropdown(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -536,11 +527,25 @@ export function ProspectListPage() {
         )}
       </div>
     ) },
-    { key: 'pemilik', header: 'Pemilik', render: (c: Customer) => (
-      <span className={`text-xs ${c.from_marketing_name ? 'font-medium text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`}>
-        {c.from_marketing_name || '-'}
-      </span>
-    ) },
+    { key: 'pemilik', header: 'Pemilik', render: (c: Customer) => {
+      const isShared = !!c.from_marketing_name;
+      return (
+        <div className="flex items-center gap-1.5">
+          <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+            isShared
+              ? 'bg-gradient-to-br from-cyan-100 to-teal-100 text-cyan-700 dark:from-cyan-900/40 dark:to-teal-900/40 dark:text-cyan-300'
+              : 'bg-gradient-to-br from-violet-100 to-purple-100 text-violet-700 dark:from-violet-900/40 dark:to-purple-900/40 dark:text-violet-300'
+          }`}>
+            {isShared ? <ArrowLeftRight className="h-3 w-3" /> : <UserIcon className="h-3 w-3" />}
+          </div>
+          {isShared ? (
+            <span className="text-xs font-medium text-cyan-600 dark:text-cyan-400">{c.from_marketing_name}</span>
+          ) : (
+            <span className="rounded-md bg-gradient-to-r from-violet-500 to-purple-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">Anda</span>
+          )}
+        </div>
+      );
+    } },
     { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => (
       <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{dyn(c, 'obj_desc') || '-'}</span>
     ) },
@@ -782,6 +787,52 @@ export function ProspectListPage() {
           />
         </div>
 
+        <div ref={ownershipRef} className="relative">
+          <button
+            onClick={() => setShowOwnershipDropdown((p) => !p)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+              ownershipFilter !== 'all'
+                ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+            }`}
+          >
+            {ownershipFilter === 'all' && <Users className="h-3.5 w-3.5" />}
+                {ownershipFilter === 'own' && <UserIcon className="h-3.5 w-3.5" />}
+            {ownershipFilter === 'shared' && <ArrowLeftRight className="h-3.5 w-3.5" />}
+            {ownershipFilter === 'all' ? 'Semua Data' : ownershipFilter === 'own' ? 'Data Saya' : 'Dipinjam'}
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOwnershipDropdown ? 'rotate-180' : ''}`} />
+          </button>
+          {showOwnershipDropdown && (
+            <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
+              {([
+                { value: 'all' as const, label: 'Semua Data', icon: <Users className="h-4 w-4" />, desc: 'Data sendiri + dipinjam' },
+                { value: 'own' as const, label: 'Data Saya', icon: <UserIcon className="h-4 w-4" />, desc: 'Hanya data milik Anda' },
+                { value: 'shared' as const, label: 'Dipinjam', icon: <ArrowLeftRight className="h-4 w-4" />, desc: 'Hanya data pinjaman' },
+              ]).map((opt) => {
+                const active = ownershipFilter === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => { setOwnershipFilter(opt.value); setShowOwnershipDropdown(false); setPage(1); }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
+                      active
+                        ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
+                        : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <span className={active ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}>{opt.icon}</span>
+                    <div>
+                      <div className="text-sm font-medium">{opt.label}</div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500">{opt.desc}</div>
+                    </div>
+                    {active && <CheckCircle2 className="ml-auto h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         <button
           onClick={() => navigate('/marketing/history')}
           className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-slate-500 to-slate-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-slate-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-slate-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-slate-900/30 dark:hover:shadow-slate-800/40"
@@ -875,7 +926,7 @@ export function ProspectListPage() {
         showCheckbox
         selectedIds={selectedIds}
         markedIds={sentIds}
-        rowClassName={(c: Customer) => c.from_marketing_name ? 'bg-cyan-50/30 dark:bg-cyan-950/10' : ''}
+        rowClassName={(c: Customer) => c.from_marketing_name ? 'bg-gradient-to-r from-cyan-50/40 to-teal-50/20 dark:from-cyan-950/15 dark:to-teal-950/10 border-l-2 border-l-cyan-400 dark:border-l-cyan-600' : ''}
         onSelect={(id) => setSelectedIds((prev) =>
           prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         )}
@@ -1013,48 +1064,6 @@ export function ProspectListPage() {
           </div>
         </div>
       </Modal>
-
-      {sharedCustomers.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-purple-500" />
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Data Dipinjam ({sharedCustomers.length})</h3>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-purple-200 dark:border-purple-800 bg-purple-100/50 dark:bg-purple-900/20">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No Contract</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Nama</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Pinjam Dari</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">No. WhatsApp</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-purple-700 dark:text-purple-300">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sharedCustomers.map((c) => {
-                  const latest = c.broadcast_histories?.[0];
-                  return (
-                    <tr key={c.id} className="border-b border-purple-100 dark:border-purple-800/50 last:border-0">
-                      <td className="px-4 py-2 font-mono text-xs font-semibold text-purple-900 dark:text-purple-100">{c.no_contract}</td>
-                      <td className="px-4 py-2 text-purple-800 dark:text-purple-200">{c.name}</td>
-                      <td className="px-4 py-2 text-xs text-purple-600 dark:text-purple-400">{c.from_marketing_name || '—'}</td>
-                      <td className="px-4 py-2 font-mono text-xs text-purple-700 dark:text-purple-300">{c.phone_number}</td>
-                      <td className="px-4 py-2">
-                        {latest ? (
-                          <Badge variant={statusVariant(latest.status)} size="sm">{statusLabel(latest.status)}</Badge>
-                        ) : (
-                          <span className="text-xs text-purple-400">&mdash;</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       <RollingDataModal open={showRollingModal} onClose={() => setShowRollingModal(false)} marketingUsers={marketingUsers} />
     </div>
