@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus, Shield } from 'lucide-react';
 import { templateService } from '../../services/templateService';
 import { DataTable } from '../../components/ui/DataTable';
@@ -9,6 +9,23 @@ import { useToast } from '../../components/ui/Toast';
 import { useAuth } from '../../context/AuthContext';
 import type { Template } from '../../types';
 
+const VARIABLE_BUTTONS = [
+  { key: '#nomor_contract', label: 'No Contract' },
+  { key: '#nama', label: 'Nama Customer' },
+  { key: '#obj_desc', label: 'Tipe Motor' },
+  { key: '#tahun', label: 'Tahun Motor' },
+  { key: '#plat', label: 'Plat Nomor' },
+  { key: '#angsuran_kurang', label: 'Angsuran Kurang' },
+  { key: '#input_angsuran', label: 'Input Angsuran' },
+  { key: '#dinego_jadi', label: 'Nego Jadi' },
+  { key: '#pinjaman', label: 'Pinjaman' },
+  { key: '#pelunasan', label: 'Pelunasan' },
+  { key: '#terima', label: 'Terima' },
+  { key: '#tenor', label: 'Tenor' },
+  { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
+  { key: '#namapanggilanakun', label: 'Nama Kamu' },
+];
+
 export function TemplateManagementPage() {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -18,6 +35,23 @@ export function TemplateManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState({ title: '', message_body: '' });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertVariable = (variable: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setForm((prev) => ({ ...prev, message_body: prev.message_body + variable }));
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const newVal = form.message_body.substring(0, start) + variable + form.message_body.substring(end);
+    setForm((prev) => ({ ...prev, message_body: newVal }));
+    requestAnimationFrame(() => {
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = start + variable.length;
+    });
+  };
 
   useEffect(() => {
     templateService.getAll().then((data) => { setTemplates(data); setLoading(false); });
@@ -115,13 +149,26 @@ export function TemplateManagementPage() {
           <div className="space-y-1.5">
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Isi Pesan</label>
             <textarea
+              ref={textareaRef}
               value={form.message_body}
               onChange={(e) => setForm({ ...form, message_body: e.target.value })}
-              placeholder="Gunakan #nama, #plat, #nomor_contract, #angsuran_kurang, #namapanggilanakun dll..."
+              placeholder="Tulis isi pesan di sini..."
               rows={5}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
             />
-            <p className="text-xs text-slate-400">Gunakan <code>#namapanggilanakun</code> untuk nama pengirim broadcast</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>
+              {VARIABLE_BUTTONS.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => insertVariable(v.key)}
+                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1 font-mono text-xs font-medium text-slate-500 shadow-sm transition-all hover:border-fif-300 hover:bg-fif-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-fif-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400"
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowForm(false)}>Batal</Button>
