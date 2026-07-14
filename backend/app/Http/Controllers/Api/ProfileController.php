@@ -47,11 +47,13 @@ class ProfileController extends Controller
         $data = array_filter($data, fn ($v) => $v !== null && $v !== '');
 
         if ($request->has('display_name')) {
-            $data['display_name'] = $request->input('display_name') ?: null;
+            $val = trim($request->input('display_name'));
+            $data['display_name'] = $val !== '' ? $val : null;
         }
 
         if ($request->has('phone_number')) {
-            $data['phone_number'] = $request->input('phone_number') ?: null;
+            $val = trim($request->input('phone_number'));
+            $data['phone_number'] = $val !== '' ? $val : null;
         }
 
         if (! empty($data)) {

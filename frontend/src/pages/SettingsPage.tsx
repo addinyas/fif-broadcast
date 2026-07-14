@@ -79,8 +79,8 @@ export function SettingsPage() {
     try {
       const res = await profileService.updateProfile({
         name,
-        display_name: displayName || null,
-        phone_number: phoneNumber || null,
+        display_name: displayName.trim() || null,
+        phone_number: phoneNumber.trim() || null,
         gender: gender || null,
         npo_mce_id: npoMceId || null,
       });
