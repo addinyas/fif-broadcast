@@ -283,9 +283,9 @@ export function CustomerManagementPage() {
       ),
       render: (c: Customer) => dyn(c, 'buss_unit'),
     },
-    { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => dyn(c, 'obj_desc') },
+    { key: 'obj_desc', header: 'Tipe Motor', render: (c: Customer) => dyn(c, 'obj_desc') },
     { key: 'vcode', header: 'V Code', render: (c: Customer) => dyn(c, 'vcode') },
-    { key: 'tahun', header: 'Tahun', render: (c: Customer) => dyn(c, 'tahun') },
+    { key: 'tahun', header: 'Tahun Motor', render: (c: Customer) => dyn(c, 'tahun') },
     { key: 'otr', header: 'OTR', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
     {
       key: 'plafon', header: 'Plafon', render: (c: Customer) => {
@@ -383,9 +383,9 @@ export function CustomerManagementPage() {
     { key: 'name', label: 'Nama' },
     { key: 'no_whatsapp', label: 'No Whatsapp' },
     { key: 'buss_unit', label: 'Buss Unit' },
-    { key: 'obj_desc', label: 'Obj Desc' },
+    { key: 'obj_desc', label: 'Tipe Motor' },
     { key: 'vcode', label: 'V Code' },
-    { key: 'tahun', label: 'Tahun' },
+    { key: 'tahun', label: 'Tahun Motor' },
     { key: 'otr', label: 'OTR' },
     { key: 'plafon', label: 'Plafon' },
     { key: 'cori', label: 'CORI' },

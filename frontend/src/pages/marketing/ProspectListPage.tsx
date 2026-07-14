@@ -19,8 +19,8 @@ const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama' },
   { key: '#namapanggilanakun', label: 'Nama Panggilan' },
-  { key: '#obj_desc', label: 'Obj Desc' },
-  { key: '#tahun', label: 'Tahun' },
+  { key: '#obj_desc', label: 'Tipe Motor' },
+  { key: '#tahun', label: 'Tahun Motor' },
   { key: '#plafon', label: 'Plafon' },
   { key: '#sisa_angsuran', label: 'Sisa Angsuran' },
 ];
@@ -557,10 +557,10 @@ export function ProspectListPage() {
         </div>
       );
     } },
-    { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => (
+    { key: 'obj_desc', header: 'Tipe Motor', render: (c: Customer) => (
       <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{dyn(c, 'obj_desc') || '-'}</span>
     ) },
-    { key: 'tahun', header: 'Tahun', render: (c: Customer) => (
+    { key: 'tahun', header: 'Tahun Motor', render: (c: Customer) => (
       <span className="text-sm text-slate-600 dark:text-slate-400">{dyn(c, 'tahun') || '-'}</span>
     ) },
     {
