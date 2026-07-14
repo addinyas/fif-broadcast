@@ -845,12 +845,25 @@ export function ProspectListPage() {
         </div>
         <div className="p-5">
           <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Pesan</label>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {VARIABLE_BUTTONS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                onClick={() => insertVariable(v.key)}
+                className="group inline-flex items-center gap-1.5 rounded-full border border-fif-200/60 bg-gradient-to-r from-fif-50 to-white px-3 py-1.5 font-mono text-xs font-medium text-fif-600 shadow-sm transition-all hover:border-fif-400 hover:from-fif-100 hover:to-fif-50 hover:text-fif-700 hover:shadow-md active:scale-95 dark:border-fif-800/40 dark:from-fif-900/20 dark:to-transparent dark:text-fif-400 dark:hover:border-fif-500 dark:hover:from-fif-900/30 dark:hover:text-fif-300"
+              >
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-fif-400 transition-colors group-hover:bg-fif-600 dark:group-hover:bg-fif-300" />
+                {v.label}
+              </button>
+            ))}
+          </div>
           <textarea
             ref={textareaRef}
             value={templateBody}
             onChange={(e) => setTemplateBody(e.target.value)}
             rows={6}
-            className="mt-2 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
+            className="mt-3 w-full resize-none overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
           {templateBody && (
@@ -876,19 +889,6 @@ export function ProspectListPage() {
               </div>
             </div>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Variabel:</span>
-            {VARIABLE_BUTTONS.map((v) => (
-              <button
-                key={v.key}
-                type="button"
-                onClick={() => insertVariable(v.key)}
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs font-medium text-slate-500 shadow-sm transition-all hover:border-fif-300 hover:bg-fif-50 hover:text-fif-600 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:border-fif-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400"
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
