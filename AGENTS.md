@@ -1190,6 +1190,37 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — 6 tasks: template default + calculator fix + delete preserve + UH dashboard + hide superadmin data
+
+**Belum di-push ⏸️** — user instruksi: simpan dulu lokal, jangan deploy dulu.
+
+**Task 1 — Rolling approval:** Tidak ada perubahan — sudah 1 approval, UH klik Approve → batch approve via `approveShare()`.
+
+**Task 2 — Default template + `#namapanggilanakun` (HIGH):**
+- `backend/database/migrations/2026_07_14_000001_add_is_default_to_templates_table.php`: tambah kolom `is_default` boolean ke tabel `templates`
+- `backend/app/Models/Templates.php`: tambah `is_default` ke `$fillable`
+- `backend/database/seeders/TemplateSeeder.php`: seeder baru — buat template default "Default Broadcast" dengan body mengandung `#namapanggilanakun` + `#sisa_angsuran`, `created_by` superadmin
+- `backend/database/seeders/DatabaseSeeder.php`: tambah `TemplateSeeder` ke `$this->call()`
+- `backend/app/Repositories/TemplateRepository.php`: `getAll()` — marketing lihat template sendiri + `is_default`; `update()`/`delete()` — `is_default` hanya bisa diubah superadmin
+- `backend/app/Services/BroadcastService.php`: `prepare()` resolve `#namapanggilanakun` → `$marketingUser->name`; `mapFormToMessage()` tambah `#namapanggilanakun` ke `$values['_namapanggilanakun']`
+- `backend/app/Http/Controllers/Api/TemplateController.php`: `store()` — only superadmin can set `is_default`, gunakan `$request->only()` (bukan `$request->all()`)
+- `frontend/src/types/index.ts`: tambah `is_default?: boolean` ke `Template` interface; tambah `{ key: 'namapanggilanakun', label: 'Nama Panggilan' }` ke `FORM_FIELDS`
+- `frontend/src/pages/admin/TemplateManagementPage.tsx`: badge "Default" (Shield icon) untuk default templates; `canEdit()`/`canDelete()` — non-superadmin tidak bisa edit/hapus default template; placeholder tambah `#namapanggilanakun`
+- `frontend/src/components/ui/DataTable.tsx`: tambah `editDisabled`/`deleteDisabled` props (optional per-item callbacks)
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: tambah `#namapanggilanakun` ke `VARIABLE_BUTTONS`; `interpolateMessage()` resolve `#namapanggilanakun` → `user?.name`; destructure `user` dari `useAuth()`
+
+**Task 3 — Calculator unit input allow spaces (HIGH):**
+- `frontend/src/pages/CalculatorPage.tsx`: `formatAlphaNum(raw, allowSpaces)` — Unit field pakai `allowSpaces=true`, collapse double spaces
+
+**Task 4 — UH dashboard show unassigned marketing (HIGH):**
+- `backend/app/Repositories/CustomerRepository.php`: `getDistributionReport()` — query `User::where('role', 'marketing')` + left-join dengan customer count via `pluck()` + `map()`. Semua marketing muncul meskipun 0 assigned, sorted by total desc.
+
+**Task 5 — Delete all preserve marketing manual entries (HIGH):**
+- `backend/app/Repositories/CustomerRepository.php`: `deleteAll()` — tambah filter `whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'")`. Marketing entries tidak ikut terhapus.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua perubahan masih lokal, belum di-push. User akan approve push + deploy setelah semua task selesai.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

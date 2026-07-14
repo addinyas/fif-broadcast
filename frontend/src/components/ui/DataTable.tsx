@@ -15,6 +15,8 @@ interface DataTableProps<T> {
   loading?: boolean;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  editDisabled?: (item: T) => boolean;
+  deleteDisabled?: (item: T) => boolean;
   selectedIds?: number[];
   onSelect?: (id: number) => void;
   onSelectAll?: () => void;
@@ -25,7 +27,7 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T extends { id: number }>({
-  columns, data, loading, onEdit, onDelete, selectedIds, onSelect, onSelectAll, showCheckbox, allPageSelected, markedIds, rowClassName,
+  columns, data, loading, onEdit, onDelete, editDisabled, deleteDisabled, selectedIds, onSelect, onSelectAll, showCheckbox, allPageSelected, markedIds, rowClassName,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -99,7 +101,8 @@ export function DataTable<T extends { id: number }>({
                         {onEdit && (
                           <button
                             onClick={() => onEdit(item)}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-fif-50 hover:text-fif-600 dark:text-slate-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400"
+                            disabled={editDisabled?.(item)}
+                            className={`rounded-lg p-1.5 transition-colors ${editDisabled?.(item) ? 'cursor-not-allowed text-slate-300 dark:text-slate-600' : 'text-slate-400 hover:bg-fif-50 hover:text-fif-600 dark:text-slate-500 dark:hover:bg-fif-900/20 dark:hover:text-fif-400'}`}
                             title="Edit"
                           >
                             <Pencil className="h-4 w-4" />
@@ -108,7 +111,8 @@ export function DataTable<T extends { id: number }>({
                         {onDelete && (
                           <button
                             onClick={() => onDelete(item)}
-                            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+                            disabled={deleteDisabled?.(item)}
+                            className={`rounded-lg p-1.5 transition-colors ${deleteDisabled?.(item) ? 'cursor-not-allowed text-slate-300 dark:text-slate-600' : 'text-slate-400 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-red-900/20 dark:hover:text-red-400'}`}
                             title="Hapus"
                           >
                             <Trash2 className="h-4 w-4" />

@@ -10,6 +10,7 @@ class Template extends Model
     protected $fillable = [
         'title',
         'message_body',
+        'is_default',
         'created_by',
     ];
 

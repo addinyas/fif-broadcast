@@ -32,6 +32,9 @@ class BroadcastService
             throw new \Exception('Batas broadcast 150 pesan per hari sudah tercapai');
         }
 
+        $marketingUser = User::find($marketingId);
+        $formValues['_namapanggilanakun'] = $marketingUser?->name ?? '';
+
         $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);
 
         $broadcast = $this->broadcastRepository->create([
@@ -128,6 +131,7 @@ class BroadcastService
             '#nomor_contract' => $values['nomor_contract'] ?? '',
             '#no_contract' => $values['no_contract'] ?? '',
             '#nama' => $values['nama'] ?? '',
+            '#namapanggilanakun' => $values['_namapanggilanakun'] ?? '',
             '#motor_dan_tahun' => $values['motor_dan_tahun'] ?? '',
             '#plat' => $values['plat'] ?? '',
             '#obj_desc' => $values['obj_desc'] ?? '',

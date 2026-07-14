@@ -251,6 +251,7 @@ class CustomerRepository implements CustomerRepositoryInterface
     {
         $customerIds = Customer::query()
             ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
+            ->whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'")
             ->pluck('id')
             ->toArray();
 
@@ -319,14 +320,25 @@ class CustomerRepository implements CustomerRepositoryInterface
         $byMarketing = (clone $query)->where('assignment_status', 'assigned')
             ->selectRaw('marketing_id, count(*) as total')
             ->groupBy('marketing_id')
-            ->with('marketing:id,name')
-            ->get();
+            ->pluck('total', 'marketing_id');
+
+        $marketingQuery = User::where('role', 'marketing');
+        if (! empty($kiosId)) {
+            $marketingQuery->where('kios_id', $kiosId);
+        }
+        $allMarketing = $marketingQuery->get(['id', 'name']);
+
+        $byMarketingCollection = $allMarketing->map(fn ($user) => [
+            'marketing_id' => $user->id,
+            'marketing' => ['id' => $user->id, 'name' => $user->name],
+            'total' => $byMarketing->get($user->id, 0),
+        ])->sortByDesc('total')->values();
 
         return [
             'total_customers' => $totalCustomers,
             'assigned' => $assigned,
             'unassigned' => $unassigned,
-            'by_marketing' => $byMarketing,
+            'by_marketing' => $byMarketingCollection,
         ];
     }
 

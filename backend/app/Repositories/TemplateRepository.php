@@ -11,7 +11,10 @@ class TemplateRepository implements TemplateRepositoryInterface
     {
         $query = Template::with('creator:id,name');
         if ($user && $user->role === 'marketing') {
-            $query->where('created_by', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                    ->orWhere('is_default', true);
+            });
         }
 
         return $query->latest()->get();
@@ -21,7 +24,10 @@ class TemplateRepository implements TemplateRepositoryInterface
     {
         $query = Template::with('creator:id,name')->where('id', $id);
         if ($user && $user->role === 'marketing') {
-            $query->where('created_by', $user->id);
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                    ->orWhere('is_default', true);
+            });
         }
 
         return $query->findOrFail($id);
@@ -35,10 +41,18 @@ class TemplateRepository implements TemplateRepositoryInterface
     public function update(int $id, array $data, $user = null)
     {
         $query = Template::where('id', $id);
-        if ($user && $user->role === 'marketing') {
-            $query->where('created_by', $user->id);
-        }
+
         $template = $query->findOrFail($id);
+
+        if ($template->is_default && (! $user || $user->role !== 'superadmin')) {
+            abort(403, 'Template default hanya bisa diubah oleh superadmin.');
+        }
+
+        if ($user && $user->role === 'marketing' && ! $template->is_default) {
+            $query->where('created_by', $user->id);
+            $template = $query->findOrFail($id);
+        }
+
         $template->update($data);
 
         return $template->fresh();
@@ -46,10 +60,19 @@ class TemplateRepository implements TemplateRepositoryInterface
 
     public function delete(int $id, $user = null): void
     {
-        $query = Template::where('id', $id);
-        if ($user && $user->role === 'marketing') {
-            $query->where('created_by', $user->id);
+        $template = Template::findOrFail($id);
+
+        if ($template->is_default && (! $user || $user->role !== 'superadmin')) {
+            abort(403, 'Template default hanya bisa dihapus oleh superadmin.');
         }
-        $query->findOrFail($id)->delete();
+
+        if ($user && $user->role === 'marketing' && ! $template->is_default) {
+            $query = Template::where('id', $id)->where('created_by', $user->id);
+            $query->findOrFail($id)->delete();
+
+            return;
+        }
+
+        $template->delete();
     }
 }

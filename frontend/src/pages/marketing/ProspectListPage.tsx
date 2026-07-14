@@ -18,6 +18,7 @@ import type { Customer, Template, User } from '../../types';
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama' },
+  { key: '#namapanggilanakun', label: 'Nama Panggilan' },
   { key: '#obj_desc', label: 'Obj Desc' },
   { key: '#tahun', label: 'Tahun' },
   { key: '#plafon', label: 'Plafon' },
@@ -41,7 +42,7 @@ function getPageRange(current: number, total: number): (number | 'ellipsis')[] {
 
 export function ProspectListPage() {
   const { toast } = useToast();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -282,6 +283,7 @@ export function ProspectListPage() {
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
+      .replace(/#namapanggilanakun/g, user?.name || '')
       .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')

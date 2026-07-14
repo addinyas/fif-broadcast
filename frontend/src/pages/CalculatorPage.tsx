@@ -87,8 +87,9 @@ export function CalculatorPage() {
     return nums.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  const formatAlphaNum = (val: string) => {
-    return val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const formatAlphaNum = (val: string, allowSpaces = false) => {
+    const pattern = allowSpaces ? /[^A-Z0-9 ]/g : /[^A-Z0-9]/g;
+    return val.toUpperCase().replace(/  +/g, ' ').replace(pattern, '');
   };
 
   const selectCustomer = (c: Customer) => {
@@ -181,10 +182,10 @@ export function CalculatorPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Unit <span className="text-red-500">*</span></label>
-              <input value={formatAlphaNum(manual.obj_desc)}
+              <input value={formatAlphaNum(manual.obj_desc, true)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/[^A-Za-z0-9 ]/g, '');
-                  const formatted = formatAlphaNum(raw);
+                  const formatted = formatAlphaNum(raw, true);
                   setManual({ ...manual, obj_desc: formatted });
                 }}
                 placeholder="mis: VARIO 160 CBS"

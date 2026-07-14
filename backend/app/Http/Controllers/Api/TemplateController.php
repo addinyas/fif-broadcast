@@ -39,8 +39,12 @@ class TemplateController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $data = $request->only(['title', 'message_body']);
         $data['created_by'] = $request->user()->id;
+
+        if ($request->user()->role === 'superadmin' && $request->boolean('is_default')) {
+            $data['is_default'] = true;
+        }
 
         $template = $this->templateService->create($data);
 

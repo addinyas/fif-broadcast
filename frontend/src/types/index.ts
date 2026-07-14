@@ -51,6 +51,7 @@ export interface Template {
   id: number;
   title: string;
   message_body: string;
+  is_default?: boolean;
   created_by: number;
   created_at?: string;
   updated_at?: string;
@@ -145,6 +146,7 @@ export const FORM_FIELDS = [
   { key: 'nomor_contract', label: 'Nomor Contract' },
   { key: 'no_contract', label: 'No Contract' },
   { key: 'nama', label: 'Nama' },
+  { key: 'namapanggilanakun', label: 'Nama Panggilan' },
   { key: 'motor_dan_tahun', label: 'Motor dan Tahun' },
   { key: 'plat', label: 'Plat' },
   { key: 'obj_desc', label: 'Obj Desc' },
