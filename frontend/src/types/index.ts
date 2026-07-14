@@ -4,6 +4,7 @@ export interface User {
   id: number;
   name: string;
   display_name?: string | null;
+  phone_number?: string | null;
   broadcast_sender_name?: string;
   email: string;
   avatar?: string;

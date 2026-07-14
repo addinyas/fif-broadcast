@@ -19,9 +19,10 @@ export const profileService = {
 
   async updateProfile(payload: {
     name?: string;
+    display_name?: string | null;
+    phone_number?: string | null;
     gender?: string | null;
     npo_mce_id?: string | null;
-    display_name?: string | null;
   }): Promise<{ message: string; data: User }> {
     const clean = Object.fromEntries(
       Object.entries(payload).filter(([, v]) => v !== undefined)

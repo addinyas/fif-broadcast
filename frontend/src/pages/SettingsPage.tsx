@@ -11,6 +11,7 @@ export function SettingsPage() {
 
   const [name, setName] = useState(user?.name || '');
   const [displayName, setDisplayName] = useState(user?.display_name || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone_number || '');
   const [gender, setGender] = useState(user?.gender || '');
   const [npoMceId, setNpoMceId] = useState(user?.npo_mce_id || '');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar_url || null);
@@ -33,9 +34,10 @@ export function SettingsPage() {
   useEffect(() => {
     setName(user?.name || '');
     setDisplayName(user?.display_name || '');
+    setPhoneNumber(user?.phone_number || '');
     setGender(user?.gender || '');
     setNpoMceId(user?.npo_mce_id || '');
-  }, [user?.name, user?.display_name, user?.gender, user?.npo_mce_id]);
+  }, [user?.name, user?.display_name, user?.phone_number, user?.gender, user?.npo_mce_id]);
 
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -78,6 +80,7 @@ export function SettingsPage() {
       const res = await profileService.updateProfile({
         name,
         display_name: displayName || null,
+        phone_number: phoneNumber || null,
         gender: gender || null,
         npo_mce_id: npoMceId || null,
       });
@@ -288,6 +291,19 @@ export function SettingsPage() {
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
               Nama yang muncul di broadcast sebagai #namapanggilanakun
             </p>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Nomor Telepon
+            </label>
+            <input
+              type="tel"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-500 dark:focus:border-fif-400"
+              placeholder="08xxxxxxxxxx"
+            />
           </div>
 
           <div>

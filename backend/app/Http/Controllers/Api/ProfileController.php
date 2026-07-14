@@ -17,7 +17,7 @@ class ProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         return response()->json(['data' => $request->user()->only([
-            'id', 'name', 'display_name', 'email', 'avatar', 'avatar_url', 'role',
+            'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
             'gender', 'npo_mce_id', 'kios_name', 'kios_id',
         ])]);
     }
@@ -29,6 +29,7 @@ class ProfileController extends Controller
         $rules = [
             'name' => 'sometimes|string|max:255',
             'display_name' => 'sometimes|nullable|string|max:255',
+            'phone_number' => 'sometimes|nullable|string|max:20',
             'gender' => 'sometimes|nullable|in:L,P',
             'npo_mce_id' => [
                 'sometimes', 'nullable', 'string', 'max:100', 'min:1',
@@ -42,11 +43,15 @@ class ProfileController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name', 'display_name', 'gender', 'npo_mce_id']);
+        $data = $request->only(['name', 'display_name', 'phone_number', 'gender', 'npo_mce_id']);
         $data = array_filter($data, fn ($v) => $v !== null && $v !== '');
 
         if ($request->has('display_name')) {
             $data['display_name'] = $request->input('display_name') ?: null;
+        }
+
+        if ($request->has('phone_number')) {
+            $data['phone_number'] = $request->input('phone_number') ?: null;
         }
 
         if (! empty($data)) {
@@ -56,7 +61,7 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Profile updated successfully',
             'data' => $user->fresh()->only([
-                'id', 'name', 'display_name', 'email', 'avatar', 'avatar_url', 'role',
+                'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
                 'gender', 'npo_mce_id', 'kios_name', 'kios_id',
             ]),
         ]);

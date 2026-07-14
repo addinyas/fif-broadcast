@@ -74,7 +74,7 @@ class AuthController extends Controller
 
         return response()->json(array_merge(
             $user->only([
-                'id', 'name', 'display_name', 'email', 'avatar_url', 'role',
+                'id', 'name', 'display_name', 'phone_number', 'email', 'avatar_url', 'role',
                 'gender', 'npo_mce_id', 'kios_name', 'kios_id',
             ]),
             ['broadcast_sender_name' => $user->display_name ?? $user->name ?? '']
