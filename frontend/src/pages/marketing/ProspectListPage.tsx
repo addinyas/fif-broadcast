@@ -18,7 +18,7 @@ import type { Customer, Template, User } from '../../types';
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
   { key: '#nama', label: 'Nama Customer' },
-  { key: '#namapanggilanakun', label: 'Nama Kamu' },
+  { key: '#namapanggilan', label: 'Nama Kamu' },
   { key: '#obj_desc', label: 'Tipe Motor' },
   { key: '#tahun', label: 'Tahun Motor' },
   { key: '#plafon', label: 'Plafon' },
@@ -298,7 +298,7 @@ export function ProspectListPage() {
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
-      .replace(/#namapanggilanakun/g, user?.broadcast_sender_name || user?.name || '')
+      .replace(/#namapanggilan/g, user?.broadcast_sender_name || user?.name || '')
       .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')

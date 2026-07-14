@@ -289,7 +289,7 @@ export function SettingsPage() {
               placeholder="Contoh: Admin FIF"
             />
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
-              Nama yang muncul di broadcast sebagai #namapanggilanakun
+              Nama yang muncul di broadcast sebagai #namapanggilan
             </p>
           </div>
 

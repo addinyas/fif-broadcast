@@ -18,7 +18,7 @@ class TemplateSeeder extends Seeder
         Template::firstOrCreate(
             ['title' => 'Default Broadcast'],
             [
-                'message_body' => "Halo #nama,\n\nSaya #namapanggilanakun dari FIF. Saat ini sisa angsuran Anda adalah Rp #sisa_angsuran.\n\nMohon segera lakukan pembayaran untuk menghindari denda.\n\nTerima kasih.",
+                'message_body' => "Halo #nama,\n\nSaya #namapanggilan dari FIF. Saat ini sisa angsuran Anda adalah Rp #sisa_angsuran.\n\nMohon segera lakukan pembayaran untuk menghindari denda.\n\nTerima kasih.",
                 'is_default' => true,
                 'created_by' => $superadmin->id,
             ]
