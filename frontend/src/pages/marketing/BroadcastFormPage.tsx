@@ -126,7 +126,7 @@ export function BroadcastFormPage() {
             </p>
           </div>
           <button
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate(user?.role === 'marketing' ? '/marketing/settings' : '/admin/settings')}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-amber-700"
           >
             <Settings className="h-3.5 w-3.5" />
