@@ -526,10 +526,18 @@ export function ProspectListPage() {
           {(dyn(c, 'nama') || c.name).charAt(0).toUpperCase()}
         </div>
         <span className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{dyn(c, 'nama') || c.name}</span>
+        {c.from_marketing_name && (
+          <span className="shrink-0 rounded bg-cyan-100 px-1.5 py-0.5 text-[10px] font-semibold text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400">Dipinjam</span>
+        )}
         {dyn(c, '_entry_source') === 'manual' && (
           <span className="shrink-0 rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">M</span>
         )}
       </div>
+    ) },
+    { key: 'pemilik', header: 'Pemilik', render: (c: Customer) => (
+      <span className={`text-xs ${c.from_marketing_name ? 'font-medium text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}`}>
+        {c.from_marketing_name || '-'}
+      </span>
     ) },
     { key: 'obj_desc', header: 'Obj Desc', render: (c: Customer) => (
       <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{dyn(c, 'obj_desc') || '-'}</span>
@@ -865,6 +873,7 @@ export function ProspectListPage() {
         showCheckbox
         selectedIds={selectedIds}
         markedIds={sentIds}
+        rowClassName={(c: Customer) => c.from_marketing_name ? 'bg-cyan-50/30 dark:bg-cyan-950/10' : ''}
         onSelect={(id) => setSelectedIds((prev) =>
           prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         )}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, Loader2, UserCheck, Activity, TrendingUp, CalendarDays } from 'lucide-react';
+import { Users, Send, Clock, CheckCircle2, XCircle, Loader2, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
@@ -107,6 +107,24 @@ export function MarketingDashboardPage() {
           </>
         )}
       </div>
+
+      {(summary?.shared_data?.total_shared ?? 0) > 0 && (
+        <div className="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 shadow-sm dark:border-cyan-800 dark:from-cyan-950/30 dark:to-blue-950/30">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100 dark:bg-cyan-900/40">
+              <ArrowLeftRight className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-cyan-800 dark:text-cyan-200">
+                {summary.shared_data.total_shared} Data Dipinjam
+              </p>
+              <p className="mt-0.5 text-xs text-cyan-600/80 dark:text-cyan-400/80">
+                dari {summary.shared_data.owners.join(', ')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {loading ? (

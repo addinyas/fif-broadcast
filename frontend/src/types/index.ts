@@ -90,6 +90,10 @@ export interface MarketingSummary {
   assigned_count: number;
   broadcast: BroadcastStats;
   not_broadcast_count: number;
+  shared_data: {
+    total_shared: number;
+    owners: string[];
+  };
   last_broadcast: {
     customer_name: string;
     status: string;

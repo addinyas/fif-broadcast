@@ -1,11 +1,12 @@
 const { getWritableDb } = require('./db');
 const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
-const { emitBroadcastStatus, emitPendingStuck } = require('./events');
+const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew } = require('./events');
 
 const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
 const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '180', 10);
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
+const NOTIF_POLL_INTERVAL = parseInt(process.env.NOTIF_POLL_INTERVAL_MS || '5000', 10);
 const MAX_RETRY = 3;
 const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
@@ -14,6 +15,8 @@ const WARMUP_GRACE_MS = 10_000;
 let running = false;
 let processing = false;
 let intervalId = null;
+let notifIntervalId = null;
+const lastNotifId = new Map();
 
 function randomDelay() {
   return Math.floor(Math.random() * (MAX_DELAY - MIN_DELAY + 1) + MIN_DELAY) * 1000;
@@ -163,6 +166,31 @@ function startQueue() {
   running = true;
   console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, delay ${MIN_DELAY}-${MAX_DELAY}s)`);
   intervalId = setInterval(processPending, POLL_INTERVAL);
+
+  // Notification poller: emit notification:new for new unread notifications
+  notifIntervalId = setInterval(() => {
+    try {
+      const db = getWritableDb();
+      // Get all users with new unread notifications
+      const rows = db.prepare(`
+        SELECT user_id, MAX(id) as max_id
+        FROM notifications
+        WHERE read_at IS NULL
+        GROUP BY user_id
+      `).all();
+
+      for (const row of rows) {
+        const prevMax = lastNotifId.get(row.user_id) || 0;
+        if (row.max_id > prevMax) {
+          // New unread notification(s) — emit once per user per poll cycle
+          emitNotificationNew(row.user_id, { user_id: row.user_id });
+          lastNotifId.set(row.user_id, row.max_id);
+        }
+      }
+    } catch {
+      // silent — notifications table might not exist yet
+    }
+  }, NOTIF_POLL_INTERVAL);
 }
 
 function stopQueue() {
@@ -170,6 +198,10 @@ function stopQueue() {
   if (intervalId) {
     clearInterval(intervalId);
     intervalId = null;
+  }
+  if (notifIntervalId) {
+    clearInterval(notifIntervalId);
+    notifIntervalId = null;
   }
   console.log('[Queue] Stopped');
 }

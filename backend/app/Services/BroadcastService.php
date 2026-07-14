@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\CustomerShare;
+use App\Models\User;
 use App\Models\WhatsappConnection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -17,7 +19,7 @@ class BroadcastService
     public function prepare(int $customerId, int $marketingId, string $templateBody, array $formValues): array
     {
         $waConnection = WhatsappConnection::where('user_id', $marketingId)->first();
-        if (!$waConnection || $waConnection->status !== 'connected') {
+        if (! $waConnection || $waConnection->status !== 'connected') {
             throw new \Exception('WhatsApp belum terhubung. Silakan hubungkan WhatsApp terlebih dahulu di menu Connect.');
         }
 
@@ -85,10 +87,25 @@ class BroadcastService
             ->get()
             ->toArray();
 
+        // Shared (borrowed) data for this marketing user
+        $sharedData = ['total_shared' => 0, 'owners' => []];
+        if ($marketingId !== null) {
+            $sharedQuery = CustomerShare::where('to_marketing_id', $marketingId)
+                ->where('status', 'approved');
+            $sharedCount = $sharedQuery->count();
+            $ownerIds = (clone $sharedQuery)->pluck('from_marketing_id')->unique()->values()->toArray();
+            $ownerNames = $ownerIds ? User::whereIn('id', $ownerIds)->pluck('name')->toArray() : [];
+            $sharedData = [
+                'total_shared' => $sharedCount,
+                'owners' => $ownerNames,
+            ];
+        }
+
         return [
             'assigned_count' => $assignedCount,
             'broadcast' => $stats,
             'not_broadcast_count' => max(0, $assignedCount - $broadcastedCount),
+            'shared_data' => $sharedData,
             'last_broadcast' => $lastBroadcast ? [
                 'customer_name' => $lastBroadcast->customer?->name ?? "Customer #{$lastBroadcast->customer_id}",
                 'status' => $lastBroadcast->status,

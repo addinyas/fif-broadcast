@@ -28,4 +28,10 @@ function emitPairingCode(userId, data) {
   }
 }
 
-module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck, emitPairingCode };
+function emitNotificationNew(userId, data) {
+  if (io) {
+    io.to(`user:${userId}`).emit('notification:new', data);
+  }
+}
+
+module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck, emitPairingCode, emitNotificationNew };

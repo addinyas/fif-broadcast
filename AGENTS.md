@@ -1138,6 +1138,36 @@ Semua perubahan **backwards compatible** — tanpa `WA_PROXY`, behavior tetap sa
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — setup Termux SSH tunnel dari HP Android untuk residential IP.
 
+### 2026-07-14 — Dashboard shared data + ProspectList badge + Real-time notification sound
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Services/BroadcastService.php`: `marketingSummary()` — tambah `shared_data` return (total_shared + owners array) via query ke `customer_shares` where `to_marketing_id` = current user & `status = approved`. Import `CustomerShare` model.
+
+**Frontend — Dashboard:**
+- `frontend/src/types/index.ts`: tambah `shared_data: { total_shared: number; owners: string[] }` ke `MarketingSummary` interface
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: tambah card "Data Dipinjam" (cyan gradient border) — muncul hanya jika `shared_data.total_shared > 0`, tampilkan jumlah data + nama pemilik. Import `ArrowLeftRight` icon.
+
+**Frontend — ProspectListPage:**
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: tambah kolom "Pemilik" setelah kolom "Nama" — tampilkan `from_marketing_name` dengan warna cyan untuk data dipinjam, `-` untuk data sendiri. Tambah badge "Dipinjam" (cyan) di kolom Nama untuk data pinjaman. Tambah `rowClassName` prop ke DataTable — data dipinjam dapat background `bg-cyan-50/30`.
+- `frontend/src/components/ui/DataTable.tsx`: tambah `rowClassName?: (item: T) => string` prop — diterapkan ke `<tr>` sebagai custom class.
+
+**Worker — Real-time notification sound:**
+- `worker/src/events.js`: tambah `emitNotificationNew(userId, data)` — emit `notification:new` event ke room `user:${userId}`
+- `worker/src/queue-consumer.js`: tambah notification poller — poll `notifications` table tiap 5 detik (`NOTIF_POLL_INTERVAL_MS`), track `lastNotifId` Map per user, emit `notification:new` saat ada unread notification baru. Import `emitNotificationNew`.
+- `frontend/src/components/ui/NotificationBell.tsx`: sudah ada `socket.on('notification:new', ...)` handler yang panggil `fetchNotifications()` → play sound saat unread count naik. Worker sekarang emit event ini secara real-time.
+
+#### Alur Notifikasi Real-time
+1. Backend create `Notification` record di SQLite (assignment, rolling, dll)
+2. Worker poll `notifications` table tiap 5 detik
+3. Worker detect new unread notification → emit `notification:new` via Socket.IO
+4. Frontend terima event → panggil `fetchNotifications()` → play sound jika `unreadCount` naik
+5. Latency: ~5 detik (worker poll interval) + <1 detik (socket emit + frontend fetch)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

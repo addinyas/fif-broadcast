@@ -21,10 +21,11 @@ interface DataTableProps<T> {
   showCheckbox?: boolean;
   allPageSelected?: boolean;
   markedIds?: number[];
+  rowClassName?: (item: T) => string;
 }
 
 export function DataTable<T extends { id: number }>({
-  columns, data, loading, onEdit, onDelete, selectedIds, onSelect, onSelectAll, showCheckbox, allPageSelected, markedIds,
+  columns, data, loading, onEdit, onDelete, selectedIds, onSelect, onSelectAll, showCheckbox, allPageSelected, markedIds, rowClassName,
 }: DataTableProps<T>) {
   if (loading) {
     return (
@@ -74,8 +75,9 @@ export function DataTable<T extends { id: number }>({
           <tbody className="divide-y divide-slate-50 dark:divide-slate-700/30">
             {data.map((item) => {
               const marked = isMarked(item.id);
+              const customClass = rowClassName?.(item) ?? '';
               return (
-                <tr key={item.id} className={`transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${marked ? 'bg-emerald-50 dark:bg-emerald-900/15' : ''}`}>
+                <tr key={item.id} className={`transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40 ${marked ? 'bg-emerald-50 dark:bg-emerald-900/15' : ''} ${customClass}`}>
                   {showCheckbox && (
                     <td className="px-3 py-3">
                       <input

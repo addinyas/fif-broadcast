@@ -90,9 +90,9 @@ class UserController extends Controller
 
             CustomerShare::where(function ($q) use ($user) {
                 $q->where('from_marketing_id', $user->id)
-                  ->orWhere('to_marketing_id', $user->id)
-                  ->orWhere('requested_by', $user->id)
-                  ->orWhere('approved_by', $user->id);
+                    ->orWhere('to_marketing_id', $user->id)
+                    ->orWhere('requested_by', $user->id)
+                    ->orWhere('approved_by', $user->id);
             })->delete();
 
             WhatsappConnection::where('user_id', $user->id)->delete();
