@@ -26,7 +26,10 @@ class AuthService
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return ['user' => $user, 'token' => $token];
+        return ['user' => array_merge(
+            $user->only(['id', 'name', 'display_name', 'phone_number', 'email', 'avatar_url', 'role', 'gender', 'npo_mce_id', 'kios_name', 'kios_id']),
+            ['broadcast_sender_name' => $user->display_name ?? $user->name ?? '']
+        ), 'token' => $token];
     }
 
     public function login(array $credentials): array
@@ -42,7 +45,10 @@ class AuthService
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return ['user' => $user, 'token' => $token];
+        return ['user' => array_merge(
+            $user->only(['id', 'name', 'display_name', 'phone_number', 'email', 'avatar_url', 'role', 'gender', 'npo_mce_id', 'kios_name', 'kios_id']),
+            ['broadcast_sender_name' => $user->display_name ?? $user->name ?? '']
+        ), 'token' => $token];
     }
 
     public function logout(User $user): void
