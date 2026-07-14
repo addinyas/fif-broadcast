@@ -3,6 +3,8 @@ export type UserRole = 'superadmin' | 'UH' | 'marketing';
 export interface User {
   id: number;
   name: string;
+  display_name?: string | null;
+  broadcast_sender_name?: string;
   email: string;
   avatar?: string;
   avatar_url?: string;

@@ -17,10 +17,10 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $users = [
-            ['name' => 'Super Admin', 'email' => 'superadmin@crm.test', 'npo_mce_id' => 'NPOSUPERADMIN', 'role' => 'superadmin'],
-            ['name' => 'Admin User', 'email' => 'admin@crm.test', 'npo_mce_id' => 'NPO002', 'kios_id' => '40200', 'kios_name' => 'CRE', 'role' => 'UH'],
-            ['name' => 'Marketing User', 'email' => 'marketing@crm.test', 'npo_mce_id' => 'NPO003', 'kios_id' => '40200', 'kios_name' => 'CRE', 'role' => 'marketing'],
-            ['name' => 'Marketing User 2', 'email' => 'marketing2@crm.test', 'npo_mce_id' => 'NPO004', 'kios_id' => '40207', 'kios_name' => 'POS WATES', 'role' => 'marketing'],
+            ['name' => 'Super Admin', 'display_name' => 'Admin FIF', 'email' => 'superadmin@crm.test', 'npo_mce_id' => 'NPOSUPERADMIN', 'role' => 'superadmin'],
+            ['name' => 'Admin User', 'display_name' => null, 'email' => 'admin@crm.test', 'npo_mce_id' => 'NPO002', 'kios_id' => '40200', 'kios_name' => 'CRE', 'role' => 'UH'],
+            ['name' => 'Marketing User', 'display_name' => null, 'email' => 'marketing@crm.test', 'npo_mce_id' => 'NPO003', 'kios_id' => '40200', 'kios_name' => 'CRE', 'role' => 'marketing'],
+            ['name' => 'Marketing User 2', 'display_name' => null, 'email' => 'marketing2@crm.test', 'npo_mce_id' => 'NPO004', 'kios_id' => '40207', 'kios_name' => 'POS WATES', 'role' => 'marketing'],
         ];
 
         foreach ($users as $user) {

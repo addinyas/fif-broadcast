@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon, AlertTriangle, Settings } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -91,6 +91,7 @@ export function ProspectListPage() {
   const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'own' | 'shared'>('all');
   const [showOwnershipDropdown, setShowOwnershipDropdown] = useState(false);
   const ownershipRef = useRef<HTMLDivElement>(null);
+  const [useDefaultTemplate, setUseDefaultTemplate] = useState(false);
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -159,6 +160,16 @@ export function ProspectListPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
+
+  useEffect(() => {
+    if (useDefaultTemplate) {
+      const defaultT = templates.find((t) => t.is_default);
+      if (defaultT) {
+        setSelectedTemplateId(defaultT.id);
+        setTemplateBody(defaultT.message_body);
+      }
+    }
+  }, [useDefaultTemplate, templates]);
 
   const fetchMarketingUsers = useCallback(async () => {
     try {
@@ -274,7 +285,7 @@ export function ProspectListPage() {
       .replace(/#nomor_contract/g, dd.nomor_contract || dd.no_contract || '')
       .replace(/#no_contract/g, dd.no_contract || '')
       .replace(/#nama/g, dd.nama || customer.name || '')
-      .replace(/#namapanggilanakun/g, user?.name || '')
+      .replace(/#namapanggilanakun/g, user?.broadcast_sender_name || user?.name || '')
       .replace(/#motor_dan_tahun/g, dd.motor_dan_tahun || '')
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')
@@ -709,21 +720,72 @@ export function ProspectListPage() {
         </div>
       </div>
 
+      {!user?.broadcast_sender_name && user?.role === 'superadmin' && (
+        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Nama Panggilan belum diatur</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Atur nama yang muncul di broadcast (#namapanggilanakun) di halaman Settings.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/settings')}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-amber-700"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            Ke Settings
+          </button>
+        </div>
+      )}
+
       <div className="rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50">
         <div className="border-b border-slate-50 px-5 py-3.5 dark:border-slate-700/30">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
               <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Tersimpan</label>
-              <select
-                value={selectedTemplateId ?? ''}
-                onChange={(e) => { const v = e.target.value; if (v) { const id = parseInt(v); setSelectedTemplateId(id); loadTemplate(id); } else { setSelectedTemplateId(null); } }}
-                className="mt-1.5 w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
-              >
-                <option value="">-- Pilih Template --</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
+              <div className="mt-1.5 flex items-center gap-2">
+                <select
+                  value={useDefaultTemplate ? 'default' : (selectedTemplateId ?? '')}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'default') {
+                      setUseDefaultTemplate(true);
+                    } else if (v) {
+                      setUseDefaultTemplate(false);
+                      const id = parseInt(v);
+                      setSelectedTemplateId(id);
+                      loadTemplate(id);
+                    } else {
+                      setUseDefaultTemplate(false);
+                      setSelectedTemplateId(null);
+                    }
+                  }}
+                  className="w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
+                >
+                  <option value="">-- Pilih Template --</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.title}{t.is_default ? ' (Default)' : ''}</option>
+                  ))}
+                </select>
+                <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition-all hover:bg-slate-50 has-checked:border-fif-500 has-checked:bg-fif-50 has-checked:text-fif-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:has-checked:border-fif-400 dark:has-checked:bg-fif-900/20 dark:has-checked:text-fif-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useDefaultTemplate}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setUseDefaultTemplate(checked);
+                      if (!checked) {
+                        setSelectedTemplateId(null);
+                        setTemplateBody('');
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  {useDefaultTemplate ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Settings className="h-3.5 w-3.5" />}
+                  Default
+                </label>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button

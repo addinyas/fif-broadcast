@@ -1231,6 +1231,25 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-14 — Ownership filter + 'Anda' badge + from_marketing_name in main query
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Repositories/CustomerRepository.php`: `getAssignedToMarketing()` — attach `from_marketing_name` + `from_marketing_id` ke shared customers via eager-loaded `CustomerShare` map (sebelumnya tidak ada di query utama, hanya di `mySharedCustomers()`); tambah filter `ownership` parameter (`all` | `own` | `shared`)
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `assignedToMe()` — teruskan `ownership` filter ke service
+
+**Frontend:**
+- `frontend/src/types/index.ts`: tambah `from_marketing_id?: number` ke `Customer` interface
+- `frontend/src/pages/marketing/ProspectListPage.tsx`:
+  - Filter dropdown "Semua Data / Data Saya / Dipinjam" di toolbar
+  - Kolom "Pemilik" — data sendiri: badge gradient violet "Anda" + UserIcon; data dipinjam: nama marketing + ArrowLeftRight icon di circle gradient cyan
+  - Hapus section "Data Dipinjam" terpisah di bawah table (redundan — sudah gabung di main DataTable)
+  - Row styling data dipinjam: gradient background + left border cyan
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

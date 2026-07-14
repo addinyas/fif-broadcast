@@ -21,6 +21,7 @@ export const profileService = {
     name?: string;
     gender?: string | null;
     npo_mce_id?: string | null;
+    display_name?: string | null;
   }): Promise<{ message: string; data: User }> {
     const clean = Object.fromEntries(
       Object.entries(payload).filter(([, v]) => v !== undefined)
