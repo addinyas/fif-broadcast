@@ -153,23 +153,22 @@ export function TemplateManagementPage() {
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Isi Pesan</label>
             <div className="flex flex-wrap gap-1.5">
               {VARIABLE_BUTTONS.map((v) => {
-                const c: Record<string, { base: string; hover: string; ring: string; dot: string; dotHover: string }> = {
-                  violet: { base: 'bg-violet-50 text-violet-600 border-violet-200/80', hover: 'hover:bg-violet-600 hover:text-white hover:border-violet-600 hover:shadow-violet-200', ring: 'hover:ring-violet-100', dot: 'bg-violet-400', dotHover: 'group-hover:bg-white' },
-                  blue: { base: 'bg-blue-50 text-blue-600 border-blue-200/80', hover: 'hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-blue-200', ring: 'hover:ring-blue-100', dot: 'bg-blue-400', dotHover: 'group-hover:bg-white' },
-                  rose: { base: 'bg-rose-50 text-rose-600 border-rose-200/80', hover: 'hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow-rose-200', ring: 'hover:ring-rose-100', dot: 'bg-rose-400', dotHover: 'group-hover:bg-white' },
-                  amber: { base: 'bg-amber-50 text-amber-600 border-amber-200/80', hover: 'hover:bg-amber-500 hover:text-white hover:border-amber-500 hover:shadow-amber-200', ring: 'hover:ring-amber-100', dot: 'bg-amber-400', dotHover: 'group-hover:bg-white' },
-                  emerald: { base: 'bg-emerald-50 text-emerald-600 border-emerald-200/80', hover: 'hover:bg-emerald-600 hover:text-white hover:border-emerald-600 hover:shadow-emerald-200', ring: 'hover:ring-emerald-100', dot: 'bg-emerald-400', dotHover: 'group-hover:bg-white' },
-                  cyan: { base: 'bg-cyan-50 text-cyan-600 border-cyan-200/80', hover: 'hover:bg-cyan-500 hover:text-white hover:border-cyan-500 hover:shadow-cyan-200', ring: 'hover:ring-cyan-100', dot: 'bg-cyan-400', dotHover: 'group-hover:bg-white' },
+                const c: Record<string, string> = {
+                  violet: 'bg-violet-50 text-violet-600 hover:bg-violet-100 hover:shadow-violet-100',
+                  blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100 hover:shadow-blue-100',
+                  rose: 'bg-rose-50 text-rose-600 hover:bg-rose-100 hover:shadow-rose-100',
+                  amber: 'bg-amber-50 text-amber-600 hover:bg-amber-100 hover:shadow-amber-100',
+                  emerald: 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:shadow-emerald-100',
+                  cyan: 'bg-cyan-50 text-cyan-600 hover:bg-cyan-100 hover:shadow-cyan-100',
                 };
-                const s = c[v.color] || c.violet;
+                const cls = c[v.color] || c.violet;
                 return (
                   <button
                     key={v.key}
                     type="button"
                     onClick={() => insertVariable(v.key)}
-                    className={`group inline-flex items-center gap-1.5 rounded-lg border ${s.base} ${s.hover} ${s.ring} px-2.5 py-1 text-[11px] font-semibold shadow-sm ring-0 transition-all duration-200 hover:shadow-md hover:ring-2 active:scale-95`}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium ${cls} transition-colors hover:shadow-sm active:scale-95`}
                   >
-                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.dot} transition-colors ${s.dotHover}`} />
                     {v.label}
                   </button>
                 );
