@@ -60,12 +60,16 @@ class ProfileController extends Controller
             $user->update($data);
         }
 
+        $fresh = $user->fresh();
+        $result = $fresh->only([
+            'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
+            'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+        ]);
+        $result['broadcast_sender_name'] = $fresh->display_name ?? $fresh->name;
+
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => $user->fresh()->only([
-                'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
-                'gender', 'npo_mce_id', 'kios_name', 'kios_id',
-            ]),
+            'data' => $result,
         ]);
     }
 
