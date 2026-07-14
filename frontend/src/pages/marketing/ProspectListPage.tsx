@@ -17,8 +17,8 @@ import type { Customer, Template, User } from '../../types';
 
 const VARIABLE_BUTTONS = [
   { key: '#no_contract', label: 'No Contract' },
-  { key: '#nama', label: 'Nama' },
-  { key: '#namapanggilanakun', label: 'Nama Panggilan' },
+  { key: '#nama', label: 'Nama Customer' },
+  { key: '#namapanggilanakun', label: 'Nama Kamu' },
   { key: '#obj_desc', label: 'Tipe Motor' },
   { key: '#tahun', label: 'Tahun Motor' },
   { key: '#plafon', label: 'Plafon' },
