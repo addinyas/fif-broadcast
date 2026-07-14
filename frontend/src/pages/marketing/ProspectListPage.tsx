@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon, AlertTriangle, Settings } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon, AlertTriangle, Settings, MessageCircle, CheckCheck } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -854,9 +854,26 @@ export function ProspectListPage() {
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
           {templateBody && (
-            <div className="mt-2 rounded-lg border border-dashed border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-600 dark:border-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Preview:</span>
-              <p className="mt-1 whitespace-pre-wrap">{previewMessage}</p>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm dark:border-slate-600 dark:from-emerald-900/10 dark:to-teal-900/10">
+              <div className="flex items-center gap-2 bg-emerald-600 px-4 py-2.5">
+                <MessageCircle className="h-4 w-4 text-emerald-100" />
+                <span className="text-xs font-semibold text-white">Preview Pesan</span>
+                <span className="ml-auto rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-medium text-emerald-100">LIVE</span>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-fif-500 to-fif-600 text-xs font-bold text-white shadow-md">
+                    {(user?.display_name || user?.name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="relative max-w-[85%] rounded-2xl rounded-tl-md bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200">
+                    <p className="whitespace-pre-wrap">{previewMessage}</p>
+                    <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-slate-400 dark:text-slate-500">
+                      <span>{new Date().toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' })}</span>
+                      <CheckCheck className="h-3 w-3 text-blue-500" />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
