@@ -1470,6 +1470,25 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-16 — UI cleanup: hide CORI plafon hint + replace Plafon with OTR in manual input
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Fix 1 — Hide plafon hint next to CORI dropdown (CustomerManagementPage):**
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: hapus `hintPlafon` variable + `<span>` plafon hint di samping dropdown CORI — kolom CORI sekarang hanya tampilkan dropdown saja, lebih rapi
+
+**Fix 2 — CORI dropdown instant render (CalculatorPage manual input):**
+- `frontend/src/pages/CalculatorPage.tsx`: `onChange` CORI dropdown → sync `setSelected()` update local state langsung + `setPinjaman()` langsung, API save fire-and-forget via `.then()/.catch()`. Fix flicker/one-step lag dari async `setSelected(updated)` yang trigger re-render ulang
+
+**Fix 3 — Replace Plafon with OTR in manual input (CalculatorPage):**
+- `frontend/src/pages/CalculatorPage.tsx`: field "Plafon (Rp)" → "OTR / Harga Pasar (Rp)"
+- `ManualCustomer` interface: `plafon: string` → `otr: string`
+- Plafon auto-calc dari `calcPlafon(otr, cori)` — berubah instant saat OTR atau CORI diubah
+- CORI dropdown di manual input juga trigger `setPinjaman(calcPlafon(manual.otr, newCori))`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
