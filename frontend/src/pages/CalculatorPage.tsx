@@ -399,7 +399,7 @@ export function CalculatorPage() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pinjaman Maksimal <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Plafon/Pinjaman <span className="text-red-500">*</span></label>
                 <input
                   value={pinjaman ? formatAngka(pinjaman) : ''}
                   onChange={(e) => setPinjaman(parseAngka(e.target.value))}
