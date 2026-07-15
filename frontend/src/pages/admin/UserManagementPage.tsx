@@ -55,8 +55,6 @@ export function UserManagementPage() {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(fetchUsers, 10000);
-    return () => clearInterval(interval);
   }, [fetchUsers]);
 
   const groups = useMemo(() => {

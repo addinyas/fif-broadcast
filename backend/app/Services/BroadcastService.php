@@ -145,9 +145,9 @@ class BroadcastService
         $plafon = '';
         if ($otr > 0 && $cori !== '') {
             if ($cori === 'MEDIUM') {
-                $plafon = (string) ((int) ($otr * 0.75));
+                $plafon = (string) $this->roundPlafon($otr * 0.75);
             } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
-                $plafon = (string) ((int) ($otr * 0.90));
+                $plafon = (string) $this->roundPlafon($otr * 0.90);
             }
         }
 
@@ -174,11 +174,21 @@ class BroadcastService
         ];
 
         $message = $templateBody;
-        uksort($map, fn($a, $b) => strlen($b) - strlen($a));
+        uksort($map, fn ($a, $b) => strlen($b) - strlen($a));
         foreach ($map as $key => $value) {
             $message = str_replace($key, $value, $message);
         }
 
         return $message;
+    }
+
+    private function roundPlafon(float $raw): int
+    {
+        $remainder = (int) $raw % 100000;
+        if ($remainder < 50000) {
+            return (int) $raw - $remainder;
+        }
+
+        return (int) $raw - $remainder + 50000;
     }
 }
