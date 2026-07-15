@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Search, Copy, Check, PenLine } from 'lucide-react';
+import { Search, Copy, Check, Plus } from 'lucide-react';
 import { customerService } from '../services/customerService';
 import { calculateAngsuran, calcPlafon } from '../finance/financeEngine';
 import type { Customer } from '../types';
@@ -117,13 +117,27 @@ export function CalculatorPage() {
       </div>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari nama atau no kontrak..."
-          className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-        />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari nama atau no kontrak..."
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+            />
+          </div>
+          <button
+            onClick={() => {
+              setManual({ name: search.trim() || '', no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
+              setSearch('');
+              setResults([]);
+            }}
+            className="shrink-0 flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-slate-500 hover:border-fif-400 hover:text-fif-600 dark:hover:text-fif-400 transition-colors"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
         {results.length > 0 && (
           <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg">
               {results.map((c) => (
@@ -146,19 +160,7 @@ export function CalculatorPage() {
         )}
         {search.trim().length >= 2 && results.length === 0 && (
           <div className="absolute left-0 right-0 top-full z-10 mt-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-lg">
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Data tidak ditemukan</p>
-            <button
-              onClick={() => {
-                const isNumeric = /^\d+$/.test(search);
-                setManual({ name: isNumeric ? '' : search, no_contract: isNumeric ? search : '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
-                setSearch('');
-                setResults([]);
-              }}
-              className="flex items-center gap-2 rounded-lg bg-fif-50 dark:bg-fif-900/20 px-3 py-2 text-xs font-medium text-fif-600 dark:text-fif-400 hover:bg-fif-100 dark:hover:bg-fif-900/40 transition-colors"
-            >
-              <PenLine className="h-3.5 w-3.5" />
-              Input Manual
-            </button>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Data tidak ditemukan</p>
           </div>
         )}
       </div>
