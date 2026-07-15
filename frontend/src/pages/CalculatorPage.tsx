@@ -335,10 +335,9 @@ export function CalculatorPage() {
                   if (!selected || !e.target.value) return;
                   const newCori = e.target.value;
                   const otr = selected.dynamic_data?.otr;
+                  setSelected((prev) => prev ? { ...prev, dynamic_data: { ...prev.dynamic_data, cori: newCori } } : prev);
                   setPinjaman(calcPlafon(otr, newCori));
-                  customerService.updateCori(selected.id, newCori)
-                    .then((updated) => setSelected(updated))
-                    .catch(() => {});
+                  customerService.updateCori(selected.id, newCori).catch(() => {});
                 }}
                 className="w-auto min-w-[90px] max-w-[110px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-1.5 py-1 text-xs font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 sm:min-w-[110px] sm:px-2 sm:text-sm"
               >
