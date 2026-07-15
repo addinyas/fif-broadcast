@@ -1348,9 +1348,25 @@ Ketik: `lanjut yang tadi`
 
 **Aturan pembulatan:**
 - Sisa < 50.000 → bulatkan ke bawah ke 100.000 terdekat (11.737.500 → 11.700.000)
-- Sisa >= 50.000 → bulatkan ke atas ke 100.000 terdekat (11.750.000 → 11.800.000)
+- Sisa >= 50.000 tapi belum 100.000 → bulatkan ke 50.000 (11.775.000 → 11.750.000)
 
-**Rumus:** `round(plafon / 100000) * 100000` — tapi belum pasti, cek aturan bisnis FIF dulu.
+**Rumus:**
+```php
+$remainder = $plafon % 100000;
+if ($remainder < 50000) {
+    $plafon = $plafon - $remainder; // bulatkan ke bawah ke 100k
+} else {
+    $plafon = $plafon - $remainder + 50000; // bulatkan ke 50k
+}
+```
+
+**Contoh:**
+- 11.737.500 → remainder 37.500 (< 50k) → 11.700.000
+- 11.750.000 → remainder 50.000 (>= 50k) → 11.750.000
+- 11.775.000 → remainder 75.000 (>= 50k) → 11.750.000
+- 11.800.000 → remainder 0 → 11.800.000
+- 12.060.000 → remainder 60.000 (>= 50k) → 12.050.000
+- 12.040.000 → remainder 40.000 (< 50k) → 12.000.000
 
 **Files yang perlu diubah:**
 - `frontend/src/finance/financeEngine.ts` — `calcPlafon()` tambah pembulatan
