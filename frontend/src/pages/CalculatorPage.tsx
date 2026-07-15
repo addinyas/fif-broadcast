@@ -265,6 +265,7 @@ export function CalculatorPage() {
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               >
                 <option value="">Pilih</option>
+                <option value="BAD">BAD</option>
                 <option value="MEDIUM">MEDIUM</option>
                 <option value="GOOD">GOOD</option>
                 <option value="GOOD LOYAL">GOOD LOYAL</option>
@@ -338,6 +339,7 @@ export function CalculatorPage() {
                 className="w-auto min-w-[90px] max-w-[110px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-1.5 py-1 text-xs font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 sm:min-w-[110px] sm:px-2 sm:text-sm"
               >
                 <option value="">Pilih</option>
+                <option value="BAD">BAD</option>
                 <option value="MEDIUM">MEDIUM</option>
                 <option value="GOOD">GOOD</option>
                 <option value="GOOD LOYAL">GOOD LOYAL</option>

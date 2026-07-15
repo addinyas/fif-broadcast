@@ -377,7 +377,7 @@ class CustomerController extends Controller
     public function updateCori(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'cori' => 'required|string|in:MEDIUM,GOOD,GOOD LOYAL',
+            'cori' => 'required|string|in:BAD,MEDIUM,GOOD,GOOD LOYAL',
         ]);
 
         if ($validator->fails()) {

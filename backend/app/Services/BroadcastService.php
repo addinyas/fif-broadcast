@@ -144,7 +144,9 @@ class BroadcastService
         $cori = strtoupper($values['cori'] ?? '');
         $plafon = '';
         if ($otr > 0 && $cori !== '') {
-            if ($cori === 'MEDIUM') {
+            if ($cori === 'BAD') {
+                $plafon = number_format($this->roundPlafon($otr * 0.65), 0, '', '.');
+            } elseif ($cori === 'MEDIUM') {
                 $plafon = number_format($this->roundPlafon($otr * 0.75), 0, '', '.');
             } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
                 $plafon = number_format($this->roundPlafon($otr * 0.90), 0, '', '.');

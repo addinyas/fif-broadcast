@@ -67,6 +67,7 @@ export function calcPlafon(otr: string | number | undefined | null, cori: string
   const otrNum = typeof otr === 'number' ? otr : parseInt(String(otr ?? '0').replace(/\D/g, '')) || 0;
   const coriUpper = (cori ?? '').toUpperCase();
   if (otrNum <= 0 || !coriUpper) return 0;
+  if (coriUpper === 'BAD') return roundPlafon(otrNum * 0.65);
   if (coriUpper === 'MEDIUM') return roundPlafon(otrNum * 0.75);
   if (coriUpper === 'GOOD' || coriUpper === 'GOOD LOYAL') return roundPlafon(otrNum * 0.90);
   return 0;
