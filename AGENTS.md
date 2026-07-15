@@ -1413,6 +1413,22 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-15 — Plafon pembulatan 50k/100k + UserManagement polling fix
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Frontend — Plafon rounding:**
+- `frontend/src/finance/financeEngine.ts`: tambah `roundPlafon()` helper — remainder < 50k → bulat bawah ke 100k, >= 50k → bulat ke 50k. Ganti `Math.floor(otrNum * 0.75/0.90)` → `roundPlafon(...)`. OTR 15.650.000 × 75% = 11.737.500 → **11.700.000**
+
+**Backend — Plafon rounding:**
+- `backend/app/Services/BroadcastService.php`: tambah `private roundPlafon()` method — rumus PHP yang sama. Ganti `(int) ($otr * 0.75/0.90)` → `$this->roundPlafon(...)`. Template `#plafon` di broadcast juga resolve ke nilai yang dibulatkan
+
+**Frontend — Hapus polling:**
+- `frontend/src/pages/admin/UserManagementPage.tsx`: hapus `setInterval(fetchUsers, 10000)` + `clearInterval` — data hanya refresh saat mount/navigate
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
