@@ -125,7 +125,7 @@ export function TemplateManagementPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Template Management</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Template Management</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola template pesan WhatsApp</p>
         </div>
         <Button

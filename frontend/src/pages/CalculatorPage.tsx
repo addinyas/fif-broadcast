@@ -111,7 +111,7 @@ export function CalculatorPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Kalkulator</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Kalkulator</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hitung angsuran dan simulasi pinjaman</p>
             </div>
       </div>
@@ -325,7 +325,7 @@ export function CalculatorPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">OTR</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('otr') ? `Rp ${formatAngka(dyn('otr'))}` : '-'}</p>
+              <p className="font-mono font-semibold tabular-nums text-slate-800 dark:text-slate-200">{dyn('otr') ? `Rp ${formatAngka(dyn('otr'))}` : '-'}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">CORI</p>
@@ -429,21 +429,21 @@ export function CalculatorPage() {
               <div className="space-y-1.5 text-sm">
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Angsuran Kurang</span>
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
+                  <span className="font-mono font-semibold tabular-nums text-slate-800 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = Rp {formatAngka(totalAngsuran)}</span>
                 </div>
                 {dendaVal > 0 && (
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Denda</span>
-                  <span className="font-semibold text-red-500">Rp {formatAngka(dendaVal)}</span>
+                  <span className="font-mono font-semibold tabular-nums text-red-500">Rp {formatAngka(dendaVal)}</span>
                 </div>
                 )}
                 <div className="flex items-center justify-between rounded-lg bg-slate-50 dark:bg-slate-800/50 px-4 py-2.5">
                   <span className="text-slate-500 dark:text-slate-400 text-xs">Pelunasan</span>
-                  <span className="font-semibold text-fif-600">Rp {formatAngka(pelunasan)}</span>
+                  <span className="font-mono font-semibold tabular-nums text-fif-600">Rp {formatAngka(pelunasan)}</span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3">
                   <span className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm">Terima</span>
-                  <span className="font-bold text-emerald-700 dark:text-emerald-300 text-base">Rp {formatAngka(terima)}</span>
+                  <span className="font-mono font-bold tabular-nums text-emerald-700 dark:text-emerald-300 text-base">Rp {formatAngka(terima)}</span>
                 </div>
               </div>
 

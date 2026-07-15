@@ -32,8 +32,8 @@ function Greeting() {
       <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
       <div className="relative">
         <p className="text-sm font-medium text-fif-200">{greeting}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
-          <span className="uppercase">{user?.name || 'Marketing'}</span>
+        <h1 className="font-heading mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <span className="font-name">{user?.name || 'Marketing'}</span>
         </h1>
         <p className="mt-2 max-w-xl text-sm text-fif-200">
           Pantau progress broadcast WhatsApp Anda di sini
@@ -234,19 +234,19 @@ export function MarketingDashboardPage() {
           </CardHeader>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-emerald-50 p-4 text-center dark:bg-emerald-900/20">
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{summary?.broadcast.sent ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{summary?.broadcast.sent ?? 0}</p>
               <p className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">Terkirim</p>
             </div>
             <div className="rounded-xl bg-red-50 p-4 text-center dark:bg-red-900/20">
-              <p className="text-2xl font-bold text-red-600 dark:text-red-400">{summary?.broadcast.failed ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">{summary?.broadcast.failed ?? 0}</p>
               <p className="text-xs font-medium text-red-600/70 dark:text-red-400/70">Gagal</p>
             </div>
             <div className="rounded-xl bg-amber-50 p-4 text-center dark:bg-amber-900/20">
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{summary?.broadcast.pending ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{summary?.broadcast.pending ?? 0}</p>
               <p className="text-xs font-medium text-amber-600/70 dark:text-amber-400/70">Pending</p>
             </div>
             <div className="rounded-xl bg-purple-50 p-4 text-center dark:bg-purple-900/20">
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{summary?.not_broadcast_count ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-purple-600 dark:text-purple-400">{summary?.not_broadcast_count ?? 0}</p>
               <p className="text-xs font-medium text-purple-600/70 dark:text-purple-400/70">Belum dikerjakan</p>
           </div>
         </div>

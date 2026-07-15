@@ -108,7 +108,7 @@ export function BroadcastHistoryPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast History</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast History</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Riwayat pengiriman broadcast WhatsApp</p>
         </div>
         <div className="flex gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-800/80">

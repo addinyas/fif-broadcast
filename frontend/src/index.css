@@ -1,7 +1,14 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-name: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+  --font-subheading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Sora", ui-monospace, monospace;
+  --font-ios: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Satoshi", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --color-fif-50: #eff5ff;
   --color-fif-100: #dbe8fe;
@@ -95,7 +102,7 @@
   }
 
   body {
-    @apply bg-surface text-slate-800 antialiased;
+    @apply font-body bg-surface text-slate-800 antialiased;
   }
 
   .dark body {

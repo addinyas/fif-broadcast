@@ -34,7 +34,7 @@ export function DashboardPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Dashboard</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Dashboard</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Overview FIF Broadcast system</p>
         </div>
       </div>
@@ -143,19 +143,19 @@ export function DashboardPage() {
           ) : (
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-blue-50 p-4 text-center dark:bg-blue-900/20">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dist?.assigned ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{dist?.assigned ?? 0}</p>
               <p className="text-xs font-medium text-blue-600/70 dark:text-blue-400/70">Terassign</p>
             </div>
             <div className="rounded-xl bg-amber-50 p-4 text-center dark:bg-amber-900/20">
-              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{dist?.unassigned ?? 0}</p>
+              <p className="text-2xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{dist?.unassigned ?? 0}</p>
               <p className="text-xs font-medium text-amber-600/70 dark:text-amber-400/70">Belum diassign</p>
             </div>
             <div className="rounded-xl bg-emerald-50 p-4 text-center dark:bg-emerald-900/20">
-              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{totalBroadcasted}</p>
+              <p className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{totalBroadcasted}</p>
               <p className="text-xs font-medium text-emerald-600/70 dark:text-emerald-400/70">Total Broadcast</p>
             </div>
             <div className="rounded-xl bg-purple-50 p-4 text-center dark:bg-purple-900/20">
-              <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+              <p className="text-2xl font-bold tabular-nums text-purple-600 dark:text-purple-400">
                 {dist ? dist.by_marketing.length : '-'}
               </p>
               <p className="text-xs font-medium text-purple-600/70 dark:text-purple-400/70">Marketing Aktif</p>

@@ -91,7 +91,7 @@ export function BroadcastFormPage() {
           Kembali
         </Button>
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kirim pesan WhatsApp ke customer</p>
         </div>
       </div>

@@ -59,7 +59,7 @@ export function LoginPage() {
         </div>
 
         <div className={`text-center transition-all duration-700 ${showForm ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
-          <h1 className="bg-gradient-to-r from-white via-fif-100 to-fif-200 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
+          <h1 className="font-heading bg-gradient-to-r from-white via-fif-100 to-fif-200 bg-clip-text text-2xl font-bold tracking-tight text-transparent">
             Selamat Datang
           </h1>
           <p className="mt-1.5 text-sm text-slate-500">Federal International Finance</p>

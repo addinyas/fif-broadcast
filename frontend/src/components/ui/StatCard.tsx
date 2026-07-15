@@ -25,7 +25,7 @@ export function StatCard({ title, value, icon, color = 'blue' }: StatCardProps) 
       <div className="flex items-start justify-between">
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">{title}</p>
-          <p className="text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-200">{value}</p>
+          <p className="text-3xl font-bold tracking-tight tabular-nums text-slate-800 dark:text-slate-200">{value}</p>
         </div>
         {icon && (
           <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${cfg.bg} ${cfg.icon} transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3`}>

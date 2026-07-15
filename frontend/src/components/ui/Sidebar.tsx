@@ -100,8 +100,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-5">
           <img src="/logo.png" alt="FIF" className="h-9 w-9 object-contain" />
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold tracking-tight">FIF</span>
-            <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
+            <span className="font-display text-lg font-bold tracking-tight">FIF</span>
+            <span className={`font-tight rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
               {roleLabel[user?.role || ''] || user?.role}
             </span>
           </div>
@@ -152,7 +152,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-slate-100 uppercase">{user?.name}</div>
+            <div className="font-name truncate text-sm font-medium text-slate-100">{user?.name}</div>
             <div className="truncate text-xs text-slate-400">{user?.email}</div>
             {(user?.kios_name || user?.kios_id) && (
               <div className="truncate text-[11px] font-medium text-slate-500">

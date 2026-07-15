@@ -745,7 +745,7 @@ export function ProspectListPage() {
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">Broadcast</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">Broadcast</h1>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Buat template dan kirim pesan ke customer</p>
         </div>
       </div>

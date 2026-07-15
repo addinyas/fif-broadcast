@@ -84,7 +84,7 @@ export function KiosManagementPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Kelola Kios</h1>
+          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Kelola Kios</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola daftar kios yang tersedia</p>
         </div>
         <Button onClick={openAdd} size="sm">
@@ -144,7 +144,7 @@ export function KiosManagementPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
-            <h2 className="mb-4 text-lg font-bold text-slate-800 dark:text-slate-200">
+            <h2 className="mb-4 font-subheading text-lg font-bold text-slate-800 dark:text-slate-200">
               {editingKios ? 'Edit Kios' : 'Tambah Kios'}
             </h2>
             <div className="space-y-3">

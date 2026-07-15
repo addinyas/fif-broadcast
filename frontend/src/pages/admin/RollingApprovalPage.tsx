@@ -61,7 +61,7 @@ export function RollingApprovalPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Rolling Data Approval</h1>
+        <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Rolling Data Approval</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Approve atau reject request pinjam data antar marketing</p>
       </div>
 
