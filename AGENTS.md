@@ -1321,7 +1321,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### 2026-07-15 — CORI editable + auto plafon calculation (CORI×OTR)
 
-**Status: PLANNED ⏸️**
+**Sudah di-push ✅ & deployed ✅**
 
 **Alur baru:**
 1. User ganti CORI di Kalkulator → PATCH `/customers/{id}/cori`
