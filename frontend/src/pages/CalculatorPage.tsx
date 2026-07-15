@@ -302,8 +302,8 @@ export function CalculatorPage() {
       )}
 
       {selected && (
-        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-3 sm:p-4">
+          <div className="grid grid-cols-3 gap-2 text-xs sm:gap-4 sm:text-sm">
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">No Kontrak</p>
               <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('no_contract') || '-'}</p>
