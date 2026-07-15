@@ -1342,6 +1342,20 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### ⏳ Perlu diperbaiki: Plafon pembulatan
+
+**Plafon belum dibulatkan dengan benar.** Contoh: OTR 15.650.000 × 75% = 11.737.500 → harusnya **11.700.000** (bukan 11.737.500).
+
+**Aturan pembulatan:**
+- Sisa < 50.000 → bulatkan ke bawah ke 100.000 terdekat (11.737.500 → 11.700.000)
+- Sisa >= 50.000 → bulatkan ke atas ke 100.000 terdekat (11.750.000 → 11.800.000)
+
+**Rumus:** `round(plafon / 100000) * 100000` — tapi belum pasti, cek aturan bisnis FIF dulu.
+
+**Files yang perlu diubah:**
+- `frontend/src/finance/financeEngine.ts` — `calcPlafon()` tambah pembulatan
+- `backend/app/Services/BroadcastService.php` — `mapFormToMessage()` tambah pembulatan di plafon computation
+
 ### 2026-07-15 — CORI editable + auto plafon calculation (CORI×OTR)
 
 **Sudah di-push ✅ & deployed ✅**
