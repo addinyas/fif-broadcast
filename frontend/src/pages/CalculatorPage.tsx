@@ -303,7 +303,7 @@ export function CalculatorPage() {
 
       {selected && (
         <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4">
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">No Kontrak</p>
               <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('no_contract') || '-'}</p>
@@ -441,7 +441,7 @@ export function CalculatorPage() {
 
               <div>
                 <h4 className="mb-2 text-sm font-semibold text-slate-600 dark:text-slate-400">Tenor Angsuran</h4>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {visibleTenors.map((n, i) => {
                     const idx = financeTenors.indexOf(n);
                     const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
