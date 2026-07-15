@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown, User } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
+import { calcPlafon } from '../../finance/financeEngine';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -289,15 +290,10 @@ export function CustomerManagementPage() {
     { key: 'otr', header: 'OTR', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
     {
       key: 'plafon', header: 'Plafon', render: (c: Customer) => {
-        const coriVal = (dyn(c, 'cori') || '').toUpperCase();
-        const original = dyn(c, 'plafon');
-        const pembulatan75 = dyn(c, 'pembulatan_75');
-        const pembulatan90 = dyn(c, 'pembulatan_90');
-        const calculated = coriVal === 'MEDIUM' ? pembulatan75 : coriVal === 'GOOD' || coriVal === 'GOOD LOYAL' ? pembulatan90 : null;
-
+        const plafon = calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'));
         return (
-          <span className={calculated && calculated !== original ? 'text-fif-600 font-semibold' : ''}>
-            {calculated ? formatRupiah(calculated) : formatRupiah(original) || '-'}
+          <span className={plafon > 0 ? 'text-fif-600 font-semibold' : ''}>
+            {plafon > 0 ? formatRupiah(String(plafon)) : '-'}
           </span>
         );
       }
@@ -305,9 +301,7 @@ export function CustomerManagementPage() {
     {
       key: 'cori', header: 'CORI', render: (c: Customer) => {
         const coriVal = (dyn(c, 'cori') || '').toUpperCase();
-        const pembulatan75 = dyn(c, 'pembulatan_75');
-        const pembulatan90 = dyn(c, 'pembulatan_90');
-        const activePembulatan = coriVal === 'MEDIUM' ? pembulatan75 : coriVal === 'GOOD' || coriVal === 'GOOD LOYAL' ? pembulatan90 : null;
+        const hintPlafon = calcPlafon(dyn(c, 'otr'), coriVal);
 
         return (
           <div className="flex items-center gap-2">
@@ -334,9 +328,9 @@ export function CustomerManagementPage() {
               <option value="GOOD">GOOD</option>
               <option value="GOOD LOYAL">GOOD LOYAL</option>
             </select>
-            {activePembulatan && (
+            {hintPlafon > 0 && (
               <span className="text-xs font-mono text-slate-400">
-                {activePembulatan}
+                {formatRupiah(String(hintPlafon))}
               </span>
             )}
           </div>
@@ -389,8 +383,6 @@ export function CustomerManagementPage() {
     { key: 'otr', label: 'OTR' },
     { key: 'plafon', label: 'Plafon' },
     { key: 'cori', label: 'CORI' },
-    { key: '75', label: '75%' },
-    { key: '90', label: '90%' },
     { key: 'kota', label: 'Kota' },
     { key: 'kecamatan', label: 'Kecamatan' },
     { key: 'kelurahan', label: 'Kelurahan' },

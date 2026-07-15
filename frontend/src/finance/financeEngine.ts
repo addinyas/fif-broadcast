@@ -55,6 +55,15 @@ function effToFlat(eff: number, top: number): number {
   return (((top * r) / (1 - (1 + r) ** -top)) - 1) * (12 / top);
 }
 
+export function calcPlafon(otr: string | number | undefined | null, cori: string | undefined | null): number {
+  const otrNum = typeof otr === 'number' ? otr : parseInt(String(otr ?? '0').replace(/\D/g, '')) || 0;
+  const coriUpper = (cori ?? '').toUpperCase();
+  if (otrNum <= 0 || !coriUpper) return 0;
+  if (coriUpper === 'MEDIUM') return Math.floor(otrNum * 0.75);
+  if (coriUpper === 'GOOD' || coriUpper === 'GOOD LOYAL') return Math.floor(otrNum * 0.90);
+  return 0;
+}
+
 export function calculateAngsuran(input: FinanceInput): FinanceOutput {
   const hargaTaksasi = input.hargaTaksasi ?? 40_000_000;
   const eff = RATE_EFF_MAP[input.rate] ?? 0.45;

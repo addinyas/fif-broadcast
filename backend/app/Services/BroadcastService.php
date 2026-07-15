@@ -139,6 +139,18 @@ class BroadcastService
             $waktu = 'Malam';
         }
 
+        // Compute plafon from OTR + CORI (not stored in dynamic_data)
+        $otr = (int) ($values['otr'] ?? 0);
+        $cori = strtoupper($values['cori'] ?? '');
+        $plafon = '';
+        if ($otr > 0 && $cori !== '') {
+            if ($cori === 'MEDIUM') {
+                $plafon = (string) ((int) ($otr * 0.75));
+            } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
+                $plafon = (string) ((int) ($otr * 0.90));
+            }
+        }
+
         $map = [
             '#nomor_contract' => $values['nomor_contract'] ?? '',
             '#no_contract' => $values['no_contract'] ?? '',
@@ -149,7 +161,7 @@ class BroadcastService
             '#plat' => $values['plat'] ?? '',
             '#obj_desc' => $values['obj_desc'] ?? '',
             '#tahun' => $values['tahun'] ?? '',
-            '#plafon' => $values['plafon'] ?? '',
+            '#plafon' => $plafon,
             '#angsuran_kurang' => $values['angsuran_kurang'] ?? '',
             '#input_angsuran' => $values['input_angsuran'] ?? '',
             '#dinego_jadi' => $values['dinego_jadi'] ?? '',

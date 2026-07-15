@@ -391,23 +391,9 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Customer not found'], 404);
             }
             $dynamicData = $customer->dynamic_data ?? [];
-            $otr = (int) ($dynamicData['otr'] ?? 0);
-            $cori = $request->cori;
 
-            // Save CORI
-            $dynamicData['cori'] = $cori;
-
-            // Auto-calculate plafon based on CORI × OTR
-            if ($otr > 0) {
-                $dynamicData['pembulatan_75'] = (int) ($otr * 0.75);
-                $dynamicData['pembulatan_90'] = (int) ($otr * 0.90);
-
-                if ($cori === 'MEDIUM') {
-                    $dynamicData['plafon'] = (int) ($otr * 0.75);
-                } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
-                    $dynamicData['plafon'] = (int) ($otr * 0.90);
-                }
-            }
+            // Save CORI only — plafon is computed on-the-fly from OTR + CORI
+            $dynamicData['cori'] = $request->cori;
 
             $customer = $this->customerService->update($id, ['dynamic_data' => $dynamicData]);
 
@@ -644,13 +630,13 @@ class CustomerController extends Controller
 
         $headers = [
             'NO_CONTRACT', 'NAMA', 'SISA ANGSURAN', 'KECAMATAN', 'KELURAHAN',
-            'OBJ_DESC', 'VCODE', 'TAHUN', 'OTR', 'PLAFON',
+            'OBJ_DESC', 'VCODE', 'TAHUN', 'OTR',
             'CORI', 'NO_WHATSAPP',
         ];
 
         $sampleData = [
             '40200001', 'Nama Contoh', '6', 'Gamping', 'Trimurti',
-            'Honda Beat', '001', '2023', '18000000', '12000000',
+            'Honda Beat', '001', '2023', '18000000',
             'GOOD', '08123456789',
         ];
 

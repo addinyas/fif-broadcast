@@ -1319,6 +1319,28 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-15 — Remove plafon from import, compute on-the-fly from OTR+CORI
+
+**Status: IN PROGRESS ⏸️**
+
+**Konsep:** Hapus `plafon` dari import. Plafon selalu dihitung dari `calcPlafon(otr, cori)`:
+- MEDIUM → 75% × OTR
+- GOOD / GOOD LOYAL → 90% × OTR
+
+**Backend:**
+- `CustomerController::updateCori()` — hapus simpan plafon/pembulatan_75/pembulatan_90
+- `BroadcastService::mapFormToMessage()` — compute `#plafon` dari OTR+CORI
+- `CustomerController::templateDownload()` — hapus kolom PLAFON dari template
+
+**Frontend:**
+- `frontend/src/utils/finance.ts` (baru) — `calcPlafon(otr, cori)` utility function
+- `CalculatorPage.tsx` — pakai `calcPlafon()` untuk pinjaman
+- `CustomerManagementPage.tsx` — plafon column + CORI hint pakai `calcPlafon()`
+- `ProspectListPage.tsx` — interpolation + column pakai `calcPlafon()`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### 2026-07-15 — CORI editable + auto plafon calculation (CORI×OTR)
 
 **Sudah di-push ✅ & deployed ✅**

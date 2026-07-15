@@ -6,6 +6,7 @@ import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
 import { getSocket } from '../../services/socketService';
 import { useAuth } from '../../context/AuthContext';
+import { calcPlafon } from '../../finance/financeEngine';
 import { DataTable } from '../../components/ui/DataTable';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
@@ -80,7 +81,8 @@ export function ProspectListPage() {
   const [newDynamicFields, setNewDynamicFields] = useState<{ key: string; value: string }[]>(() => [
     { key: 'obj_desc', value: '' },
     { key: 'tahun', value: '' },
-    { key: 'plafon', value: '' },
+    { key: 'otr', value: '' },
+    { key: 'cori', value: '' },
     { key: 'sisa_angsuran', value: '' },
   ]);
   const [adding, setAdding] = useState(false);
@@ -119,7 +121,8 @@ export function ProspectListPage() {
         const defaults = [
           { key: 'obj_desc', value: '' },
           { key: 'tahun', value: '' },
-          { key: 'plafon', value: '' },
+          { key: 'otr', value: '' },
+          { key: 'cori', value: '' },
           { key: 'sisa_angsuran', value: '' },
         ];
         const merged = defaults.map((d) => {
@@ -315,7 +318,7 @@ export function ProspectListPage() {
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')
       .replace(/#tahun/g, dd.tahun || '')
-      .replace(/#plafon/g, dd.plafon || '')
+      .replace(/#plafon/g, String(calcPlafon(dd.otr, dd.cori) || ''))
       .replace(/#angsuran_kurang/g, dd.angsuran_kurang || '')
       .replace(/#input_angsuran/g, dd.input_angsuran || '')
       .replace(/#dinego_jadi/g, dd.dinego_jadi || '')
@@ -479,7 +482,8 @@ export function ProspectListPage() {
       setNewDynamicFields([
         { key: 'obj_desc', value: '' },
         { key: 'tahun', value: '' },
-        { key: 'plafon', value: '' },
+        { key: 'otr', value: '' },
+        { key: 'cori', value: '' },
         { key: 'sisa_angsuran', value: '' },
       ]);
       fetchData();
@@ -633,7 +637,7 @@ export function ProspectListPage() {
       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{dyn(c, 'buss_unit') || '-'}</span>
     ) },
     { key: 'plafon', header: 'Plafon', render: (c: Customer) => (
-      <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(dyn(c, 'plafon'))}</span>
+      <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(String(calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'))))}</span>
     ) },
     {
       key: 'sisa_angsuran',

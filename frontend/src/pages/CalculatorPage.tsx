@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, Copy, Check, PenLine } from 'lucide-react';
 import { customerService } from '../services/customerService';
-import { calculateAngsuran } from '../finance/financeEngine';
+import { calculateAngsuran, calcPlafon } from '../finance/financeEngine';
 import type { Customer } from '../types';
 
 interface ManualCustomer {
@@ -97,8 +97,8 @@ export function CalculatorPage() {
     setManual(null);
     setSearch('');
     setResults([]);
-    const plafon = String(c.dynamic_data?.plafon ?? '0');
-    setPinjaman(parseAngka(plafon));
+    const plafon = calcPlafon(c.dynamic_data?.otr, c.dynamic_data?.cori);
+    setPinjaman(plafon);
     const sisa = String(c.dynamic_data?.sisa_angsuran ?? '0');
     setSisaAngsuran(parseInt(sisa) || 0);
     const angsuran = String(c.dynamic_data?.angsuran ?? c.dynamic_data?.angsuran_per_bulan ?? '0');
@@ -329,8 +329,8 @@ export function CalculatorPage() {
                   try {
                     const updated = await customerService.updateCori(selected.id, e.target.value);
                     setSelected(updated);
-                    const plafon = String(updated.dynamic_data?.plafon ?? '0');
-                    setPinjaman(parseAngka(plafon));
+                    const plafon = calcPlafon(updated.dynamic_data?.otr, e.target.value);
+                    setPinjaman(plafon);
                   } catch { /* ignore */ }
                 }}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
