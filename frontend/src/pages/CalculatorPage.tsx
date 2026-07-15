@@ -326,14 +326,14 @@ export function CalculatorPage() {
               <p className="text-xs text-slate-500 dark:text-slate-400">CORI</p>
               <select
                 value={(dyn('cori') || '').toUpperCase()}
-                onChange={async (e) => {
+                onChange={(e) => {
                   if (!selected || !e.target.value) return;
-                  try {
-                    const updated = await customerService.updateCori(selected.id, e.target.value);
-                    setSelected(updated);
-                    const plafon = calcPlafon(updated.dynamic_data?.otr, e.target.value);
-                    setPinjaman(plafon);
-                  } catch { /* ignore */ }
+                  const newCori = e.target.value;
+                  const otr = selected.dynamic_data?.otr;
+                  setPinjaman(calcPlafon(otr, newCori));
+                  customerService.updateCori(selected.id, newCori)
+                    .then((updated) => setSelected(updated))
+                    .catch(() => {});
                 }}
                 className="w-auto min-w-[90px] max-w-[110px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-1.5 py-1 text-xs font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 sm:min-w-[110px] sm:px-2 sm:text-sm"
               >
