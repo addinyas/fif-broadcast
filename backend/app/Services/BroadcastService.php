@@ -145,9 +145,9 @@ class BroadcastService
         $plafon = '';
         if ($otr > 0 && $cori !== '') {
             if ($cori === 'MEDIUM') {
-                $plafon = (string) $this->roundPlafon($otr * 0.75);
+                $plafon = number_format($this->roundPlafon($otr * 0.75), 0, '', '.');
             } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
-                $plafon = (string) $this->roundPlafon($otr * 0.90);
+                $plafon = number_format($this->roundPlafon($otr * 0.90), 0, '', '.');
             }
         }
 
