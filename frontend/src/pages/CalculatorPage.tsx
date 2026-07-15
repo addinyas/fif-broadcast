@@ -317,8 +317,8 @@ export function CalculatorPage() {
               <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('obj_desc')} tahun {dyn('tahun')}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Nopol</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{displayNopol || '-'}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">OTR</p>
+              <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('otr') ? `Rp ${formatAngka(dyn('otr'))}` : '-'}</p>
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">CORI</p>

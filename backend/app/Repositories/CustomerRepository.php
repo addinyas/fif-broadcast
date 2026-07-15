@@ -19,6 +19,25 @@ class CustomerRepository implements CustomerRepositoryInterface
             $query->where('kios_id', $filters['kios_id']);
         }
 
+        // Marketing viewers: only own assigned + shared (borrowed) customers
+        if (($filters['viewer_role'] ?? '') === 'marketing' && ! empty($filters['viewer_id'])) {
+            $viewerId = (int) $filters['viewer_id'];
+            $sharedIds = CustomerShare::where('to_marketing_id', $viewerId)
+                ->where('status', 'approved')
+                ->pluck('customer_id')
+                ->toArray();
+
+            $query->where(function ($q) use ($viewerId, $sharedIds) {
+                $q->where(function ($q2) use ($viewerId) {
+                    $q2->where('marketing_id', $viewerId)
+                        ->where('assignment_status', 'assigned');
+                });
+                if (! empty($sharedIds)) {
+                    $q->orWhereIn('id', $sharedIds);
+                }
+            });
+        }
+
         if (! empty($filters['search'])) {
             $searchTerm = $filters['search'];
             $query->where(function ($q) use ($searchTerm) {

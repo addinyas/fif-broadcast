@@ -32,6 +32,11 @@ class CustomerController extends Controller
             $filters['kios_id'] = $user->kios_id;
         }
 
+        // Marketing: only see own assigned + shared (borrowed) customers
+        if ($user->role === 'marketing') {
+            $filters['viewer_id'] = $user->id;
+        }
+
         return response()->json($this->customerService->getAll($filters));
     }
 

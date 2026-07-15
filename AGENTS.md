@@ -1319,6 +1319,25 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-15 — Marketing scope fix + Calculator OTR + Kios-wide search
+
+**Status: PLANNED ⏸️**
+
+**Task 1 — Marketing customer scope (HIGH):**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `index()` — marketing users automatically pass `viewer_id` to filters
+- `backend/app/Repositories/CustomerRepository.php`: `getAll()` — when `viewer_role=marketing`, filter to own assigned customers + shared (borrowed) customers only. Uses `CustomerShare` query like `getAssignedToMarketing()`
+- Alasan: marketing hanya boleh lihat data sendiri + data pinjaman, bukan semua data di kios
+
+**Task 2 — Calculator kios-wide search (INFO):**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `searchCalculator()` — sudah benar, search ALL customers in kios tanpa filter marketing_id
+- Tidak perlu perubahan
+
+**Task 3 — Calculator detail card: Nopol → OTR (MEDIUM):**
+- `frontend/src/pages/CalculatorPage.tsx`: ganti field "Nopol" di detail card jadi "OTR" — tampilkan `dyn('otr')` dengan format currency
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
