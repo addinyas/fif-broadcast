@@ -318,7 +318,7 @@ export function ProspectListPage() {
       .replace(/#plat/g, dd.plat || '')
       .replace(/#obj_desc/g, dd.obj_desc || '')
       .replace(/#tahun/g, dd.tahun || '')
-      .replace(/#plafon/g, String(calcPlafon(dd.otr, dd.cori) || ''))
+      .replace(/#plafon/g, calcPlafon(dd.otr, dd.cori) ? Number(calcPlafon(dd.otr, dd.cori)).toLocaleString('id-ID') : '')
       .replace(/#angsuran_kurang/g, dd.angsuran_kurang || '')
       .replace(/#input_angsuran/g, dd.input_angsuran || '')
       .replace(/#dinego_jadi/g, dd.dinego_jadi || '')
