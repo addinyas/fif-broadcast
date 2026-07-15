@@ -1321,7 +1321,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### 2026-07-15 — Remove plafon from import, compute on-the-fly from OTR+CORI
 
-**Status: IN PROGRESS ⏸️**
+**Sudah di-push ✅ & deployed ✅**
 
 **Konsep:** Hapus `plafon` dari import. Plafon selalu dihitung dari `calcPlafon(otr, cori)`:
 - MEDIUM → 75% × OTR
@@ -1333,10 +1333,11 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 - `CustomerController::templateDownload()` — hapus kolom PLAFON dari template
 
 **Frontend:**
-- `frontend/src/utils/finance.ts` (baru) — `calcPlafon(otr, cori)` utility function
+- `frontend/src/finance/financeEngine.ts` — tambah `calcPlafon(otr, cori)` utility function
 - `CalculatorPage.tsx` — pakai `calcPlafon()` untuk pinjaman
-- `CustomerManagementPage.tsx` — plafon column + CORI hint pakai `calcPlafon()`
-- `ProspectListPage.tsx` — interpolation + column pakai `calcPlafon()`
+- `CustomerManagementPage.tsx` — plafon column + CORI hint pakai `calcPlafon()`, hapus dead `'75'`/`'90'` keys
+- `ProspectListPage.tsx` — interpolation + column pakai `calcPlafon()`, manual add swap plafon → otr + cori
+- `types/index.ts` — FORM_FIELDS swap `plafon` → `otr` + `cori`
 
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
