@@ -316,7 +316,7 @@ export function CustomerManagementPage() {
                   toast('error', 'Gagal mengupdate CORI');
                 }
               }}
-              className={`rounded-lg border px-2 py-1 text-xs font-semibold uppercase tracking-wider outline-none transition-all focus:ring-2 focus:ring-fif-500/30 ${
+              className={`max-w-[130px] rounded-lg border px-2 py-1 text-xs font-semibold uppercase tracking-wider outline-none transition-all focus:ring-2 focus:ring-fif-500/30 ${
                 coriVal === 'MEDIUM' ? 'border-amber-300 bg-amber-50 text-amber-700' :
                 coriVal === 'GOOD' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' :
                 coriVal === 'GOOD LOYAL' ? 'border-blue-300 bg-blue-50 text-blue-700' :

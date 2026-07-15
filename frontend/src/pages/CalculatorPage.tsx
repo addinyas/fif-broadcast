@@ -333,7 +333,7 @@ export function CalculatorPage() {
                     setPinjaman(plafon);
                   } catch { /* ignore */ }
                 }}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+                className="w-auto min-w-[110px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               >
                 <option value="">Pilih</option>
                 <option value="MEDIUM">MEDIUM</option>
