@@ -9,7 +9,7 @@ interface ManualCustomer {
   no_contract: string;
   obj_desc: string;
   tahun: string;
-  plafon: string;
+  otr: string;
   angsuran: string;
   sisa_angsuran: string;
   nopol: string;
@@ -132,7 +132,7 @@ export function CalculatorPage() {
               if (manual) {
                 setManual(null);
               } else {
-                setManual({ name: search.trim() || '', no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
+                setManual({ name: search.trim() || '', no_contract: '', obj_desc: '', tahun: '', otr: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
                 setSearch('');
                 setResults([]);
               }
@@ -211,12 +211,12 @@ export function CalculatorPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">Plafon (Rp) <span className="text-red-500">*</span></label>
-              <input value={formatAngka(manual.plafon)}
+              <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">OTR / Harga Pasar (Rp) <span className="text-red-500">*</span></label>
+              <input value={formatAngka(manual.otr)}
                 onChange={(e) => {
                   const raw = e.target.value.replace(/\D/g, '');
-                  setManual({ ...manual, plafon: raw });
-                  setPinjaman(parseInt(raw) || 0);
+                  setManual({ ...manual, otr: raw });
+                  setPinjaman(calcPlafon(raw, manual.cori));
                 }}
                 placeholder="0"
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
@@ -265,7 +265,11 @@ export function CalculatorPage() {
             <div>
               <label className="mb-1 block text-[10px] font-medium text-slate-500 dark:text-slate-400">CORI</label>
               <select value={manual.cori}
-                onChange={(e) => setManual({ ...manual, cori: e.target.value })}
+                onChange={(e) => {
+                  const newCori = e.target.value;
+                  setManual({ ...manual, cori: newCori });
+                  setPinjaman(calcPlafon(manual.otr, newCori));
+                }}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
               >
                 <option value="">Pilih</option>
