@@ -129,13 +129,17 @@ export function CalculatorPage() {
           </div>
           <button
             onClick={() => {
-              setManual({ name: search.trim() || '', no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
-              setSearch('');
-              setResults([]);
+              if (manual) {
+                setManual(null);
+              } else {
+                setManual({ name: search.trim() || '', no_contract: '', obj_desc: '', tahun: '', plafon: '', angsuran: '', sisa_angsuran: '', nopol: '', cori: '', vcode: '' });
+                setSearch('');
+                setResults([]);
+              }
             }}
             className="shrink-0 flex items-center justify-center rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 text-slate-500 hover:border-fif-400 hover:text-fif-600 dark:hover:text-fif-400 transition-colors"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className={`h-5 w-5 transition-transform ${manual ? 'rotate-45' : ''}`} />
           </button>
         </div>
         {results.length > 0 && (
