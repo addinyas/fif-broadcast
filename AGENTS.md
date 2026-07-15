@@ -1321,7 +1321,7 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### 2026-07-15 — Marketing scope fix + Calculator OTR + Kios-wide search
 
-**Status: PLANNED ⏸️**
+**Sudah di-push ✅ & deployed ✅**
 
 **Task 1 — Marketing customer scope (HIGH):**
 - `backend/app/Http/Controllers/Api/CustomerController.php`: `index()` — marketing users automatically pass `viewer_id` to filters
