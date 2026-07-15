@@ -1,0 +1,99 @@
+DAILY BUG REPORT 14/07/2026 : 
+#sudah dieksekusi
+1. fitur connect tidak dapat terhubung sepertinya ada bug
+2. crosscek ulang perhitungan auto calculate dari pool : no_contract NMC harus berawalan 4020 dan REFI no_contract harus berawalan 4029
+4. di fitur kalukator nopolnya kok jadi tidak bisa menginput angka + huruf
+5. jika akun UH di hapus apakah ada solusi untuk menghapus datanya? 
+6. Dirole UH kok dihilangkan approval rolling datanya
+7. simpan dulu ke agents untuk antisipasi jika limit opencode habis baru ke langkah selanjutnya
+8. push ke github dan deploy ke vps secara bertahap agar tidak crash dijalan
+
+============================================================================================================================================================
+
+DAILY BUG REPORT 14/07/2026:
+#SUDAH DIEKSEKUSI
+1. di role UH jika ada notifikasi approval rolling data dari marketing jika notifikasinya di klik maka akan muncul toast approve atau reject kemudian tambahkan tombol cancel
+2. tandai data yang dipinjam di akun si peminjam data
+3. jangan hapus semua notifikasi jika belum berganti hari
+4. di dashboard masing-masing marketing tampilkan berapa data yang dipinjam dan tampil nama pemiliknya
+6. suara notifikasi bahwa UH baru saja mengirimkan data tidak ada ya dimasing-masing akun marketing
+7. suara notifikasi di akun marketing bahwa ada yang meminjam data dan suara notifikasi diakun UH bahwa ada marketing yang menunggu approval tidak ada ya?
+8. suara notifikasi di akun UH bahwa data berhasil di approve tidak ada ya?
+9. simpan dulu ke agents untuk antisipasi jika limit opencode habis baru ke langkah selanjutnya
+10. push ke github dan deploy ke vps secara bertahap agar tidak crash dijalan
+
+============================================================================================================================================================
+
+DAILY BUG REPORT 14/07/2026
+#SUDAH DIEKSEKUSI :
+1. di fitur rolling data approval kenapa tidak buat 1 approval saja? apakah membuat berat sistem jika dibuat jadi 1
+2. buatkan template default untuk semua role namun harus punya nama panggilan dan di isinya harus di setting akun masing-masing. pembuatan teks template nya yang default hanya bisa di akun superadmin dan tambahkan #namapanggilanakun
+3. dikolom input unit di kalkulator tidak bisa dispasi jadi kalau input VARIO160 hasilnya sama, harusnya VARIO 160
+4. sempurnakan data yang tampil didashboard UH, termasuk jika ada marketing yang belum diassign atau di distribusikan data maka akan tampil juga
+5. jika UH menghapus semua data dari fitur customers maka data yang di input oleh marketing juga akan ikut terhapus
+5. simpan dulu ke agents untuk antisipasi jika limit opencode habis baru ke langkah selanjutnya
+6. push ke github dan deploy ke vps secara bertahap agar tidak crash dijalan
+
+============================================================================================================================================================
+
+DAILY BUG REPORT 15/07/2026:
+SUDAH DIEKSEKUSI :
+1. data yang dipinjam dan sudah di approve oleh UH tadi kemana tampilnya? 
+2. buatkan filter untuk data yang dipinjam dari marketing lain tadi
+3. dikolom pemilik ubah - jadi anda jika data yang tampil adalah milik akun marketing tersebut
+4. buatkan tampilan hasil dari kolom pemilik agar lebih menarik lagi dan ditandai dengan warna warna yang kekinian 
+
+============================================================================================================================================================
+
+DAILY BUG REPORT --/07/2026
+BELUM DI EKSEKUSI :
+1. sesuaikan lagi dimasing-masing akun marketing di fitur customer nanti di semua scope cari hanya bisa mengakses datanya sendiri kecuali sudah dipinjam dari marketing lain (data yang sudah ditandai pinjam tadi)
+2. untuk difitur scope kalkulator bisa mencari semua data yang ada dikios tersebut baik yang dimiliki sendiri maupun akun lain
+3. di fitur kalkulator kan ada detail data di yang paling atas setelah cari, di situ ada nopol kan, nah bisa tidak diubah jadi data otr saja yang tampil
+4. simpan dulu ke agents untuk antisipasi jika limit opencode habis baru ke langkah selanjutnya
+5.  push ke github dan deploy ke vps secara bertahap agar tidak crash dijalan
+
+============================================================================================================================================================
+
+DAILY BUG REPORT --/07/2026
+BELUM DI EKSEKUSI :
+1. kemudian di CORI nya kan menampilkan isi dari tabel cori, buatkan agar bisa diedit corinya dan jika diganti maka semua data yang menyangkut no_contract itu juga akan ikut berubah
+2. bisa buatkan perhitungan perkalian antara cori dan otr, jadi semisal cori medium maka isi otr dikalikan 75% kemudian jika cori good dan good loyal dikalikan 90%, hasil semua dari perkalian ini nantinya akan jadi isi dari plafon pinjaman maksimal 
+3. buatkan agar hasil perhitungan ini (plafon) tampil di kolom plafon customer dan data broadcast
+4. perhitungannya tidak perlu diperlihatkan cukup dibackend saja. difrontend hanya menampilkan hasil perhitungan soal perkalian otr dan cori juga sama marketing atau uh atau superadmin cukup hanya mengganti cori dari kalkulator saja dan langsung tersimpan dan perhitungan serta hasil dilakukan dibackend
+5. simpan dulu ke agents untuk antisipasi jika limit opencode habis baru ke langkah selanjutnya
+6.  push ke github dan deploy ke vps secara bertahap agar tidak crash dijalan
+
+============================================================================================================================================================
+
+DAILY BUG REPORT --/07/2026
+BELUM DIEKSEKUSI :
+1. sesuaikan lagi isi download template dengan perubahan sistem saat ini
+2. sesuaikan dashboard masing-masing role
+3. sesuaikan semua tampilan mobile dan website nya
+
+============================================================================================================================================================						 Task List Update Terbaru Mendatang :
+
+FITUR BARU:
+1. buatkan ai untuk edit foto yang ditempel didalam aplikasinya 
+2. buatkan agar ai tersebut dapat dipakai edit foto yang sudah diupload dan berikan input tulisan mana yang mau diedit 
+3. buatkan agar ada 2 perbandingan sebelum dan setelah diedit oleh ai
+4. 
+
+
+FITUR BARU:
+1. saya ada rencana untuk membuat server sendiri dari komputer lama saya, jadi nanti semua ini kemungkinan akan diubah jadi berjalan diserver sendiri.
+2. bisa buatkan aplikasi desktop yang bisa diremote untuk mengatur servernya ini?
+3. bisa buatkan untuk keamanan servernya bagaimana yang bisa diremote dari jauh dengan aplikasi desktop yang ingin kita buat
+4. bisa buatkan aplikasi dekstop ini dapat mengontrol semuanya dan melihat aktifitasnya via remote? jadi bisa berjalan di device laptop saya.
+5. buat agar bisa multi device yang bisa control yang aksesnya hanya bisa superadmin namun multi device
+
+============================================================================================================================================================
+
+FITUR BARU :
+1. Buatkan Fitur untuk mengecek daftar konsumen yang akan jatuh tempo selama 3 bulan kedepan dan datanya selalu diperbarui setiap awal bulan, jadi jika sudah tinggal 2-1 minggu hingga 3 hari sebelum jatuh tempo maka akan terlihat -2 Minggu Lagi , -1 Minggu Lagi, -3 Hari Lagi dan Hari ini Jatuh Tempo dan nantinya akan terlihat Marketingnya siapa
+2. Buatkan jika ternyata sudah bayar misal bulan ini didata belum bayar angsuran ke 2 tapi setelah di follow up atau dikonfirmasi ternyata konsumen sudah bayar jadinya nanti UH tinggal memberikan ceklis sudah bayar maka langsung berubah ke angsuran ke 3 bulan depan.
+3. Buatkan Dapat Membaca hari dengan realtime termasuk jam nya
+4. Buatkan Agar Jika konsumen A kurang -5 hari lagi misalnya dan marketingnya ADDIN maka di akun addin akan otomatis diberikan notifikasi bahwa konsumen ini akan segera jatuh tempo mohon dihubungi kembali
+5. Buatkan Fitur ini di kedua role baik di role UH maupun MARKETING namun permissionnya berbeda jadi yang bisa ceklis bahwa konsumen ini sudah bayar atau belum hanya UH, di marketing hanya bisa melakukan send manual seperti di broadcast namun disini juga dibuatkan template agar bisa menyesuaikan
+6. Kemudian ada historynya juga kalau sudah difollow up atau sudah di klik dan nantinya akan tampil di dashboard masing-masing role, noted: jika role UH dapat drop down nama marketing untuk melihat marketing ini sudah follow up atau belum

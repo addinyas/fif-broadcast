@@ -1429,6 +1429,47 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-15 — Fix: CORI dropdown one-step lag + instant render
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+`e.target.value` di-baca SETELAH `await` di async handler. `e.target` adalah live reference ke DOM element — selama `await`, React re-render dan revert controlled `<select>` value ke value lama. Akibatnya `calcPlafon()` menerima CORI yang salah (one-step lag):
+- MEDIUM → GOOD: plafon tetap 75% (tidak berubah)
+- GOOD → MEDIUM: plafon tampil 90% (nilai GOOD, bukan MEDIUM)
+
+**Fix 2 layer:**
+1. **Stale value fix**: Capture `newCori = e.target.value` + `otr = selected.dynamic_data?.otr` SEBELUM `await`
+2. **Instant render**: Ganti `async/await` → sync `onChange` + `setPinjaman()` langsung, API save di-background (fire-and-forget via `.then()/.catch()`)
+
+**Files:**
+- `frontend/src/pages/CalculatorPage.tsx:329-338`: `onChange` sync — `setPinjaman(calcPlafon(otr, newCori))` langsung, `customerService.updateCori()` di-background
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-15 — CORI BAD (65% x OTR) + CORI dropdown instant render
+
+**Sudah di-push ✅ & deployed ✅**
+
+**CORI BAD — 6 files diubah:**
+- `frontend/src/finance/financeEngine.ts`: `calcPlafon()` tambah `BAD → 65%` (sebelum MEDIUM 75%)
+- `frontend/src/pages/CalculatorPage.tsx`: tambah `<option value="BAD">BAD</option>` di 2 dropdown (manual input + info card)
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: tambah option BAD + warna `red-300/red-50/red-700`
+- `backend/app/Http/Controllers/Api/CustomerController.php`: validasi `in:BAD,MEDIUM,GOOD,GOOD LOYAL`
+- `backend/app/Services/BroadcastService.php`: `mapFormToMessage()` tambah `BAD → 65%`
+
+**CORI reference:**
+| CORI | Persentase |
+|------|-----------|
+| BAD | 65% × OTR |
+| MEDIUM | 75% × OTR |
+| GOOD | 90% × OTR |
+| GOOD LOYAL | 90% × OTR |
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
