@@ -111,7 +111,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:template_management')->group(function () {
             Route::get('templates', [TemplateController::class, 'index']);
             Route::get('templates/{template}', [TemplateController::class, 'show']);
