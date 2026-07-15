@@ -24,7 +24,7 @@ export function StatCard({ title, value, icon, color = 'blue' }: StatCardProps) 
     <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50 dark:border-slate-700/80 dark:bg-slate-800 dark:shadow-slate-900/50 dark:hover:shadow-slate-900/50">
       <div className="flex items-start justify-between">
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">{title}</p>
+          <p className="font-redhat text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">{title}</p>
           <p className="text-3xl font-bold tracking-tight tabular-nums text-slate-800 dark:text-slate-200">{value}</p>
         </div>
         {icon && (

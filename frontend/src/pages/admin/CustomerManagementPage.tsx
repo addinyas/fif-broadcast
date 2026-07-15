@@ -287,7 +287,7 @@ export function CustomerManagementPage() {
     { key: 'obj_desc', header: 'Tipe Motor', render: (c: Customer) => dyn(c, 'obj_desc') },
     { key: 'vcode', header: 'V Code', render: (c: Customer) => dyn(c, 'vcode') },
     { key: 'tahun', header: 'Tahun Motor', render: (c: Customer) => dyn(c, 'tahun') },
-    { key: 'otr', header: 'OTR', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
+    { key: 'otr', header: 'OTR / Harga Pasar', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
     {
       key: 'plafon', header: 'Plafon', render: (c: Customer) => {
         const plafon = calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'));
@@ -376,7 +376,7 @@ export function CustomerManagementPage() {
     { key: 'obj_desc', label: 'Tipe Motor' },
     { key: 'vcode', label: 'V Code' },
     { key: 'tahun', label: 'Tahun Motor' },
-    { key: 'otr', label: 'OTR' },
+    { key: 'otr', label: 'OTR / Harga Pasar' },
     { key: 'plafon', label: 'Plafon' },
     { key: 'cori', label: 'CORI' },
     { key: 'kota', label: 'Kota' },

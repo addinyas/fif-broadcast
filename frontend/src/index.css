@@ -9,6 +9,8 @@
   --font-mono: "Sora", ui-monospace, monospace;
   --font-ios: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Satoshi", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-clash: "Clash Display", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-redhat: "Red Hat Display", ui-sans-serif, system-ui, sans-serif;
 
   --color-fif-50: #eff5ff;
   --color-fif-100: #dbe8fe;

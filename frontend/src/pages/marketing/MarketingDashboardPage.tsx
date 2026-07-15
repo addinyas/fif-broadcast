@@ -20,11 +20,11 @@ const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger
 
 function Greeting() {
   const { user } = useAuth();
-  const hour = new Date().getHours();
+  const hour = parseInt(new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }), 10);
   let greeting = 'Selamat Malam';
-  if (hour < 12) greeting = 'Selamat Pagi';
-  else if (hour < 17) greeting = 'Selamat Siang';
-  else if (hour < 19) greeting = 'Selamat Sore';
+  if (hour >= 4 && hour < 11) greeting = 'Selamat Pagi';
+  else if (hour >= 11 && hour < 15) greeting = 'Selamat Siang';
+  else if (hour >= 15 && hour < 18) greeting = 'Selamat Sore';
 
   return (
     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-fif-600 via-fif-700 to-slate-900 p-6 text-white shadow-lg shadow-fif-900/20 sm:p-8">
@@ -33,9 +33,9 @@ function Greeting() {
       <div className="relative">
         <p className="text-sm font-medium text-fif-200">{greeting}</p>
         <h1 className="font-heading mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <span className="font-name">{user?.name || 'Marketing'}</span>
+          <span className="font-clash font-semibold tracking-wide">{user?.name || 'Marketing'}</span>
         </h1>
-        <p className="mt-2 max-w-xl text-sm text-fif-200">
+        <p className="mt-0.5 max-w-xl text-sm text-fif-200">
           Pantau progress broadcast WhatsApp Anda di sini
         </p>
       </div>
@@ -165,8 +165,8 @@ export function MarketingDashboardPage() {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="mb-0">
+          <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-fif-600" />
             Progress Broadcast
           </CardTitle>
@@ -182,7 +182,7 @@ export function MarketingDashboardPage() {
         ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-slate-700 dark:text-slate-300">{completionPct}% terselesaikan</span>
+            <span className="pl-7 font-medium text-slate-700 dark:text-slate-300">{completionPct}% terselesaikan</span>
             <span className="text-slate-500 dark:text-slate-400">
               {summary?.broadcast.total ?? 0} / {summary?.assigned_count ?? 0} pelanggan
             </span>
@@ -200,7 +200,7 @@ export function MarketingDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
               <Activity className="h-5 w-5 text-fif-600" />
               Broadcast Terakhir
             </CardTitle>
@@ -227,7 +227,7 @@ export function MarketingDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
               <Users className="h-5 w-5 text-fif-600" />
               Ringkasan
             </CardTitle>
@@ -255,10 +255,10 @@ export function MarketingDashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-fif-600" />
-            Aktivitas Terbaru
-          </CardTitle>
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+              <Activity className="h-5 w-5 text-fif-600" />
+              Aktivitas Terbaru
+            </CardTitle>
         </CardHeader>
         {summary?.recent && summary.recent.length > 0 ? (
           <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700">
