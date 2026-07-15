@@ -391,7 +391,24 @@ class CustomerController extends Controller
                 return response()->json(['message' => 'Customer not found'], 404);
             }
             $dynamicData = $customer->dynamic_data ?? [];
-            $dynamicData['cori'] = $request->cori;
+            $otr = (int) ($dynamicData['otr'] ?? 0);
+            $cori = $request->cori;
+
+            // Save CORI
+            $dynamicData['cori'] = $cori;
+
+            // Auto-calculate plafon based on CORI × OTR
+            if ($otr > 0) {
+                $dynamicData['pembulatan_75'] = (int) ($otr * 0.75);
+                $dynamicData['pembulatan_90'] = (int) ($otr * 0.90);
+
+                if ($cori === 'MEDIUM') {
+                    $dynamicData['plafon'] = (int) ($otr * 0.75);
+                } elseif (in_array($cori, ['GOOD', 'GOOD LOYAL'], true)) {
+                    $dynamicData['plafon'] = (int) ($otr * 0.90);
+                }
+            }
+
             $customer = $this->customerService->update($id, ['dynamic_data' => $dynamicData]);
 
             return response()->json($customer);

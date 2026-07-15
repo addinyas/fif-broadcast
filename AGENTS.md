@@ -1319,6 +1319,28 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
+### 2026-07-15 — CORI editable + auto plafon calculation (CORI×OTR)
+
+**Status: PLANNED ⏸️**
+
+**Alur baru:**
+1. User ganti CORI di Kalkulator → PATCH `/customers/{id}/cori`
+2. Backend simpan CORI + hitung plafon = OTR × percentage:
+   - MEDIUM → 75% × OTR
+   - GOOD / GOOD LOYAL → 90% × OTR
+3. Simpan hasil ke `dynamic_data.plafon` + `dynamic_data.pembulatan_75` + `dynamic_data.pembulatan_90`
+4. Frontend refresh data → plafon otomatis ter-update di table & broadcast
+
+**Backend:**
+- `CustomerController::updateCori()` — tambah auto-calculate plafon dari CORI×OTR
+
+**Frontend:**
+- `CalculatorPage.tsx`: CORI di detail card jadi dropdown editable (bukan read-only text)
+- `CalculatorPage.tsx`: setelah save CORI, refresh selected customer data
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ### 2026-07-15 — Marketing scope fix + Calculator OTR + Kios-wide search
 
 **Sudah di-push ✅ & deployed ✅**

@@ -322,7 +322,24 @@ export function CalculatorPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">CORI</p>
-              <p className="font-semibold text-slate-800 dark:text-slate-200">{dyn('cori') || 'BELUM ADA'}</p>
+              <select
+                value={(dyn('cori') || '').toUpperCase()}
+                onChange={async (e) => {
+                  if (!selected || !e.target.value) return;
+                  try {
+                    const updated = await customerService.updateCori(selected.id, e.target.value);
+                    setSelected(updated);
+                    const plafon = String(updated.dynamic_data?.plafon ?? '0');
+                    setPinjaman(parseAngka(plafon));
+                  } catch { /* ignore */ }
+                }}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2 py-1 text-sm font-semibold outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              >
+                <option value="">Pilih</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="GOOD">GOOD</option>
+                <option value="GOOD LOYAL">GOOD LOYAL</option>
+              </select>
             </div>
             <div>
               <p className="text-xs text-slate-500 dark:text-slate-400">Vcode</p>
