@@ -301,7 +301,6 @@ export function CustomerManagementPage() {
     {
       key: 'cori', header: 'CORI', render: (c: Customer) => {
         const coriVal = (dyn(c, 'cori') || '').toUpperCase();
-        const hintPlafon = calcPlafon(dyn(c, 'otr'), coriVal);
 
         return (
           <div className="flex items-center gap-2">
@@ -330,11 +329,6 @@ export function CustomerManagementPage() {
               <option value="GOOD">GOOD</option>
               <option value="GOOD LOYAL">GOOD LOYAL</option>
             </select>
-            {hintPlafon > 0 && (
-              <span className="text-xs font-mono text-slate-400">
-                {formatRupiah(String(hintPlafon))}
-              </span>
-            )}
           </div>
         );
       }
