@@ -103,7 +103,7 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-fif-600" />
-              <span className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Distribution per Marketing</span>
+              <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Distribution per Marketing</span>
             </CardTitle>
           </CardHeader>
           {loading ? (
@@ -151,7 +151,7 @@ export function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieChart className="h-5 w-5 text-fif-600" />
-              <span className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Ringkasan Distribution</span>
+              <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Ringkasan Distribution</span>
             </CardTitle>
           </CardHeader>
           {loading ? (
@@ -192,7 +192,7 @@ export function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-fif-600" />
-            <span className="bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Detail Distribution per Marketing</span>
+            <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Detail Distribution per Marketing</span>
           </CardTitle>
         </CardHeader>
         <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700">
