@@ -32,14 +32,14 @@ export function MobileNavBar() {
   }));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200/80 bg-white/90 px-2 pb-safe backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
+    <nav className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200/80 bg-white/90 px-2 pb-safe backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
       {resolvedTabs.map((tab) => {
         const isActive = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/');
         return (
           <NavLink
             key={tab.to}
             to={tab.to}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-medium transition-all duration-200 ${
+            className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold transition-all duration-200 ${
               isActive
                 ? 'text-fif-600 dark:text-fif-400'
                 : 'text-slate-400 dark:text-slate-500'

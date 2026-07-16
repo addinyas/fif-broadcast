@@ -36,14 +36,14 @@ export function AndroidBottomNav() {
   }));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200 bg-white px-1 pb-safe pt-1 dark:border-slate-700 dark:bg-slate-800">
+    <nav className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200 bg-white px-1 pb-safe pt-1 dark:border-slate-700 dark:bg-slate-800">
       {resolvedTabs.map((tab) => {
         const isActive = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/');
         return (
           <NavLink
             key={tab.to}
             to={tab.to}
-            className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-medium transition-colors ${
+            className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold transition-colors ${
               isActive
                 ? 'text-fif-600 dark:text-fif-400'
                 : 'text-slate-400 dark:text-slate-500'

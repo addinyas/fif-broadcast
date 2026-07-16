@@ -122,11 +122,11 @@ export function TemplateManagementPage() {
   const canDelete = (t: Template) => isSuperadmin || !t.is_default;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="font-poppins space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Template Management</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola template pesan WhatsApp</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Template Management</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Kelola template pesan WhatsApp</p>
         </div>
         <Button
           variant="primary"

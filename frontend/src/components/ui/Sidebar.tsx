@@ -13,7 +13,6 @@ import {
   SendHorizontal,
   Calculator,
   Settings,
-  X,
   FileText,
   Store,
   ArrowLeftRight,
@@ -100,29 +99,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-5">
           <img src="/logo.png" alt="FIF" className="h-9 w-9 object-contain" />
           <div className="flex items-center gap-2">
-            <span className="font-display text-lg font-bold tracking-tight">FIF</span>
+            <span className="font-poppins text-lg font-bold tracking-tight">FIF</span>
             <span className={`font-tight rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
               {roleLabel[user?.role || ''] || user?.role}
             </span>
           </div>
           <div className="ml-auto flex items-center">
             <span className="hidden lg:block"><NotificationBell variant="dark" placement="left" /></span>
-            <button onClick={logout} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-500/10 hover:text-red-400 lg:hidden" title="Logout">
-              <LogOut className="h-4 w-4" />
-            </button>
-            <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden">
-              <X className="h-5 w-5" />
+            <button onClick={logout} className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-500/20 to-red-600/10 text-red-400 shadow-sm shadow-red-500/10 transition-all hover:from-red-500/30 hover:to-red-600/20 hover:text-red-300 hover:shadow-md hover:shadow-red-500/20 lg:hidden" title="Logout">
+              <LogOut className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-3 min-h-0">
+        <nav className="font-poppins flex-1 space-y-1 overflow-y-auto p-3 min-h-0">
         {visibleLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
             className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 group ${
+              `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 group ${
                 isActive
                   ? 'bg-gradient-to-r from-fif-600/20 to-fif-600/5 text-white shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
@@ -142,7 +138,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="border-t border-slate-800 p-4">
+      <div className="font-poppins border-t border-slate-800 p-4">
         <div className="mb-3 flex items-center gap-3.5 rounded-xl bg-slate-800/50 p-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-fif-400 to-fif-600 text-sm font-bold text-white shadow-md ring-2 ring-slate-700">
             {user?.avatar_url ? (
@@ -152,7 +148,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="font-name truncate text-sm font-medium text-slate-100">{user?.name}</div>
+            <div className="font-poppins truncate text-sm font-medium text-slate-100">{user?.name}</div>
             <div className="truncate text-xs text-slate-400">{user?.email}</div>
             {(user?.kios_name || user?.kios_id) && (
               <div className="truncate text-[11px] font-medium text-slate-500">
@@ -163,14 +159,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
         <button
           onClick={toggleTheme}
-          className="mb-2 flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-slate-800/50 hover:text-slate-200"
+          className="mb-2 flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-400 transition-all hover:bg-slate-800/50 hover:text-slate-200"
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           {isDark ? 'Light Mode' : 'Dark Mode'}
         </button>
         <button
           onClick={logout}
-          className="flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400"
+          className="flex w-full items-center gap-2.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400"
         >
           <LogOut className="h-4 w-4" />
           Logout

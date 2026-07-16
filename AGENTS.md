@@ -1581,6 +1581,55 @@ Ketik: `lanjut yang tadi`
 - `frontend/src/pages/admin/DashboardPage.tsx`: 3 section CardTitle — ganti dari `font-clash` + gradient text → `!font-redhat !font-extrabold !tracking-[0.05em]` (Red Hat Display weight 800)
 - `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: 4 section CardTitle — upgrade `!font-bold` → `!font-extrabold` (weight 800) supaya konsisten dengan admin
 
+### 2026-07-17 — Frontend design overhaul + UH broadcast isolation
+
+**Belum di-push ⏸️ & belum deploy ⏸️**
+
+#### Group 1: Frontend design skill overhaul (cosmetic)
+
+**Font system overhaul:**
+- `frontend/index.html`: hapus 8 fonts lama (DM Sans, Inter, Inter Tight, Montserrat, Red Hat Display, Sora, Satoshi, Clash Display) → ganti 4 fonts baru: Plus Jakarta Sans (body), Geist (display/numbers), Space Grotesk (subheading), Geist Mono (monospace)
+- `frontend/src/index.css`: hapus `--font-body`, `--font-name`, `--font-clash`, `--font-redhat`, `--font-ios` → ganti `--font-sans` = Plus Jakarta Sans, `--font-display` = Geist, `--font-heading` = Geist, `--font-satoshi` = Geist, `--font-subheading` = Space Grotesk, `--font-mono` = Geist Mono
+
+**StatCard redesign:**
+- `frontend/src/components/ui/StatCard.tsx`: ganti dari white bg + dot indicator → left accent border (3px colored line), numbers pakai `font-satoshi` (Geist) ukuran 4xl bold, hover effect lebih subtle
+
+**Sidebar fix:**
+- `frontend/src/components/ui/Sidebar.tsx`: `font-name` → `font-satoshi` (karena `--font-name` dihapus)
+
+**Dashboard admin redesign:**
+- `frontend/src/pages/admin/DashboardPage.tsx`: Greeting card — radial gradient + glass-like overlay, `font-clash` → `font-satoshi` untuk nama. Section CardTitle — `!font-redhat` → `!font-display`. StatCards — staggered `animate-slide-up` (50ms delay bertingkat). Ringkasan card — tambah ring borders + `font-satoshi` untuk angka. Table — header `text-[11px] font-bold uppercase tracking-widest`, rows lebih clean. Gap spacing dikurangi (gap-4 → gap-3).
+
+**Dashboard marketing redesign:**
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: Treatment sama seperti admin — greeting card, StatCards staggered, section titles, progress bar gradient, ringkasan cards, activity table.
+
+> **✅ Font angka sudah di-revert ke Satoshi:**
+> - `frontend/index.html`: tambah kembali `<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&display=swap" rel="stylesheet" />`
+> - `frontend/src/index.css`: `--font-satoshi: "Geist", ...` → `"Satoshi", "Inter", ...`
+
+#### Group 2: UH broadcast isolation (functional)
+
+**Backend — sent marks scope by user:**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `sentIds()` — UH filter by `manual_sent_by = user->id` (sebelumnya `kios_id` — UH lihat semua tanda kirim marketing). `clearSentMarks()` — UH clear hanya own marks (sebelumnya clear semua kios).
+
+**Backend — history/stats default ke data sendiri:**
+- `backend/app/Http/Controllers/Api/BroadcastController.php`: `history()` — UH default `$marketingId = $user->id` (sebelumnya null — lihat semua di kios). `marketing_id=all` untuk lihat semua. `stats()` — perubahan sama.
+
+**Frontend — BroadcastHistoryPage scope toggle:**
+- `frontend/src/pages/marketing/BroadcastHistoryPage.tsx`: UH dapat toggle "Saya Saja" (default) / "Semua di Kios". Superadmin filter kios+marketing tetap ada. Marketing tidak lihat filter apapun (sudah own-only).
+
+**Frontend — ProspectListPage sent marks:**
+- `frontend/src/pages/marketing/ProspectListPage.tsx:149`: UH sent marks filter `c.manual_sent_by === user.id` (sebelumnya `c.manual_sent_at` — semua yang ada tanda kirim).
+
+**Frontend — type update:**
+- `frontend/src/types/index.ts`: tambah `manual_sent_by: number | null` ke `Customer` interface.
+
+### Next steps when resuming
+1. ~~Revert font angka~~ ✅ sudah done
+2. Push ke GitHub
+3. Deploy ke VPS
+4. Update AGENTS.md
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

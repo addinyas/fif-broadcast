@@ -174,11 +174,11 @@ export function CalculatorPage() {
   };
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="font-poppins space-y-5 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Kalkulator</h1>
-        <p className="mt-0.5 text-sm text-slate-400 dark:text-slate-500">Hitung angsuran dan simulasi pinjaman</p>
+        <p className="mt-0.5 text-sm font-medium text-slate-400 dark:text-slate-500">Hitung angsuran dan simulasi pinjaman</p>
       </div>
 
       {/* Search — pill style */}
@@ -574,21 +574,21 @@ export function CalculatorPage() {
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between rounded-xl bg-white px-4 py-2.5 dark:bg-slate-800/80">
               <span className="text-slate-400 text-xs">Angsuran Kurang</span>
-              <span className="font-mono font-semibold tabular-nums text-slate-700 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = {formatAngka(totalAngsuran)}</span>
+              <span className="font-satoshi font-semibold tabular-nums text-slate-700 dark:text-slate-200">{sisaAngsuran}×{formatAngka(angsuranPerBulan)} = {formatAngka(totalAngsuran)}</span>
             </div>
             {dendaVal > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-white px-4 py-2.5 dark:bg-slate-800/80">
                 <span className="text-slate-400 text-xs">Denda</span>
-                <span className="font-mono font-semibold tabular-nums text-red-500">{formatAngka(dendaVal)}</span>
+                <span className="font-satoshi font-semibold tabular-nums text-red-500">{formatAngka(dendaVal)}</span>
               </div>
             )}
             <div className="flex items-center justify-between rounded-xl bg-white px-4 py-2.5 dark:bg-slate-800/80">
               <span className="text-slate-400 text-xs">Pelunasan</span>
-              <span className="font-mono font-semibold tabular-nums text-fif-600 dark:text-fif-400">{formatAngka(pelunasan)}</span>
+              <span className="font-satoshi font-semibold tabular-nums text-fif-600 dark:text-fif-400">{formatAngka(pelunasan)}</span>
             </div>
             <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-3 shadow-lg shadow-teal-500/20">
               <span className="font-semibold text-sm text-teal-50">Terima</span>
-              <span className="font-mono font-bold tabular-nums text-base text-white">{formatAngka(terima)}</span>
+              <span className="font-satoshi font-bold tabular-nums text-base text-white">{formatAngka(terima)}</span>
             </div>
           </div>
 

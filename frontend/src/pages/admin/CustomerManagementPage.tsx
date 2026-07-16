@@ -239,7 +239,7 @@ export function CustomerManagementPage() {
   };
 
   const sharedColumns = [
-    { key: 'no_contract', header: 'No Contract', render: (c: Customer) => dyn(c, 'no_contract') },
+    { key: 'no_contract', header: 'No Contract', render: (c: Customer) => <span className="font-satoshi">{dyn(c, 'no_contract')}</span> },
     { key: 'nama', header: 'Nama', render: (c: Customer) => dyn(c, 'nama') || c.name },
     {
       key: 'buss_unit',
@@ -287,12 +287,12 @@ export function CustomerManagementPage() {
     { key: 'obj_desc', header: 'Tipe Motor', render: (c: Customer) => dyn(c, 'obj_desc') },
     { key: 'vcode', header: 'V Code', render: (c: Customer) => dyn(c, 'vcode') },
     { key: 'tahun', header: 'Tahun Motor', render: (c: Customer) => dyn(c, 'tahun') },
-    { key: 'otr', header: 'OTR / Harga Pasar', render: (c: Customer) => formatRupiah(dyn(c, 'otr')) || '-' },
+    { key: 'otr', header: 'OTR / Harga Pasar', render: (c: Customer) => <span className="font-satoshi">{formatRupiah(dyn(c, 'otr')) || '-'}</span> },
     {
       key: 'plafon', header: 'Plafon', render: (c: Customer) => {
         const plafon = calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'));
         return (
-          <span className={plafon > 0 ? 'text-fif-600 font-semibold' : ''}>
+          <span className={`font-satoshi ${plafon > 0 ? 'text-fif-600 font-semibold' : ''}`}>
             {plafon > 0 ? formatRupiah(String(plafon)) : '-'}
           </span>
         );
@@ -387,11 +387,11 @@ export function CustomerManagementPage() {
   const isRupiahField = (key: string) => key === 'otr' || key === 'plafon';
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="font-poppins space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Customer Management</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola data customer dan assignment</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Customer Management</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Kelola data customer dan assignment</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isAdmin && (
@@ -720,7 +720,7 @@ export function CustomerManagementPage() {
                             {importResult.skipped.map((s, i) => (
                               <tr key={i} className="text-amber-900 dark:text-amber-200">
                                 <td className="px-2 py-1 text-amber-600">{s.row}</td>
-                                <td className="px-2 py-1 font-mono">{s.no_contract}</td>
+                                <td className="px-2 py-1 font-satoshi">{s.no_contract}</td>
                                 <td className="hidden px-2 py-1 sm:table-cell">{s.name}</td>
                               </tr>
                             ))}

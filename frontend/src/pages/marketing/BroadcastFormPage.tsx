@@ -85,14 +85,14 @@ export function BroadcastFormPage() {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="font-poppins space-y-6 animate-fade-in">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(`${base}/broadcast`)} icon={<ArrowLeft className="h-4 w-4" />}>
           Kembali
         </Button>
         <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kirim pesan WhatsApp ke customer</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Broadcast</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Kirim pesan WhatsApp ke customer</p>
         </div>
       </div>
 

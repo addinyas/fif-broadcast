@@ -135,10 +135,10 @@ export function QRScannerPage() {
   const cfg = statusConfig[effectiveStatus] || statusConfig.disconnected;
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 animate-fade-in">
+    <div className="font-poppins mx-auto max-w-lg space-y-6 animate-fade-in">
       <div>
-        <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Connect WhatsApp</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hubungkan WhatsApp pribadi Anda untuk mengirim broadcast</p>
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Connect WhatsApp</h1>
+        <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Hubungkan WhatsApp pribadi Anda untuk mengirim broadcast</p>
       </div>
 
       <Card>
