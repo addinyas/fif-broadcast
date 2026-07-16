@@ -1573,6 +1573,12 @@ Ketik: `lanjut yang tadi`
 4. Jika Api.co.id: setup akun + integrasi API
 5. Test broadcast dengan setup baru
 
+### 2026-07-16 — Admin dashboard section titles: font-clash → font-redhat (match marketing)
+
+**Sudah di-push ✅ & deployed ✅**
+
+- `frontend/src/pages/admin/DashboardPage.tsx`: 3 section CardTitle ("Distribution per Marketing", "Ringkasan Distribution", "Detail Distribution per Marketing") — ganti dari `font-clash` + gradient text → `!font-redhat !font-bold !tracking-[0.05em]` (Red Hat Display). Sekarang konsisten dengan marketing dashboard yang sudah pakai `font-redhat` sebelumnya.
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`
