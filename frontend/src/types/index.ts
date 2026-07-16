@@ -41,6 +41,7 @@ export interface Customer {
   assignment_status: 'unassigned' | 'assigned';
   dynamic_data: Record<string, string> | null;
   manual_sent_at: string | null;
+  manual_sent_by: number | null;
   created_at: string;
   updated_at: string;
   uploader?: User;

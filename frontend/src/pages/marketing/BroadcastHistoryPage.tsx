@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Clock, Filter } from 'lucide-react';
+import { Send, Clock, Filter, User, Users } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
@@ -26,6 +26,7 @@ export function BroadcastHistoryPage() {
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | ''>('');
   const [kiosList, setKiosList] = useState<Kios[]>([]);
   const [selectedKiosId, setSelectedKiosId] = useState<string>('');
+  const [uhScope, setUhScope] = useState<'own' | 'all_kios'>('own');
   const fetchIdRef = useRef(0);
 
   useEffect(() => {
@@ -37,8 +38,8 @@ export function BroadcastHistoryPage() {
   useEffect(() => {
     if (!isAdmin) return;
     customerService.getMarketingUsers(selectedKiosId || undefined).then(setMarketingUsers);
-    setSelectedMarketingId('');
-  }, [isAdmin, selectedKiosId]);
+    if (!isUH) setSelectedMarketingId('');
+  }, [isAdmin, selectedKiosId, isUH]);
 
   const fetchData = useCallback(async () => {
     const fetchId = ++fetchIdRef.current;
@@ -47,7 +48,13 @@ export function BroadcastHistoryPage() {
       const params: Record<string, string> = { page: page.toString() };
       if (tab === 'sent') params.status = 'sent';
       if (isSuperadmin && selectedKiosId) params.kios_id = selectedKiosId;
-      if ((isSuperadmin || isUH) && selectedMarketingId) params.marketing_id = selectedMarketingId.toString();
+      if (isSuperadmin && selectedMarketingId) {
+        params.marketing_id = selectedMarketingId.toString();
+      } else if (isUH) {
+        if (uhScope === 'all_kios') {
+          params.marketing_id = 'all';
+        }
+      }
       const res = await broadcastService.getHistory(params);
       if (fetchId === fetchIdRef.current) {
         setHistory(res.data);
@@ -56,7 +63,7 @@ export function BroadcastHistoryPage() {
     } finally {
       if (fetchId === fetchIdRef.current) setLoading(false);
     }
-  }, [page, tab, selectedMarketingId, selectedKiosId, isSuperadmin, isUH]);
+  }, [page, tab, selectedMarketingId, selectedKiosId, isSuperadmin, isUH, uhScope]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -105,11 +112,11 @@ export function BroadcastHistoryPage() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="font-poppins space-y-6 animate-fade-in">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Broadcast History</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Riwayat pengiriman broadcast WhatsApp</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Broadcast History</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Riwayat pengiriman broadcast WhatsApp</p>
         </div>
         <div className="flex gap-1 rounded-xl border border-slate-200/80 bg-slate-100/80 p-1 backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-800/80">
           {tabs.map((t) => {
@@ -132,9 +139,35 @@ export function BroadcastHistoryPage() {
         </div>
       </div>
 
-      {isAdmin && (
+      {(isUH || isSuperadmin) && (
         <div className="flex flex-wrap items-center gap-2">
           <Filter className="h-4 w-4 text-slate-400" />
+          {isUH && (
+            <div className="flex gap-1 rounded-lg border border-slate-200/80 bg-slate-100/80 p-1 backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-800/80">
+              <button
+                onClick={() => { setUhScope('own'); setPage(1); }}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  uhScope === 'own'
+                    ? 'bg-white text-fif-700 shadow-sm dark:bg-slate-700 dark:text-fif-300'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <User className="h-3.5 w-3.5" />
+                Saya Saja
+              </button>
+              <button
+                onClick={() => { setUhScope('all_kios'); setPage(1); }}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+                  uhScope === 'all_kios'
+                    ? 'bg-white text-fif-700 shadow-sm dark:bg-slate-700 dark:text-fif-300'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+              >
+                <Users className="h-3.5 w-3.5" />
+                Semua di Kios
+              </button>
+            </div>
+          )}
           {isSuperadmin && kiosList.length > 0 && (
             <select
               value={selectedKiosId}
@@ -147,7 +180,7 @@ export function BroadcastHistoryPage() {
               ))}
             </select>
           )}
-          {marketingUsers.length > 0 && (
+          {isSuperadmin && marketingUsers.length > 0 && (
             <select
               value={selectedMarketingId}
               onChange={(e) => { setSelectedMarketingId(e.target.value ? parseInt(e.target.value) : ''); setPage(1); }}

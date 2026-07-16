@@ -143,10 +143,10 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="font-poppins space-y-8 animate-fade-in">
       <div>
-        <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Pengaturan</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Pengaturan</h1>
+        <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
           Kelola profil dan pengaturan akun Anda
         </p>
       </div>
@@ -187,7 +187,7 @@ export function SettingsPage() {
               {user?.name}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              JPEG, PNG, GIF, WebP. Maks 2MB.
+              JPEG, PNG, GIF, WebP. Maks 8MB.
             </p>
             {user?.avatar && (
               <button
@@ -403,6 +403,7 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {user?.role === 'superadmin' && (
       <button
         type="button"
         onClick={handleClearCache}
@@ -416,6 +417,7 @@ export function SettingsPage() {
         )}
         Clear Cache
       </button>
+      )}
     </div>
   );
 }

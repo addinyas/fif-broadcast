@@ -146,7 +146,7 @@ export function ProspectListPage() {
       const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter, ownership: ownershipFilter });
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
-      setSentIds(res.data.filter((c) => c.manual_sent_at).map((c) => c.id));
+      setSentIds(res.data.filter((c) => user?.role === 'UH' ? c.manual_sent_by === user?.id : !!c.manual_sent_at).map((c) => c.id));
 
       if (!skipAutoAdvanceRef.current && res.data.length > 0 && res.data.every((c) => c.manual_sent_at) && page < (res.last_page || 1)) {
         setPage((p) => p + 1);
@@ -552,7 +552,7 @@ export function ProspectListPage() {
 
   const columns = [
     { key: 'no_contract', header: 'No Contract', render: (c: Customer) => (
-      <span className="font-mono text-xs font-medium text-slate-700 dark:text-slate-300">{c.no_contract || dyn(c, 'no_contract')}</span>
+      <span className="font-satoshi text-xs font-medium text-slate-700 dark:text-slate-300">{c.no_contract || dyn(c, 'no_contract')}</span>
     ) },
     { key: 'nama', header: 'Nama', render: (c: Customer) => (
       <div className="flex items-center gap-1">
@@ -637,7 +637,7 @@ export function ProspectListPage() {
       <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{dyn(c, 'buss_unit') || '-'}</span>
     ) },
     { key: 'plafon', header: 'Plafon', render: (c: Customer) => (
-      <span className="font-mono text-sm font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(String(calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'))))}</span>
+      <span className="font-satoshi text-sm font-semibold text-emerald-600 dark:text-emerald-400">{rupiah(String(calcPlafon(dyn(c, 'otr'), dyn(c, 'cori'))))}</span>
     ) },
     {
       key: 'sisa_angsuran',
@@ -680,7 +680,7 @@ export function ProspectListPage() {
         </div>
       ),
       render: (c: Customer) => (
-      <span className="font-mono text-sm font-semibold text-amber-600 dark:text-amber-400">{dyn(c, 'sisa_angsuran') || '-'}</span>
+      <span className="font-satoshi text-sm font-semibold text-amber-600 dark:text-amber-400">{dyn(c, 'sisa_angsuran') || '-'}</span>
     ) },
     {
       key: 'status', header: 'Status', render: (c: Customer) => {
@@ -742,11 +742,11 @@ export function ProspectListPage() {
   ];
 
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="font-poppins space-y-5 animate-fade-in">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-xl font-bold tracking-tight text-transparent">Broadcast</h1>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Buat template dan kirim pesan ke customer</p>
+          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Broadcast</h1>
+          <p className="mt-0.5 text-sm font-medium text-slate-500 dark:text-slate-400">Buat template dan kirim pesan ke customer</p>
         </div>
       </div>
 
