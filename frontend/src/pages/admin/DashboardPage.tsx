@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Send, Clock, CheckCircle2, XCircle, Loader2, UserCheck, UserX, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
+import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
@@ -9,6 +10,33 @@ import { Badge } from '../../components/ui/Badge';
 import type { BroadcastStats, DistributionReport } from '../../types';
 
 const MARKETING_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444'];
+
+function Greeting() {
+  const { user } = useAuth();
+  const hour = parseInt(new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }), 10);
+  let greeting = 'Selamat Malam';
+  if (hour >= 4 && hour < 11) greeting = 'Selamat Pagi';
+  else if (hour >= 11 && hour < 15) greeting = 'Selamat Siang';
+  else if (hour >= 15 && hour < 18) greeting = 'Selamat Sore';
+
+  const roleLabel: Record<string, string> = { superadmin: 'Superadmin', UH: 'UH', marketing: 'MCE' };
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-fif-600 via-fif-700 to-slate-900 p-6 text-white shadow-lg shadow-fif-900/20 sm:p-8">
+      <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-white/5" />
+      <div className="absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-white/5" />
+      <div className="relative">
+        <p className="text-sm font-medium text-fif-200">{greeting}</p>
+        <h1 className="font-heading mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+          <span className="font-clash font-semibold tracking-wide">{user?.name || 'Admin'}</span>
+        </h1>
+        <p className="mt-0.5 max-w-xl text-sm text-fif-200">
+          {roleLabel[user?.role || ''] || user?.role} &middot; Panel administrasi FIF Broadcast
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -32,12 +60,7 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-2xl font-bold tracking-tight text-transparent">Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Overview FIF Broadcast system</p>
-        </div>
-      </div>
+      <Greeting />
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {loading ? (
