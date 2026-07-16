@@ -70,8 +70,12 @@ class BroadcastController extends Controller
             $kiosId = $user->kios_id;
         } elseif ($user->role === 'UH') {
             $kiosId = $user->kios_id;
-            if ($request->query('marketing_id')) {
+            if ($request->query('marketing_id') === 'all') {
+                $marketingId = null;
+            } elseif ($request->query('marketing_id')) {
                 $marketingId = (int) $request->query('marketing_id');
+            } else {
+                $marketingId = $user->id;
             }
         } else {
             if ($request->query('kios_id')) {
@@ -99,8 +103,12 @@ class BroadcastController extends Controller
             $kiosId = $user->kios_id;
         } elseif ($user->role === 'UH') {
             $kiosId = $user->kios_id;
-            if ($request->query('marketing_id')) {
+            if ($request->query('marketing_id') === 'all') {
+                $marketingId = null;
+            } elseif ($request->query('marketing_id')) {
                 $marketingId = (int) $request->query('marketing_id');
+            } else {
+                $marketingId = $user->id;
             }
         } else {
             if ($request->query('kios_id')) {

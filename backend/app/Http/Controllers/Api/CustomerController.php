@@ -560,6 +560,8 @@ class CustomerController extends Controller
         $query = Customer::whereNotNull('manual_sent_at');
         if ($user->role === 'marketing') {
             $query->where('marketing_id', $user->id);
+        } elseif ($user->role === 'UH') {
+            $query->where('manual_sent_by', $user->id);
         } elseif ($user->role !== 'superadmin' && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
@@ -574,8 +576,8 @@ class CustomerController extends Controller
         $query = Customer::whereNotNull('manual_sent_at');
         if ($user->role === 'marketing') {
             $query->where('marketing_id', $user->id);
-        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
-            $query->where('kios_id', $user->kios_id);
+        } elseif ($user->role === 'UH') {
+            $query->where('manual_sent_by', $user->id);
         } else {
             $query->where('manual_sent_by', $user->id);
         }

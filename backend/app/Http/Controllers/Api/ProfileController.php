@@ -76,7 +76,7 @@ class ProfileController extends Controller
     public function uploadAvatar(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:8192',
         ]);
 
         if ($validator->fails()) {
