@@ -416,15 +416,22 @@ export function CalculatorPage() {
 
       {/* Selected customer — compact info strip */}
       {selected && (
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fif-50 text-sm font-bold text-fif-600 dark:bg-fif-900/30 dark:text-fif-400">
-            {(selected.name || '?')[0]}
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800 sm:flex sm:items-center sm:gap-3 sm:px-4 sm:py-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-fif-50 text-sm font-bold text-fif-600 dark:bg-fif-900/30 dark:text-fif-400">
+              {(selected.name || '?')[0]}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{selected.name}</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{dyn('no_contract')} · {dyn('obj_desc')} {dyn('tahun')}</p>
+            </div>
+            <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); }}
+              className="shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors sm:hidden"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{selected.name}</p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{dyn('no_contract')} · {dyn('obj_desc')} {dyn('tahun')}</p>
-          </div>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="mt-3 flex items-center justify-between gap-3 text-xs sm:mt-0 sm:justify-start sm:gap-3">
             <div className="text-center">
               <p className="text-[10px] text-slate-400 dark:text-slate-500">OTR</p>
               <p className="font-semibold text-slate-700 dark:text-slate-300">{dyn('otr') ? `Rp ${formatAngka(dyn('otr'))}` : '-'}</p>
@@ -450,12 +457,12 @@ export function CalculatorPage() {
                 <option value="GOOD LOYAL">GOOD LOYAL</option>
               </select>
             </div>
-            <div className="text-right">
+            <div className="text-center">
               <p className="text-[10px] text-slate-400 dark:text-slate-500">Vcode</p>
               <p className="font-semibold text-slate-700 dark:text-slate-300">{dyn('vcode') || '-'}</p>
             </div>
             <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); }}
-              className="shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors"
+              className="hidden shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors sm:block"
             >
               <X className="h-4 w-4" />
             </button>
