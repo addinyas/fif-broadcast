@@ -31,7 +31,7 @@ function Greeting() {
           <span className="font-clash font-semibold tracking-wide">{user?.name || 'Admin'}</span>
         </h1>
         <p className="mt-0.5 max-w-xl text-sm text-fif-200">
-          {roleLabel[user?.role || ''] || user?.role} &middot; Panel administrasi FIF Broadcast
+          {roleLabel[user?.role || ''] || user?.role}{user?.kios_id ? ` · ${user.kios_id} ${user.kios_name || ''}` : ''}
         </p>
       </div>
     </div>
