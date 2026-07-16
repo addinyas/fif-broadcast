@@ -1489,6 +1489,90 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-16 — Proxy research + WhatsApp Gateway alternatives + rate-limit mitigation
+
+**Status: Research complete, belum diputuskan arah**
+
+**Root cause rate-limiting:**
+- VPS IP `202.10.42.237` adalah datacenter IP (Rumahweb/AlmaLinux)
+- WhatsApp mendeteksi semua koneksi dari range IP hosting — IP ini sudah masuk blacklist WhatsApp
+- Baileys v7 sebelumnya spam reconnect loop → trigger rate-limit permanen di IP tersebut
+- Semua user di VPS terkena dampaknya — bukan karena konten pesan
+
+**Rate-limit mitigation yang sudah di-deploy:**
+- Browser identity: `['WhatsApp', 'Chrome', '120.0.0.0']` (match real WhatsApp Web)
+- Platform: `'Desktop'`
+- Cooldown reconnect: 60 detik
+- Warmup delay: 3-5 detik setelah connect
+- Post-reconnect grace: 10 detik sebelum kirim pesan pertama
+- Delay antar pesan: 60-180 detik (3-4 pesan/jam)
+- Daily limit: 150 pesan/hari
+- connectTimeoutMs: 30 detik
+- keepAliveIntervalMs: 20-30 detik (random jitter)
+- MAX_RECONNECT_ATTEMPTS: 10
+- Pairing code support (alternative ke QR)
+- WA proxy support via `WA_PROXY` env var (SOCKS5/HTTP)
+
+**Proxy options yang sudah di-research:**
+
+| Opsi | Biaya | Kompleksitas | Risiko | Status |
+|------|-------|-------------|--------|--------|
+| DataImpulse (SOCKS5) | $50 deposit (~Rp 775rb), $1/GB, no expiry | Rendah — tinggal set `WA_PROXY` | Masih bisa detect | Sudah di-deploy supportnya |
+| FloppyData (SOCKS5) | $50 deposit, $1/GB | Rendah | Sama | Belum dicoba |
+| 9Proxy (Shopee) | Min $24 (~Rp 378rb) untuk 100 IPs, unlimited bandwidth/IP, IPs unused tak expired, each activated IP tahan hours-24h | Sedang — install app di VPS | IP pool model | Sudah di-research |
+| Cloudflare WARP | Gratis | Sedang | Masih datacenter IP Cloudflare — tidak menyelesaikan masalah | ❌ Ditolak user |
+| Termux SSH tunnel (HP) | Gratis | Tinggi — Termux + OpenSSH + autossh + MIUI battery bypass + phone 24/7 on | IP residential, pasti aman | ❌ Ditolak user (terlalu rumit) |
+| SocksDroid (Android) | Gratis | Sedang — perlu PC/server SSH | IP WiFi residential | Belum dicoba |
+| Shadowsocks VPS sendiri | $5/bulan | Sedang | Tetap datacenter IP | ❌ Ditolak user |
+
+**WhatsApp Gateway services (alternatif baru):**
+
+| Service | Harga/bulan | Pesan | Tipe | Ban Risk |
+|---------|-------------|-------|------|----------|
+| **WAAPI** | **Gratis** (100/hari) / **Rp 50rb** (5K/hari) | Unlimited | Unofficial (Baileys) | Tinggi |
+| **PushWA** | **Rp 55rb** | Unlimited text | Unofficial | Tinggi |
+| **Fonnte** | Rp 25rb-175rb | Tergantung paket | Unofficial | Tinggi |
+| **Kirimin** | **Rp 125rb** | Unlimited | Unofficial, trial 7 hari gratis | Tinggi |
+| **WaAPI** (global) | $10/bulan (~Rp 155rb) | Unlimited | Unofficial | Tinggi |
+| **EasyWA** | Rp 150rb | 1K-Unlimited | Unofficial | Tinggi |
+
+**Official WhatsApp Business API:**
+
+| Service | Platform Fee | Biaya Meta/pesan | Total 150 pesan/hari |
+|---------|-------------|-------------------|---------------------|
+| **Api.co.id Lifetime** | **Rp 2 juta sekali bayar** | Rp 460/pesan (marketing) | ~Rp 2 juta/bulan (Meta) |
+| **Convia** | Rp 49rb/bulan | Rp 460/pesan (marketing) | ~Rp 2,1 juta/bulan |
+| **Notif Chat** | Flat | Rp 586/pesan (marketing) | ~Rp 2,6 juta/bulan |
+
+> **Catatan:** Kalau pesan FIF dikategorikan **utility** (pengingat pembayaran ke customer existing), biaya Meta turun jadi **Rp 175/pesan** → total ~Rp 788rb/bulan.
+
+**Analisis user terhadap WhatsApp Business API:**
+- TIDAK cocok untuk FIF karena: butuh opt-in (customer harus save nomor dulu), template approval dari Meta, format terbatas
+- Biaya per-pesan mahal untuk volume rendah (150/hari)
+
+**Analisis user terhadap WhatsApp Gateway:**
+- Semua unofficial (Baileys-based) → risiko ban TINGGI, tidak menyelesaikan masalah
+- Biaya Rp 25rb-175rb/bulan, tapi tetap bisa kena blokir
+- WAAPI free tier (100/hari) menarik untuk testing, tapi tetap unofficial
+
+**Key insight dari user:**
+- "jika pakai wa API Official, kan untuk pengingat angsuran yang sudah jadi customer, saya rasa aman dan tidak akan kena blokir"
+- User sadar official API lebih aman, tapi butuh opt-in + template approval
+- User cenderung tidak mau bayar bulanan untuk unofficial gateway
+
+**Opsi yang paling realistis:**
+1. **WAAPI free tier** (100/hari) — paling simpel, gratis, tapi unofficial
+2. **DataImpulse proxy** — $50 deposit, low latency, unlimited requests, no expiry
+3. **Api.co.id Lifetime** — Rp 2 juta sekali, official API, tapi per-message Meta fees mahal
+4. **Tetap di Baileys + accept rate limit** — delay 60-180s + 150/hari, rate-limit pulih setelah cooldown
+
+### Next steps when resuming
+1. User perlu putuskan arah: (a) WAAPI gateway, (b) DataImpulse proxy, (c) Api.co.id Lifetime, (d) tetap di Baileys + accept rate limit
+2. Jika WAAPI: refactor worker jadi HTTP POST ke WAAPI API
+3. Jika DataImpulse: set `WA_PROXY` di `worker/.env`
+4. Jika Api.co.id: setup akun + integrasi API
+5. Test broadcast dengan setup baru
+
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
 2. Tambah file: `git add <file>`

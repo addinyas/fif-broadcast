@@ -1,7 +1,7 @@
 import { lazy, Suspense, Component, type ReactNode, type ComponentType } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { AdminLayout } from './components/layouts/AdminLayout';
 import { MarketingLayout } from './components/layouts/MarketingLayout';
 import { usePermissions } from './hooks/usePermissions';
@@ -26,8 +26,7 @@ const KiosManagementPage = lazy(() => import('./pages/admin/KiosManagementPage')
 const RollingApprovalPage = lazy(() => import('./pages/admin/RollingApprovalPage').then(m => ({ default: m.RollingApprovalPage })));
 
 function LoadingScreen() {
-  const { user } = useAuth();
-  const isDark = !user;
+  const { isDark } = useTheme();
 
   return (
     <div className={`flex h-screen flex-col items-center justify-center overflow-hidden ${isDark ? 'bg-gradient-to-br from-slate-950 via-fif-950 to-slate-950' : 'bg-surface'}`}>
@@ -104,9 +103,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boole
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-screen flex-col items-center justify-center bg-surface">
+        <div className="flex h-screen flex-col items-center justify-center bg-surface dark:bg-slate-900">
           <p className="text-sm text-slate-500 dark:text-slate-400">Gagal memuat halaman.</p>
-          <button onClick={() => window.location.reload()} className="mt-3 text-sm font-medium text-fif-600 hover:underline">
+          <button onClick={() => window.location.reload()} className="mt-3 text-sm font-medium text-fif-600 hover:underline dark:text-fif-400">
             Muat ulang
           </button>
         </div>
