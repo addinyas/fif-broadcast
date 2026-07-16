@@ -166,7 +166,7 @@ export function MarketingDashboardPage() {
 
       <Card>
         <CardHeader className="mb-0">
-          <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+          <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-fif-600" />
             Progress Broadcast
           </CardTitle>
@@ -200,7 +200,7 @@ export function MarketingDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <Activity className="h-5 w-5 text-fif-600" />
               Broadcast Terakhir
             </CardTitle>
@@ -227,7 +227,7 @@ export function MarketingDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <Users className="h-5 w-5 text-fif-600" />
               Ringkasan
             </CardTitle>
@@ -255,7 +255,7 @@ export function MarketingDashboardPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <Activity className="h-5 w-5 text-fif-600" />
               Aktivitas Terbaru
             </CardTitle>

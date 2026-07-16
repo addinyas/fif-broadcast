@@ -101,7 +101,7 @@ export function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-fif-600" />
               Distribution per Marketing
             </CardTitle>
@@ -149,7 +149,7 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <PieChart className="h-5 w-5 text-fif-600" />
               Ringkasan Distribution
             </CardTitle>
@@ -190,7 +190,7 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-extrabold !tracking-[0.05em] flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-fif-600" />
               Detail Distribution per Marketing
             </CardTitle>
