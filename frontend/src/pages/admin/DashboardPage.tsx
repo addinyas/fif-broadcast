@@ -101,9 +101,9 @@ export function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-fif-600" />
-              <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Distribution per Marketing</span>
+              Distribution per Marketing
             </CardTitle>
           </CardHeader>
           {loading ? (
@@ -149,9 +149,9 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
               <PieChart className="h-5 w-5 text-fif-600" />
-              <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Ringkasan Distribution</span>
+              Ringkasan Distribution
             </CardTitle>
           </CardHeader>
           {loading ? (
@@ -190,10 +190,10 @@ export function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-fif-600" />
-            <span className="font-clash bg-gradient-to-r from-fif-600 to-fif-400 bg-clip-text text-transparent">Detail Distribution per Marketing</span>
-          </CardTitle>
+            <CardTitle className="!font-redhat !font-bold !tracking-[0.05em] flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-fif-600" />
+              Detail Distribution per Marketing
+            </CardTitle>
         </CardHeader>
         <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700">
           <table className="w-full text-left text-sm">
