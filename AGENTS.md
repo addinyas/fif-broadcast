@@ -1577,7 +1577,9 @@ Ketik: `lanjut yang tadi`
 
 **Sudah di-push ✅ & deployed ✅**
 
-- `frontend/src/pages/admin/DashboardPage.tsx`: 3 section CardTitle ("Distribution per Marketing", "Ringkasan Distribution", "Detail Distribution per Marketing") — ganti dari `font-clash` + gradient text → `!font-redhat !font-bold !tracking-[0.05em]` (Red Hat Display). Sekarang konsisten dengan marketing dashboard yang sudah pakai `font-redhat` sebelumnya.
+- `frontend/index.html`: tambah weight 800;900 ke Red Hat Display Google Fonts (sebelumnya hanya 700)
+- `frontend/src/pages/admin/DashboardPage.tsx`: 3 section CardTitle — ganti dari `font-clash` + gradient text → `!font-redhat !font-extrabold !tracking-[0.05em]` (Red Hat Display weight 800)
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: 4 section CardTitle — upgrade `!font-bold` → `!font-extrabold` (weight 800) supaya konsisten dengan admin
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
