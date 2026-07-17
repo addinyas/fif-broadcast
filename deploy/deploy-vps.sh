@@ -226,6 +226,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/var/www/fif/worker
+ExecStartPre=/bin/bash -c 'fuser -k 3001/tcp 2>/dev/null || true'
 ExecStart=/usr/bin/node src/index.js
 Restart=always
 RestartSec=5
