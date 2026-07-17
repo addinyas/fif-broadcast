@@ -95,7 +95,7 @@ export function calculateAngsuran(input: FinanceInput): FinanceOutput {
     const interestNet = ph * flat * tenor / 12;
     const interestGross = interestNet + splittingRateTotal;
     const totalHutang = ph + interestGross;
-    const angsuran = Math.round(totalHutang / tenor / 1000) * 1000;
+    const angsuran = Math.round(totalHutang / tenor / 5000) * 5000;
 
     return {
       tenor,

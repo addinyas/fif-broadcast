@@ -29,7 +29,7 @@ export function CalculatorPage() {
   const [dendaAmount, setDendaAmount] = useState('');
   const [adminChecked, setAdminChecked] = useState(false);
   const [pinjaman, setPinjaman] = useState(0);
-  const [rate, setRate] = useState(44);
+  const [rate, setRate] = useState(46);
   const [tenors, setTenors] = useState([12, 18, 24, 30, 36]);
 
   const [nopol, setNopol] = useState('');
@@ -107,6 +107,7 @@ export function CalculatorPage() {
     setManual(null);
     setSearch('');
     setResults([]);
+    setNopol('');
     const plafon = calcPlafon(c.dynamic_data?.otr, c.dynamic_data?.cori);
     setPinjaman(plafon);
     const sisa = String(c.dynamic_data?.sisa_angsuran ?? '0');
@@ -246,7 +247,7 @@ export function CalculatorPage() {
               <div className="h-2 w-2 rounded-full bg-violet-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-violet-600 dark:text-violet-400">Input Manual</span>
             </div>
-            <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); setDinego(''); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); }}
+            <button onClick={() => { setManual(null); setPinjaman(0); setAngsuranPerBulan(0); setSisaAngsuran(0); setDinego(''); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); setNopol(''); }}
               className="text-xs text-violet-400 hover:text-violet-600 dark:text-violet-500 dark:hover:text-violet-300 transition-colors"
             >
               Hapus
@@ -263,7 +264,11 @@ export function CalculatorPage() {
             <div>
               <label className={labelClass}>No Kontrak <span className="text-red-400">*</span></label>
               <input value={manual.no_contract}
-                onChange={(e) => setManual({ ...manual, no_contract: e.target.value.replace(/\D/g, '') })}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '');
+                  setManual({ ...manual, no_contract: val });
+                  if (!val) { setNopol(''); setSisaAngsuran(0); setAngsuranPerBulan(0); setManual({ ...manual, no_contract: val, nopol: '', sisa_angsuran: '' }); }
+                }}
                 className={violetInput}
               />
             </div>
@@ -425,7 +430,7 @@ export function CalculatorPage() {
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">{selected.name}</p>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{dyn('no_contract')} · {dyn('obj_desc')} {dyn('tahun')}</p>
             </div>
-            <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); }}
+            <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setSisaAngsuran(0); setAngsuranPerBulan(0); setDinego(''); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); setNopol(''); }}
               className="shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors sm:hidden"
             >
               <X className="h-4 w-4" />
@@ -461,7 +466,7 @@ export function CalculatorPage() {
               <p className="text-[10px] text-slate-400 dark:text-slate-500">Vcode</p>
               <p className="font-semibold text-slate-700 dark:text-slate-300">{dyn('vcode') || '-'}</p>
             </div>
-            <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); }}
+            <button onClick={() => { setSelected(null); setManual(null); setPinjaman(0); setSisaAngsuran(0); setAngsuranPerBulan(0); setDinego(''); setDendaChecked(false); setDendaAmount(''); setAdminChecked(false); setNopol(''); }}
               className="hidden shrink-0 rounded-lg p-1.5 text-slate-300 hover:bg-slate-100 hover:text-slate-500 dark:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300 transition-colors sm:block"
             >
               <X className="h-4 w-4" />
