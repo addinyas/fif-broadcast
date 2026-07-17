@@ -6,6 +6,7 @@ use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
 use App\Models\CustomerShare;
+use App\Models\Template;
 use App\Models\User;
 use App\Models\WhatsappConnection;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -36,7 +37,12 @@ class BroadcastService
         $formValues['_namapanggilan'] = $marketingUser?->display_name ?? $marketingUser?->name ?? '';
         $formValues['_nomor'] = $marketingUser?->phone_number ?? '';
 
-        $mappedMessage = $this->mapFormToMessage($templateBody, $formValues);
+        $effectiveBody = $templateBody;
+        if ($templateBody === 'random') {
+            $effectiveBody = $this->pickRandomTemplate($marketingUser);
+        }
+
+        $mappedMessage = $this->mapFormToMessage($effectiveBody, $formValues);
 
         $broadcast = $this->broadcastRepository->create([
             'customer_id' => $customerId,
@@ -46,6 +52,26 @@ class BroadcastService
         ]);
 
         return $broadcast->toArray();
+    }
+
+    private function pickRandomTemplate(?User $user): string
+    {
+        $query = Template::query();
+        if ($user && $user->role === 'superadmin') {
+            // superadmin sees all templates
+        } elseif ($user) {
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                    ->orWhere('is_default', true);
+            });
+        }
+
+        $templates = $query->get(['id', 'message_body']);
+        if ($templates->isEmpty()) {
+            throw new \Exception('Tidak ada template tersedia untuk random selection');
+        }
+
+        return $templates->random()->message_body;
     }
 
     public function getHistory(?int $marketingId, array $filters = [], ?string $kiosId = null): LengthAwarePaginator
@@ -192,5 +218,178 @@ class BroadcastService
         }
 
         return (int) $raw - $remainder + 50000;
+    }
+
+    public function getProgress(User $user): array
+    {
+        $query = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id');
+
+        if ($user->role !== 'superadmin' && $user->kios_id) {
+            $query->where('customers.kios_id', $user->kios_id);
+        }
+        if ($user->role === 'marketing') {
+            $query->where('broadcast_histories.marketing_id', $user->id);
+        }
+
+        // Pending & processing: all-time (show stuck messages from any day)
+        // Sent/failed/cancelled: today only
+        $stats = $query->selectRaw("
+            SUM(CASE WHEN broadcast_histories.status = 'pending' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN broadcast_histories.status = 'processing' THEN 1 ELSE 0 END) as processing,
+            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent,
+            SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed,
+            SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled,
+            COUNT(*) as total
+        ")->first();
+
+        return [
+            'pending' => (int) ($stats->pending ?? 0),
+            'processing' => (int) ($stats->processing ?? 0),
+            'sent' => (int) ($stats->sent ?? 0),
+            'failed' => (int) ($stats->failed ?? 0),
+            'cancelled' => (int) ($stats->cancelled ?? 0),
+            'total' => (int) ($stats->total ?? 0),
+            'is_active' => ((int) ($stats->pending ?? 0) + (int) ($stats->processing ?? 0)) > 0,
+        ];
+    }
+
+    public function cancelPending(User $user): array
+    {
+        $query = BroadcastHistory::where('status', 'pending');
+
+        if ($user->role === 'marketing') {
+            $query->where('marketing_id', $user->id);
+        } elseif ($user->role === 'UH') {
+            if ($user->kios_id) {
+                $query->whereHas('customer', function ($q) use ($user) {
+                    $q->where('kios_id', $user->kios_id);
+                });
+            }
+        } elseif ($user->kios_id) {
+            $query->whereHas('customer', function ($q) use ($user) {
+                $q->where('kios_id', $user->kios_id);
+            });
+        }
+
+        $cancelled = $query->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+        return ['cancelled' => $cancelled];
+    }
+
+    public function cancelItem(int $historyId, User $user): bool
+    {
+        $query = BroadcastHistory::where('id', $historyId)->whereIn('status', ['pending', 'processing']);
+
+        if ($user->role === 'marketing') {
+            $query->where('marketing_id', $user->id);
+        } elseif ($user->role === 'UH') {
+            if ($user->kios_id) {
+                $query->whereHas('customer', function ($q) use ($user) {
+                    $q->where('kios_id', $user->kios_id);
+                });
+            }
+        }
+
+        $item = $query->first();
+        if (! $item) {
+            return false;
+        }
+
+        $item->update(['status' => 'cancelled', 'updated_at' => now()]);
+
+        return true;
+    }
+
+    public function getWorkerStatus(User $user): array
+    {
+        $query = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->join('users', 'broadcast_histories.marketing_id', '=', 'users.id');
+
+        // Kios scoping
+        if ($user->role === 'marketing') {
+            $query->where('broadcast_histories.marketing_id', $user->id);
+        } elseif ($user->role === 'UH' && $user->kios_id) {
+            $query->where('customers.kios_id', $user->kios_id);
+        }
+
+        $rows = $query->selectRaw("
+            broadcast_histories.marketing_id,
+            users.name as marketing_name,
+            users.kios_id,
+            users.kios_name,
+            SUM(CASE WHEN broadcast_histories.status = 'pending' THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN broadcast_histories.status = 'processing' THEN 1 ELSE 0 END) as processing,
+            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent_today,
+            SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today,
+            SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled_today,
+            MAX(CASE WHEN broadcast_histories.status IN ('sent', 'processing', 'pending') THEN broadcast_histories.updated_at END) as last_activity
+        ")->groupBy('broadcast_histories.marketing_id', 'users.name', 'users.kios_id', 'users.kios_name')
+            ->orderByDesc('pending')
+            ->orderByDesc('processing')
+            ->orderByDesc('last_activity')
+            ->get();
+
+        // Also add users with 0 broadcasts if superadmin/UH
+        if ($user->role !== 'marketing') {
+            $existingIds = $rows->pluck('marketing_id')->toArray();
+            $userQuery = User::where('role', 'marketing')
+                ->select('id', 'name', 'kios_id', 'kios_name');
+
+            if ($user->role === 'UH' && $user->kios_id) {
+                $userQuery->where('kios_id', $user->kios_id);
+            }
+
+            $emptyUsers = $userQuery->whereNotIn('id', $existingIds)->get();
+            foreach ($emptyUsers as $eu) {
+                $rows->push((object) [
+                    'marketing_id' => $eu->id,
+                    'marketing_name' => $eu->name,
+                    'kios_id' => $eu->kios_id,
+                    'kios_name' => $eu->kios_name,
+                    'pending' => 0,
+                    'processing' => 0,
+                    'sent_today' => 0,
+                    'failed_today' => 0,
+                    'cancelled_today' => 0,
+                    'last_activity' => null,
+                ]);
+            }
+        }
+
+        $users = $rows->values();
+
+        $summary = [
+            'total_pending' => $users->sum('pending'),
+            'total_processing' => $users->sum('processing'),
+            'total_sent_today' => $users->sum('sent_today'),
+            'total_failed_today' => $users->sum('failed_today'),
+            'total_cancelled_today' => $users->sum('cancelled_today'),
+        ];
+
+        // Get pending items for the cancel feature
+        $pendingQuery = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->join('users', 'broadcast_histories.marketing_id', '=', 'users.id')
+            ->where('broadcast_histories.status', 'pending');
+
+        if ($user->role === 'marketing') {
+            $pendingQuery->where('broadcast_histories.marketing_id', $user->id);
+        } elseif ($user->role === 'UH' && $user->kios_id) {
+            $pendingQuery->where('customers.kios_id', $user->kios_id);
+        }
+
+        $pendingItems = $pendingQuery
+            ->select('broadcast_histories.id', 'customers.name as customer_name', 'broadcast_histories.marketing_id', 'users.name as marketing_name')
+            ->orderBy('broadcast_histories.created_at')
+            ->limit(100)
+            ->get();
+
+        return [
+            'summary' => $summary,
+            'users' => $users,
+            'pending_items' => $pendingItems,
+        ];
     }
 }

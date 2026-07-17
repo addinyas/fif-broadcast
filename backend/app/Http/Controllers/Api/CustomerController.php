@@ -631,15 +631,17 @@ class CustomerController extends Controller
         $sheet = $spreadsheet->getActiveSheet();
 
         $headers = [
-            'NO_CONTRACT', 'NAMA', 'SISA ANGSURAN', 'KECAMATAN', 'KELURAHAN',
-            'OBJ_DESC', 'VCODE', 'TAHUN', 'OTR',
-            'CORI', 'NO_WHATSAPP',
+            'NO_CONTRACT', 'NAMA', 'NO_WHATSAPP',
+            'SISA_ANGSURAN', 'OTR', 'CORI',
+            'OBJ_DESC', 'TAHUN', 'VCODE',
+            'KECAMATAN', 'KELURAHAN',
         ];
 
         $sampleData = [
-            '40200001', 'Nama Contoh', '6', 'Gamping', 'Trimurti',
-            'Honda Beat', '001', '2023', '18000000',
-            'GOOD', '08123456789',
+            '40200001', 'Nama Contoh', '08123456789',
+            '6', '18000000', 'GOOD',
+            'Honda Beat', '2023', '001',
+            'Gamping', 'Trimurti',
         ];
 
         foreach ($headers as $col => $header) {

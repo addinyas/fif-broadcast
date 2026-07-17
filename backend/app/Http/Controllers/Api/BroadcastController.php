@@ -134,4 +134,55 @@ class BroadcastController extends Controller
             $this->broadcastService->marketingSummary($marketingId, $kiosId)
         );
     }
+
+    public function progress(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json(
+            $this->broadcastService->getProgress($user)
+        );
+    }
+
+    public function cancel(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        try {
+            $result = $this->broadcastService->cancelPending($user);
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function workerStatus(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json(
+            $this->broadcastService->getWorkerStatus($user)
+        );
+    }
+
+    public function cancelItem(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:broadcast_histories,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+        $ok = $this->broadcastService->cancelItem((int) $request->id, $user);
+
+        if (! $ok) {
+            return response()->json(['message' => 'Item tidak ditemukan atau sudah diproses'], 404);
+        }
+
+        return response()->json(['message' => 'Berhasil dibatalkan']);
+    }
 }

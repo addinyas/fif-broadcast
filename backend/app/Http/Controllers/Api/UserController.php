@@ -105,6 +105,26 @@ class UserController extends Controller
         return response()->json(['message' => 'User dan seluruh data terkait berhasil dihapus']);
     }
 
+    public function whatsappStatus(): JsonResponse
+    {
+        $users = User::select('id', 'name', 'role', 'kios_id', 'kios_name')
+            ->with('whatsappConnection:user_id,status,updated_at')
+            ->orderBy('kios_id', 'asc')
+            ->orderBy('role', 'asc')
+            ->orderBy('name', 'asc')
+            ->get()
+            ->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $user->role,
+                'kios_name' => $user->kios_name,
+                'wa_status' => $user->whatsappConnection?->status ?? 'disconnected',
+                'last_status_at' => $user->whatsappConnection?->updated_at,
+            ]);
+
+        return response()->json(['data' => $users]);
+    }
+
     public function updateRole(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [

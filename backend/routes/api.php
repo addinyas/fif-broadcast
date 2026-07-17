@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BroadcastController;
+use App\Http\Controllers\Api\BroadcastSettingController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerShareController;
 use App\Http\Controllers\Api\GoogleSheetsController;
@@ -92,6 +93,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:broadcast')->group(function () {
             Route::post('broadcast/prepare', [BroadcastController::class, 'prepare']);
+            Route::get('broadcast/progress', [BroadcastController::class, 'progress']);
+            Route::post('broadcast/cancel', [BroadcastController::class, 'cancel']);
+            Route::get('broadcast/worker-status', [BroadcastController::class, 'workerStatus']);
+            Route::post('broadcast/cancel-item', [BroadcastController::class, 'cancelItem']);
         });
     });
 
@@ -144,6 +149,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('role:superadmin')->group(function () {
         Route::put('admin/permissions', [PermissionController::class, 'update']);
+        Route::get('admin/whatsapp-status', [UserController::class, 'whatsappStatus']);
+        Route::get('admin/broadcast-settings', [BroadcastSettingController::class, 'index']);
+        Route::put('admin/broadcast-settings', [BroadcastSettingController::class, 'update']);
+        Route::get('admin/broadcast-settings/definitions', [BroadcastSettingController::class, 'definitions']);
         Route::post('admin/kios', [KiosController::class, 'store']);
         Route::put('admin/kios/{id}', [KiosController::class, 'update']);
         Route::delete('admin/kios/{id}', [KiosController::class, 'destroy']);

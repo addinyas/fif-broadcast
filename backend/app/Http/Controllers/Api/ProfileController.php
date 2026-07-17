@@ -18,7 +18,7 @@ class ProfileController extends Controller
     {
         return response()->json(['data' => $request->user()->only([
             'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
-            'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+            'gender', 'npo_mce_id', 'kios_name', 'kios_id', 'wa_proxy',
         ])]);
     }
 
@@ -35,6 +35,7 @@ class ProfileController extends Controller
                 'sometimes', 'nullable', 'string', 'max:100', 'min:1',
                 Rule::unique('users', 'npo_mce_id')->ignore($user->id),
             ],
+            'wa_proxy' => 'sometimes|nullable|string|max:500',
         ];
 
         $validator = Validator::make($request->all(), $rules);
@@ -43,7 +44,7 @@ class ProfileController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = $request->only(['name', 'display_name', 'phone_number', 'gender', 'npo_mce_id']);
+        $data = $request->only(['name', 'display_name', 'phone_number', 'gender', 'npo_mce_id', 'wa_proxy']);
         $data = array_filter($data, fn ($v) => $v !== null && $v !== '');
 
         if ($request->has('display_name')) {
@@ -63,7 +64,7 @@ class ProfileController extends Controller
         $fresh = $user->fresh();
         $result = $fresh->only([
             'id', 'name', 'display_name', 'phone_number', 'email', 'avatar', 'avatar_url', 'role',
-            'gender', 'npo_mce_id', 'kios_name', 'kios_id',
+            'gender', 'npo_mce_id', 'kios_name', 'kios_id', 'wa_proxy',
         ]);
         $result['broadcast_sender_name'] = $fresh->display_name ?? $fresh->name;
 
