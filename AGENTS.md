@@ -92,6 +92,56 @@ Superadmin can toggle feature access for UH and marketing roles at `/admin/permi
 - TailwindCSS v4 via `@tailwindcss/vite` plugin — no `tailwind.config.js` needed.
 - No `.env` file needed (Vite proxy handles `/api` routing). Socket URL from `VITE_SOCKET_URL` env var, defaults to `http://localhost:3001`.
 
+## Local Cache Cleanup
+
+Safe to delete (~467 MB). Semua sudah `.gitignore`, tidak mempengaruhi git atau database.
+
+### Yang bisa dihapus
+
+| Kategori | Path | Size |
+|----------|------|------|
+| node_modules | `frontend/node_modules/` | 244 MB |
+| node_modules | `worker/node_modules/` | 73 MB |
+| node_modules | `backend/node_modules/` | 53 MB |
+| vendor (PHP) | `backend/vendor/` | 93 MB |
+| Build output | `frontend/dist/` | ~1 MB |
+| Log files | `backend/storage/logs/laravel.log` | 2.6 MB |
+| Log files | `worker/worker.log` | 108 KB |
+| Compiled cache | `backend/bootstrap/cache/*.php` | ~28 KB |
+| Compiled views | `backend/storage/framework/views/*.php` | 84 KB |
+| PHPUnit cache | `backend/.phpunit.result.cache` | 1 KB |
+| IDE cache | `.idea/` | 109 KB |
+
+### Yang opsional
+
+| Item | Size | Catatan |
+|------|------|---------|
+| `worker/auth_info/user_5/` | 6.7 MB | Hapus = harus scan QR ulang |
+| `database.sqlite-wal` / `database.sqlite-shm` | ~32 KB | Safe kalau worker tidak jalan |
+| `storage/app/public/avatars/*.jpg` | 300 KB | Avatar user hilang |
+
+### Yang jangan disentuh
+
+- `backend/database/database.sqlite` (9.9 MB) — database live
+
+### Script cleanup
+
+```bash
+# Dari root folder FIF
+rm -rf frontend/node_modules backend/node_modules worker/node_modules
+rm -rf backend/vendor frontend/dist
+rm -rf .idea
+rm -f backend/storage/logs/laravel.log worker/worker.log
+rm -f backend/.phpunit.result.cache
+rm -rf backend/storage/framework/views/*.php
+rm -rf backend/bootstrap/cache/*.php
+
+# Reinstall
+cd backend && composer install && cd ..
+cd frontend && npm install && npm run build && cd ..
+cd worker && npm install
+```
+
 ## Deployment
 
 ### VPS Details
@@ -1342,35 +1392,11 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
-### ⏳ Perlu diperbaiki: Plafon pembulatan
+### ✅ Plafon Pembulatan (sudah di-push & deployed)
 
-**Plafon belum dibulatkan dengan benar.** Contoh: OTR 15.650.000 × 75% = 11.737.500 → harusnya **11.700.000** (bukan 11.737.500).
-
-**Aturan pembulatan:**
-- Sisa < 50.000 → bulatkan ke bawah ke 100.000 terdekat (11.737.500 → 11.700.000)
-- Sisa >= 50.000 tapi belum 100.000 → bulatkan ke 50.000 (11.775.000 → 11.750.000)
-
-**Rumus:**
-```php
-$remainder = $plafon % 100000;
-if ($remainder < 50000) {
-    $plafon = $plafon - $remainder; // bulatkan ke bawah ke 100k
-} else {
-    $plafon = $plafon - $remainder + 50000; // bulatkan ke 50k
-}
-```
-
-**Contoh:**
-- 11.737.500 → remainder 37.500 (< 50k) → 11.700.000
-- 11.750.000 → remainder 50.000 (>= 50k) → 11.750.000
-- 11.775.000 → remainder 75.000 (>= 50k) → 11.750.000
-- 11.800.000 → remainder 0 → 11.800.000
-- 12.060.000 → remainder 60.000 (>= 50k) → 12.050.000
-- 12.040.000 → remainder 40.000 (< 50k) → 12.000.000
-
-**Files yang perlu diubah:**
-- `frontend/src/finance/financeEngine.ts` — `calcPlafon()` tambah pembulatan
-- `backend/app/Services/BroadcastService.php` — `mapFormToMessage()` tambah pembulatan di plafon computation
+**Sudah di-push ✅**
+- `frontend/src/finance/financeEngine.ts`: `roundPlafon()` — remainder < 50k → bulat bawah ke 100k, >= 50k → bulat ke 50k
+- `backend/app/Services/BroadcastService.php`: `roundPlafon()` — rumus PHP yang sama, dipanggil di `mapFormToMessage()` untuk `#plafon`
 
 ### 2026-07-15 — CORI editable + auto plafon calculation (CORI×OTR)
 
@@ -1627,20 +1653,65 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
-### Sebelum Push ke GitHub
-1. Cek status: `git status` dan `git diff`
-2. Tambah file: `git add <file>`
-3. **Wajib commit message yang jelas**, format Conventional Commits:
-   - `feat: <fitur baru>`
-   - `fix: <bug fix>`
-   - `refactor: <perubahan struktur>`
-   - `chore: <maintenance>`
-4. Push: `git push origin main`
+### ✅ Broadcast progress indicator + cancel (sudah di-push & deployed)
 
-### Sebelum Deploy ke VPS
-1. Pastikan sudah di-push ke GitHub
-2. Jalankan: `ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"`
-3. **Wajib update AGENTS.md** — tambahkan rincian di "Session History"
+**Sudah di-push ✅**
+- `backend/app/Http/Controllers/Api/BroadcastController.php`: `progress()` + `cancel()` + `cancelItem()` methods
+- `backend/app/Services/BroadcastService.php`: `getProgress(User)` + `cancelPending(User)`
+- `backend/routes/api.php`: `GET broadcast/progress` + `POST broadcast/cancel` + `POST broadcast/cancel-item`
+- `worker/src/events.js`: `emitBroadcastProgress(userId, data)` — emit `broadcast:progress` event
+- `worker/src/queue-consumer.js`: skip cancelled items, emit progress after each batch
+- `frontend/src/types/index.ts`: `BroadcastProgress` interface
+- `frontend/src/services/broadcastService.ts`: `getProgress()` + `cancelPending()` + `cancelItem()` API calls
+- `frontend/src/hooks/useBroadcastProgress.ts`: hook — poll progress tiap 5 detik + listen `broadcast:progress` socket event + `cancel()` function
+- `frontend/src/components/ui/Sidebar.tsx`: broadcast progress bar di bawah nav (amber theme, tombol "Batal")
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-17 — Calculator fix: reset field, tenor rounding, default rate
+
+**Sudah di-push ✅**
+- `frontend/src/pages/CalculatorPage.tsx`: reset field input saat switch customer atau clear; tenor pembulatan 5k; default interest rate 46
+- `frontend/src/finance/financeEngine.ts`: sesuaikan rate default
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+## Mandatory Question Before Execution
+
+**WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
+
+AI **HARUS** tanya user dulu:
+> Mau dikerjakan lokal dulu atau langsung push ke GitHub & deploy?
+
+| Opsi | Arti |
+|------|------|
+| **Lokal dulu** | Kerja di local, belum push. User驗证 dulu, nanti push manual via `deploy.bat` |
+| **Langsung push & deploy** | Kerja + push ke GitHub + deploy ke VPS sekaligus (via `deploy.bat`) |
+
+Aturan ini berlaku untuk SEMUA perubahan: fitur baru, bug fix, refactor, apapun. **Tidak boleh ada eksekusi tanpa konfirmasi ini.**
+
+## Workflow Push & Deploy
+
+### Lokal dulu (default)
+1. AI kerja di local
+2. User驗证 hasilnya
+3. User jalankan `deploy.bat` sendiri untuk push & deploy
+
+### Langsung push & deploy
+1. AI kerja di local
+2. AI jalankan `deploy.bat` untuk push & deploy
+3. Cek link GitHub Actions untuk status deploy
+
+### deploy.bat
+Script otomatis:
+1. Tampilkan `git status` → perubahan apa saja
+2. Detect perubahan per fitur (Backend / Frontend / Worker / Deploy / Root)
+3. Tanya konfirmasi
+4. Commit per fitur terpisah → push 1x
+5. Update AGENTS.md: `Belum di-push` → `Sudah di-push ✅`
+6. Tampilkan link GitHub Actions
 
 ### Format Rincian di Session History
 ```markdown
@@ -1655,3 +1726,19 @@ Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 ### Next steps
 1. <langkah selanjutnya>
 ```
+
+## Mandatory Consistency Rule
+
+**WAJIB — Sebelum membuat perubahan apapun di kode:**
+
+AI **HARUS** memastikan perubahan **konsisten dengan fitur yang sudah ada** dan **tidak memecah fitur lain**. Sebelum mengedit file:
+
+1. **Baca dulu** kode sekitar (method/controller/service yang terkait) untuk memahami pola & flow yang sudah ada
+2. **Cek relasi antar komponen** — pastikan backend response match frontend type, query scope konsisten antar method
+3. **Jangan asumsikan** — kalau ragu, tanya user dulu
+4. **Test mental** — bayangkan alur data dari frontend → API → worker → database, pastikan tidak ada yang putus
+5. **Run build, lint, pint** setelah perubahan untuk memastikan tidak ada error baru
+
+Aturan ini berlaku untuk SEMUA perubahan: fitur baru, bug fix, refactor, apapun. **Tidak boleh ada perubahan yang memecah fitur lain.**
+
+## Session History
