@@ -217,51 +217,25 @@ Group=fif
 WantedBy=multi-user.target
 EOF
 
-# --- PM2 for Worker ---
-# Install PM2 globally if not present
-if ! command -v pm2 &>/dev/null; then
-    echo "=> Installing PM2"
-    npm install -g pm2
-fi
+# --- Systemd for Worker (stable, no PM2 needed) ---
+cat > /etc/systemd/system/fif-worker.service <<EOF
+[Unit]
+Description=FIF WhatsApp Worker
+After=network.target
 
-# Write PM2 ecosystem config
-cat > "$APP_DIR/ecosystem.config.cjs" <<'PM2EOF'
-module.exports = {
-  apps: [{
-    name: 'fif-worker',
-    script: 'src/index.js',
-    cwd: '/var/www/fif/worker',
-    node_args: '--max-old-space-size=512',
-    instances: 1,
-    exec_mode: 'fork',
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '400M',
-    env: {
-      NODE_ENV: 'production',
-    },
-    log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    error_file: '/var/log/fif-worker-error.log',
-    out_file: '/var/log/fif-worker-out.log',
-    merge_logs: true,
-    max_restarts: 10,
-    restart_delay: 5000,
-  }]
-};
-PM2EOF
+[Service]
+Type=simple
+WorkingDirectory=/var/www/fif/worker
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+User=fif
+Group=fif
+Environment=NODE_ENV=production
 
-# Create log directory
-mkdir -p /var/log
-chown fif:fif /var/log/fif-worker-error.log /var/log/fif-worker-out.log 2>/dev/null || true
-
-# Stop old systemd worker if running
-systemctl stop fif-worker 2>/dev/null || true
-systemctl disable fif-worker 2>/dev/null || true
-
-# Start/restart via PM2
-cd "$APP_DIR"
-su -c "pm2 start ecosystem.config.cjs --update-env" fif || pm2 start ecosystem.config.cjs --update-env
-su -c "pm2 save" fif || pm2 save
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Create fif user if not exists
 id -u fif &>/dev/null || useradd -r -s /bin/false fif
@@ -280,12 +254,10 @@ chmod 700 "$APP_DIR/worker/auth_info" 2>/dev/null || true
 setfacl -R -m u:fif:rwx "$APP_DIR/backend/database/database.sqlite" 2>/dev/null || true
 setfacl -R -m u:fif:r "$APP_DIR/backend/storage" 2>/dev/null || true
 setfacl -R -m u:fif:rx "$APP_DIR/backend/bootstrap" 2>/dev/null || true
-systemctl stop fif-backend 2>/dev/null || true
-systemctl disable fif-backend 2>/dev/null || true
+
 nginx -t
 systemctl daemon-reload
-systemctl enable --now nginx php-fpm fif-queue
-systemctl restart nginx fif-queue
-systemctl --no-pager --full status fif-queue
+systemctl enable --now nginx php-fpm fif-queue fif-worker
+systemctl restart nginx fif-queue fif-worker
 
 echo "=== Deploy complete ==="
