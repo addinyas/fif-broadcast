@@ -161,7 +161,7 @@ Belum ada CI/CD. Deploy masih manual via SSH + script.
 - `deploy/deploy-vps.sh`: smart deploy (skip build jika tidak ada perubahan), switch `php artisan serve` → PHP-FPM, hapus `fif-backend.service`
 - `AGENTS.md`: added Deployment section (VPS info, systemd, nginx, auto-deploy)
 
-**Local only (not pushed) ⏸️**
+**Sudah di-push ✅**
 - `CustomerManagementPage`: `per_page: 500 → 50` — ringankan payload & render
 - `App.tsx`: code splitting via `React.lazy()` — bundle split: vendor (182KB), app (122KB), per-page (1-35KB), socket (41KB)
 - `vite.config.ts`: `manualChunks` function — pisahkan vendor, socket, ui ke chunk terpisah
@@ -455,7 +455,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-12 — Download Template + Cleanup + AGENTS.md update
 
-**Sudah dikerjakan ✅ (belum di-push)**
+**Sudah di-push ✅**
 - `fly.toml`: dihapus (Fly.io config sudah tidak relevan)
 - `backend/routes/api.php`: tambah route `GET customers/template-download`
 - `backend/app/Http/Controllers/Api/CustomerController.php`: tambah `templateDownload()` — generate XLSX via PhpSpreadsheet
@@ -1583,7 +1583,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-17 — Frontend design overhaul + UH broadcast isolation
 
-**Belum di-push ⏸️ & belum deploy ⏸️**
+**Sudah di-push ✅ & deployed ✅**
 
 #### Group 1: Frontend design skill overhaul (cosmetic)
 
@@ -1625,10 +1625,7 @@ Ketik: `lanjut yang tadi`
 - `frontend/src/types/index.ts`: tambah `manual_sent_by: number | null` ke `Customer` interface.
 
 ### Next steps when resuming
-1. ~~Revert font angka~~ ✅ sudah done
-2. Push ke GitHub
-3. Deploy ke VPS
-4. Update AGENTS.md
+Ketik: `lanjut yang tadi` — semua sudah di-push ✅ dan deployed ke VPS.
 
 ### Sebelum Push ke GitHub
 1. Cek status: `git status` dan `git diff`
