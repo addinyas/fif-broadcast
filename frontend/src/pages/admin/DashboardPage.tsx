@@ -202,7 +202,48 @@ export function DashboardPage() {
             DETAIL MCE
           </CardTitle>
         </CardHeader>
-        <div className="overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700/50">
+        {/* Mobile: card layout */}
+        <div className="divide-y divide-slate-100 dark:divide-slate-700/50 sm:hidden">
+          {dist?.by_marketing.map((item, idx) => {
+            const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
+            return (
+              <div key={item.marketing_id} className="px-4 py-3">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shrink-0 ring-2 ring-white dark:ring-slate-800"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="font-medium text-sm text-slate-700 dark:text-slate-300 truncate">
+                    {item.marketing?.name || `User #${item.marketing_id}`}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="text-center">
+                    <p className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total}</p>
+                    <p className="text-[10px] font-medium text-slate-400">Ditugaskan</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total_broadcasts}</p>
+                    <p className="text-[10px] font-medium text-slate-400">Broadcast</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-satoshi text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{item.sent}</p>
+                    <p className="text-[10px] font-medium text-emerald-500">Terkirim</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-satoshi text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{item.failed}</p>
+                    <p className="text-[10px] font-medium text-red-500">Gagal</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {(!dist?.by_marketing || dist.by_marketing.length === 0) && (
+            <p className="py-10 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada distribusi</p>
+          )}
+        </div>
+        {/* Desktop: table layout */}
+        <div className="hidden overflow-hidden rounded-xl border border-slate-100 dark:border-slate-700/50 sm:block">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-slate-200/60 bg-slate-50/80 text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-500">

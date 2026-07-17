@@ -243,12 +243,12 @@ export function WorkerMonitorPage() {
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50 dark:border-slate-700/50 dark:bg-slate-800/50">
                   <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">User</th>
-                  <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Kios</th>
+                  <th className="hidden px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center sm:table-cell">Kios</th>
                   <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-amber-500 text-center">Antrian</th>
                   <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-blue-500 text-center">Proses</th>
                   <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-emerald-500 text-center">Terkirim</th>
                   <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-red-500 text-center">Gagal</th>
-                  <th className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Aktivitas</th>
+                  <th className="hidden px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center sm:table-cell">Aktivitas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -362,11 +362,12 @@ function UserRow({ user }: { user: WorkerUser }) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">{user.marketing_name}</p>
-            <p className="text-xs text-slate-400">ID: {user.marketing_id}</p>
+            <p className="text-xs text-slate-400 sm:hidden">{user.kios_id || '-'} · {lastActivity}</p>
+            <p className="hidden text-xs text-slate-400 sm:block">ID: {user.marketing_id}</p>
           </div>
         </div>
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="hidden px-3 py-3 text-center sm:table-cell">
         <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400">
           <User className="h-3 w-3" />
           {user.kios_id || '-'}
@@ -392,7 +393,7 @@ function UserRow({ user }: { user: WorkerUser }) {
           {user.failed_today}
         </span>
       </td>
-      <td className="px-3 py-3 text-center">
+      <td className="hidden px-3 py-3 text-center sm:table-cell">
         <span className="text-xs text-slate-400">{lastActivity}</span>
       </td>
     </tr>
