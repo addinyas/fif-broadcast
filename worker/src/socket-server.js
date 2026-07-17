@@ -42,7 +42,9 @@ function validateToken(token) {
     db = new Database(DB_PATH, { readonly: true });
     db.pragma('busy_timeout = 5000');
     const row = db.prepare('SELECT tokenable_id FROM personal_access_tokens WHERE id = ? AND token = ?').get(tokenId, hash);
-    return row ? { userId: row.tokenable_id } : null;
+    if (!row) return null;
+    const userRow = db.prepare('SELECT id, role FROM users WHERE id = ?').get(row.tokenable_id);
+    return userRow ? { userId: userRow.id, role: userRow.role } : null;
   } catch (err) {
     console.error('[Socket] Token validation error:', err.message);
     return null;
@@ -83,13 +85,24 @@ function createSocketServer(httpServer) {
     }
 
     socket.data.userId = result.userId;
+    socket.data.role = result.role;
     next();
   });
 
   io.on('connection', (socket) => {
     const userId = socket.data.userId;
+    const userRole = socket.data.role;
     const room = `user:${userId}`;
     socket.join(room);
+
+    if (userRole === 'superadmin') {
+      socket.join('superadmin_monitor');
+      socket.join('broadcast_monitor');
+      console.log(`[Socket] Superadmin ${userId} joined superadmin_monitor + broadcast_monitor room`);
+    } else if (userRole === 'UH') {
+      socket.join('broadcast_monitor');
+      console.log(`[Socket] UH ${userId} joined broadcast_monitor room`);
+    }
 
     console.log(`[Socket] User ${userId} connected (socket ${socket.id})`);
 

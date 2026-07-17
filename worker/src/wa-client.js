@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
-const { emitWAStatus, emitPairingCode } = require('./events');
+const { emitWAStatus, emitPairingCode, emitGlobalWAStatus } = require('./events');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
@@ -12,24 +12,33 @@ const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)
 const MAX_RECONNECT_ATTEMPTS = 10;
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
-const WA_PROXY = process.env.WA_PROXY || '';
-let proxyAgent = undefined;
-let fetchAgent = undefined;
+const WA_PROXY_FALLBACK = process.env.WA_PROXY || '';
 
-if (WA_PROXY) {
+function getUserProxy(userId) {
+  let db;
   try {
-    if (WA_PROXY.startsWith('socks')) {
-      const { SocksProxyAgent } = require('socks-proxy-agent');
-      proxyAgent = new SocksProxyAgent(WA_PROXY);
-      fetchAgent = proxyAgent;
-    } else {
-      const { HttpsProxyAgent } = require('https-proxy-agent');
-      proxyAgent = new HttpsProxyAgent(WA_PROXY);
-      fetchAgent = proxyAgent;
-    }
-    console.log(`[WA] Using proxy: ${WA_PROXY}`);
+    db = new Database(DB_PATH, { readonly: true });
+    db.pragma('busy_timeout = 5000');
+    const row = db.prepare('SELECT wa_proxy FROM users WHERE id = ?').get(userId);
+    return row?.wa_proxy || null;
   } catch (err) {
-    console.error(`[WA] Failed to load proxy agent: ${err.message}. Connecting directly.`);
+    console.error(`[WA] Failed to read proxy for user ${userId}:`, err.message);
+    return null;
+  } finally {
+    if (db) db.close();
+  }
+}
+
+function resolveProxyAgent(proxyUrl) {
+  if (!proxyUrl) return { proxyAgent: undefined, fetchAgent: undefined };
+  if (proxyUrl.startsWith('socks')) {
+    const { SocksProxyAgent } = require('socks-proxy-agent');
+    const agent = new SocksProxyAgent(proxyUrl);
+    return { proxyAgent: agent, fetchAgent: agent };
+  } else {
+    const { HttpsProxyAgent } = require('https-proxy-agent');
+    const agent = new HttpsProxyAgent(proxyUrl);
+    return { proxyAgent: agent, fetchAgent: agent };
   }
 }
 
@@ -106,6 +115,17 @@ async function createWAClientForUser(userId, onReady) {
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
+  // Per-user proxy: DB > env fallback
+  const userProxy = getUserProxy(userId) || WA_PROXY_FALLBACK;
+  let userProxyAgent = undefined;
+  let userFetchAgent = undefined;
+  if (userProxy) {
+    const resolved = resolveProxyAgent(userProxy);
+    userProxyAgent = resolved.proxyAgent;
+    userFetchAgent = resolved.fetchAgent;
+    console.log(`[WA] User ${userId} using proxy: ${userProxy}`);
+  }
+
   sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
@@ -116,7 +136,7 @@ async function createWAClientForUser(userId, onReady) {
     markOnlineOnConnect: false,
     connectTimeoutMs: 30_000,
     keepAliveIntervalMs: 20_000 + Math.floor(Math.random() * 10_000),
-    ...(proxyAgent ? { agent: proxyAgent, fetchAgent } : {}),
+    ...(userProxyAgent ? { agent: userProxyAgent, fetchAgent: userFetchAgent } : {}),
   });
 
   const wsReadyPromise = new Promise((resolve) => {
@@ -163,6 +183,7 @@ async function createWAClientForUser(userId, onReady) {
     if (qr) {
       saveConnectionStatus(userId, 'awaiting_scan', qr);
       emitWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr });
+      emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda' });
     }
 
     if (connection === 'open') {
@@ -195,10 +216,12 @@ async function createWAClientForUser(userId, onReady) {
           }
           saveConnectionStatus(userId, 'logged_out', null);
           emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected (8h timeout)' });
+          emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected (8h timeout)' });
         }, MAX_CONNECTION_MS);
       }
       saveConnectionStatus(userId, 'connected', null);
       emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
+      emitGlobalWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
       setTimeout(() => {
         if (onReady) onReady(sock);
       }, WARMUP_MS);
@@ -232,6 +255,7 @@ async function createWAClientForUser(userId, onReady) {
         reconnectState.delete(userId);
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
+        emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
         return;
       }
 
@@ -244,6 +268,7 @@ async function createWAClientForUser(userId, onReady) {
         reconnectState.delete(userId);
         saveConnectionStatus(userId, 'awaiting_scan', null);
         emitWAStatus(userId, { status: 'awaiting_scan', message: 'Koneksi expired — silakan coba lagi' });
+        emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Koneksi expired — silakan coba lagi' });
         return;
       }
 
@@ -260,12 +285,14 @@ async function createWAClientForUser(userId, onReady) {
         reconnectState.delete(userId);
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
+        emitGlobalWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
         return;
       }
 
       const delay = Math.min(1000 * Math.pow(2, Math.min(rs.attempts, 5)), 30000);
       console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${rs.attempts})`);
       emitWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
+      emitGlobalWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
       try { sock.end(undefined); } catch {}
       setTimeout(() => {
         rs.reconnecting = false;
@@ -354,6 +381,7 @@ async function disconnectWAForUser(userId) {
 
   saveConnectionStatus(userId, 'logged_out', null);
   emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
+  emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
 }
 
 function isConnectedForUser(userId) {

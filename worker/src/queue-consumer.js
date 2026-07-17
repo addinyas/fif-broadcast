@@ -1,25 +1,24 @@
 const { getWritableDb } = require('./db');
 const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
-const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew } = require('./events');
+const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew, emitBroadcastProgress, emitBroadcastGlobalStatus } = require('./events');
+const { loadSettings, randomBetween } = require('./broadcast-config');
 
-const MIN_DELAY = parseInt(process.env.MIN_DELAY_SEC || '60', 10);
-const MAX_DELAY = parseInt(process.env.MAX_DELAY_SEC || '180', 10);
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const NOTIF_POLL_INTERVAL = parseInt(process.env.NOTIF_POLL_INTERVAL_MS || '5000', 10);
-const MAX_RETRY = 3;
 const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 const WARMUP_GRACE_MS = 10_000;
 
 let running = false;
-let processing = false;
-let intervalId = null;
+let pollIntervalId = null;
 let notifIntervalId = null;
 const lastNotifId = new Map();
 
-function randomDelay() {
-  return Math.floor(Math.random() * (MAX_DELAY - MIN_DELAY + 1) + MIN_DELAY) * 1000;
+const activeProcessors = new Map();
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 async function sendPushNotification(userId, title, body) {
@@ -45,133 +44,196 @@ async function sendPushNotification(userId, title, body) {
   }
 }
 
-async function processPending() {
-  if (processing) return;
-  processing = true;
+function emitUserProgress(db, userId) {
+  const progress = db.prepare(`
+    SELECT
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+      SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+      SUM(CASE WHEN status = 'sent' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent,
+      SUM(CASE WHEN status = 'failed' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'cancelled' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled,
+      COUNT(*) as total
+    FROM broadcast_histories
+    WHERE marketing_id = ?
+  `).get(userId);
 
-  try {
-    const writeDb = getWritableDb();
-    const pending = writeDb.prepare(`
-      SELECT bh.id, bh.customer_id, bh.marketing_id, bh.exact_message, bh.retry_count, c.phone_number
-      FROM broadcast_histories bh
-      JOIN customers c ON c.id = bh.customer_id
-      WHERE bh.status = 'pending' AND bh.id IN (
-        SELECT id FROM broadcast_histories WHERE status = 'pending' ORDER BY RANDOM() LIMIT 5
-      )
-    `).all();
+  emitBroadcastProgress(userId, {
+    pending: progress?.pending || 0,
+    processing: progress?.processing || 0,
+    sent: progress?.sent || 0,
+    failed: progress?.failed || 0,
+    cancelled: progress?.cancelled || 0,
+    total: progress?.total || 0,
+    is_active: ((progress?.pending || 0) + (progress?.processing || 0)) > 0,
+  });
+}
 
-    if (pending.length === 0) return;
+async function processUserQueue(userId) {
+  const settings = loadSettings();
+  const sessionsTotal = 3;
+  let totalSent = 0;
+  let totalFailed = 0;
 
-    const connectedUsers = getConnectedUsers();
-    const toProcess = pending.filter((row) => connectedUsers.includes(row.marketing_id));
-    const stuckPending = pending.filter((row) => !connectedUsers.includes(row.marketing_id));
+  console.log(`[Queue:${userId}] Starting per-user queue (sessions=${sessionsTotal}, per_session=${settings.messages_per_session}, delay=${settings.min_delay_sec}-${settings.max_delay_sec}s)`);
 
-    if (toProcess.length === 0) {
-      console.log('[Queue] No connected WA clients for pending broadcasts');
-      const seenMarketingIds = new Set();
-      for (const row of stuckPending) {
-        if (seenMarketingIds.has(row.marketing_id)) continue;
-        seenMarketingIds.add(row.marketing_id);
-        const count = writeDb.prepare(
-          "SELECT COUNT(*) as cnt FROM broadcast_histories WHERE marketing_id = ? AND status = 'pending'"
-        ).get(row.marketing_id);
-        if (count.cnt > PENDING_STUCK_THRESHOLD) {
-          emitPendingStuck(row.marketing_id, { pending_count: count.cnt });
-        }
+  for (let session = 0; session < sessionsTotal; session++) {
+    let sentThisSession = 0;
+    let restCounter = 0;
+
+    console.log(`[Queue:${userId}] Session ${session + 1}/${sessionsTotal} starting`);
+
+    while (sentThisSession < settings.messages_per_session) {
+      if (!running) {
+        console.log(`[Queue:${userId}] Queue stopped, aborting`);
+        return { sent: totalSent, failed: totalFailed };
       }
-      return;
-    }
 
-    console.log(`[Queue] Processing ${toProcess.length} pending broadcast(s)`);
-    const stats = {};
+      if (!isConnectedForUser(userId)) {
+        console.log(`[Queue:${userId}] WA disconnected, pausing queue`);
+        return { sent: totalSent, failed: totalFailed };
+      }
 
-    for (const row of toProcess) {
-      writeDb.prepare(`
-        UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now')
-        WHERE id = ?
-      `).run(row.id);
+      const db = getWritableDb();
+      const row = db.prepare(`
+        SELECT bh.id, bh.customer_id, bh.exact_message, bh.retry_count, c.phone_number
+        FROM broadcast_histories bh
+        JOIN customers c ON c.id = bh.customer_id
+        WHERE bh.status = 'pending' AND bh.marketing_id = ?
+        ORDER BY bh.id ASC
+        LIMIT 1
+      `).get(userId);
 
-      emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'processing' });
+      if (!row) {
+        console.log(`[Queue:${userId}] No more pending messages`);
+        return { sent: totalSent, failed: totalFailed };
+      }
+
+      const cancelled = db.prepare('SELECT status FROM broadcast_histories WHERE id = ?').get(row.id);
+      if (cancelled && cancelled.status === 'cancelled') {
+        console.log(`[Queue:${userId}] Skipping cancelled #${row.id}`);
+        continue;
+      }
+
+      db.prepare("UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now') WHERE id = ?").run(row.id);
+      emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'processing' });
+
+      const lastConn = lastConnectedAt.get(userId) || 0;
+      const elapsed = Date.now() - lastConn;
+      if (elapsed < WARMUP_GRACE_MS) {
+        const extraDelay = WARMUP_GRACE_MS - elapsed;
+        console.log(`[Queue:${userId}] Warmup delay ${extraDelay}ms`);
+        await sleep(extraDelay);
+      }
 
       try {
-        if (!stats[row.marketing_id]) stats[row.marketing_id] = { sent: 0, failed: 0 };
-
-        const lastConn = lastConnectedAt.get(row.marketing_id) || 0;
-        const elapsed = Date.now() - lastConn;
-        if (elapsed < WARMUP_GRACE_MS) {
-          const extraDelay = WARMUP_GRACE_MS - elapsed;
-          console.log(`[Queue] Warmup delay ${extraDelay}ms for user ${row.marketing_id}`);
-          await new Promise(r => setTimeout(r, extraDelay));
-        }
-
         const raw = row.phone_number.replace(/[^0-9]/g, '');
         const normalized = raw.startsWith('0') ? '62' + raw.slice(1) : raw;
         const jid = `${normalized}@s.whatsapp.net`;
-        await sendMessage(row.marketing_id, jid, row.exact_message);
+        await sendMessage(userId, jid, row.exact_message);
 
-        stats[row.marketing_id].sent++;
-        writeDb.prepare(`
-          UPDATE broadcast_histories
-          SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now')
-          WHERE id = ?
-        `).run(row.id);
-
-        emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'sent' });
-        console.log(`[Queue] Sent #${row.id} (marketing ${row.marketing_id}) to ${row.phone_number}`);
+        totalSent++;
+        sentThisSession++;
+        restCounter++;
+        db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(row.id);
+        emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'sent' });
+        console.log(`[Queue:${userId}] Sent #${row.id} to ${row.phone_number} (session ${session + 1}: ${sentThisSession}/${settings.messages_per_session})`);
       } catch (err) {
         const errMsg = err.message || 'Unknown error';
         const currentRetry = row.retry_count || 0;
 
-        if (currentRetry < MAX_RETRY) {
-          writeDb.prepare(`
-            UPDATE broadcast_histories
-            SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now')
-            WHERE id = ?
-          `).run(currentRetry + 1, errMsg, row.id);
-
-          console.warn(`[Queue] Failed #${row.id} (retry ${currentRetry + 1}/${MAX_RETRY}): ${errMsg}`);
+        if (currentRetry < settings.max_retry) {
+          db.prepare("UPDATE broadcast_histories SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now') WHERE id = ?")
+            .run(currentRetry + 1, errMsg, row.id);
+          console.warn(`[Queue:${userId}] Failed #${row.id} (retry ${currentRetry + 1}/${settings.max_retry}): ${errMsg}`);
         } else {
-          if (!stats[row.marketing_id]) stats[row.marketing_id] = { sent: 0, failed: 0 };
-          stats[row.marketing_id].failed++;
-          writeDb.prepare(`
-            UPDATE broadcast_histories
-            SET status = 'failed', error_log = ?, updated_at = datetime('now')
-            WHERE id = ?
-          `).run(errMsg, row.id);
-
-          emitBroadcastStatus(row.marketing_id, { customer_id: row.customer_id, status: 'failed', error: errMsg });
-          console.error(`[Queue] Failed #${row.id} (max retries): ${errMsg}`);
+          totalFailed++;
+          db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ?")
+            .run(errMsg, row.id);
+          emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'failed', error: errMsg });
+          console.error(`[Queue:${userId}] Failed #${row.id} (max retries): ${errMsg}`);
         }
       }
 
-      const delay = randomDelay();
-      console.log(`[Queue] Waiting ${delay / 1000}s (anti-ban)`);
-      await new Promise((r) => setTimeout(r, delay));
-    }
+      emitUserProgress(getWritableDb(), userId);
+      emitBroadcastGlobalStatus();
 
-    for (const [mid, s] of Object.entries(stats)) {
-      if (s.sent > 0 || s.failed > 0) {
-        sendPushNotification(parseInt(mid), 'Broadcast Selesai', `${s.sent} terkirim, ${s.failed} gagal`);
+      if (restCounter >= settings.rest_every_x_messages && sentThisSession < settings.messages_per_session) {
+        const restDuration = randomBetween(settings.rest_duration_min_sec, settings.rest_duration_max_sec);
+        console.log(`[Queue:${userId}] Rest after ${restCounter} messages: ${restDuration}s`);
+        await sleep(restDuration * 1000);
+        restCounter = 0;
+      } else if (sentThisSession < settings.messages_per_session) {
+        const delay = settings.random_delay
+          ? randomBetween(settings.min_delay_sec, settings.max_delay_sec)
+          : settings.min_delay_sec;
+        await sleep(delay * 1000);
       }
     }
-  } catch (err) {
-    console.error('[Queue] Error:', err.message);
-  } finally {
-    processing = false;
+
+    console.log(`[Queue:${userId}] Session ${session + 1} complete (${sentThisSession} sent)`);
+
+    if (session < sessionsTotal - 1) {
+      const breakDuration = randomBetween(settings.session_break_min_sec, settings.session_break_max_sec);
+      console.log(`[Queue:${userId}] Session break: ${breakDuration}s (${Math.floor(breakDuration / 60)}m ${breakDuration % 60}s)`);
+      await sleep(breakDuration * 1000);
+    }
+  }
+
+  console.log(`[Queue:${userId}] All ${sessionsTotal} sessions complete (${totalSent} sent, ${totalFailed} failed)`);
+  return { sent: totalSent, failed: totalFailed };
+}
+
+async function pollAndDispatch() {
+  if (activeProcessors.size > 0) return;
+
+  const settings = loadSettings();
+  if (!settings.queue_enabled) return;
+
+  const db = getWritableDb();
+  const usersWithPending = db.prepare(`
+    SELECT DISTINCT marketing_id FROM broadcast_histories WHERE status = 'pending'
+  `).all();
+
+  if (usersWithPending.length === 0) return;
+
+  const connectedUsers = getConnectedUsers();
+  let dispatched = 0;
+
+  for (const { marketing_id } of usersWithPending) {
+    if (dispatched >= settings.concurrency) break;
+    if (activeProcessors.has(marketing_id)) continue;
+    if (!connectedUsers.includes(marketing_id)) continue;
+
+    activeProcessors.set(marketing_id, true);
+    dispatched++;
+
+    processUserQueue(marketing_id)
+      .then((result) => {
+        if (result.sent > 0 || result.failed > 0) {
+          sendPushNotification(marketing_id, 'Broadcast Selesai', `${result.sent} terkirim, ${result.failed} gagal`);
+        }
+        emitUserProgress(getWritableDb(), marketing_id);
+        emitBroadcastGlobalStatus();
+      })
+      .catch((err) => {
+        console.error(`[Queue:${marketing_id}] Fatal error:`, err.message);
+      })
+      .finally(() => {
+        activeProcessors.delete(marketing_id);
+      });
   }
 }
 
 function startQueue() {
   if (running) return;
   running = true;
-  console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, delay ${MIN_DELAY}-${MAX_DELAY}s)`);
-  intervalId = setInterval(processPending, POLL_INTERVAL);
+  const settings = loadSettings();
+  console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, queue_enabled=${settings.queue_enabled}, concurrency=${settings.concurrency})`);
+  pollIntervalId = setInterval(pollAndDispatch, POLL_INTERVAL);
 
-  // Notification poller: emit notification:new for new unread notifications
   notifIntervalId = setInterval(() => {
     try {
       const db = getWritableDb();
-      // Get all users with new unread notifications
       const rows = db.prepare(`
         SELECT user_id, MAX(id) as max_id
         FROM notifications
@@ -182,22 +244,21 @@ function startQueue() {
       for (const row of rows) {
         const prevMax = lastNotifId.get(row.user_id) || 0;
         if (row.max_id > prevMax) {
-          // New unread notification(s) — emit once per user per poll cycle
           emitNotificationNew(row.user_id, { user_id: row.user_id });
           lastNotifId.set(row.user_id, row.max_id);
         }
       }
     } catch {
-      // silent — notifications table might not exist yet
+      // silent
     }
   }, NOTIF_POLL_INTERVAL);
 }
 
 function stopQueue() {
   running = false;
-  if (intervalId) {
-    clearInterval(intervalId);
-    intervalId = null;
+  if (pollIntervalId) {
+    clearInterval(pollIntervalId);
+    pollIntervalId = null;
   }
   if (notifIntervalId) {
     clearInterval(notifIntervalId);

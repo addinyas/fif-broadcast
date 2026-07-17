@@ -2,10 +2,7 @@ const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
-const pino = require('pino');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
-
-const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 
 const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
@@ -20,16 +17,16 @@ const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)
 let httpServer = null;
 
 async function main() {
-  logger.info('[Worker] Starting FIF Broadcast Worker...');
+  console.log('[Worker] Starting FIF Broadcast Worker...');
 
-  // Clean stale connections that exceeded max connection time
   try {
     const db = new Database(DB_PATH, { readonly: false });
     db.pragma('journal_mode = WAL');
+    db.pragma('busy_timeout = 5000');
     const staleCutoff = new Date(Date.now() - MAX_CONNECTION_MS).toISOString();
     const stale = db.prepare("SELECT user_id FROM whatsapp_connections WHERE status = 'connected' AND updated_at < ?").all(staleCutoff);
     for (const row of stale) {
-      logger.info(`[Worker] Cleaning stale connection for user ${row.user_id} (exceeded ${MAX_CONNECTION_MS / 3600000}h)`);
+      console.log(`[Worker] Cleaning stale connection for user ${row.user_id} (exceeded ${MAX_CONNECTION_MS / 3600000}h)`);
       db.prepare("UPDATE whatsapp_connections SET status = 'logged_out', qr_code = NULL, updated_at = datetime('now') WHERE user_id = ?").run(row.user_id);
       const authDir = path.join(AUTH_BASE, `user_${row.user_id}`);
       if (fs.existsSync(authDir)) {
@@ -38,61 +35,49 @@ async function main() {
     }
     db.close();
   } catch (err) {
-    logger.error('[Worker] Failed to clean stale connections:', err.message);
+    console.error('[Worker] Failed to clean stale connections:', err.message);
   }
 
-  // Clean old LID files (> 7 days) from auth directories
   try {
     cleanupOldLidFiles();
   } catch (err) {
-    logger.error('[Worker] Failed to clean LID files:', err.message);
+    console.error('[Worker] Failed to clean LID files:', err.message);
   }
 
-  // Reset stuck 'processing' messages to 'pending' on startup
   try {
     const db = new Database(DB_PATH);
+    db.pragma('busy_timeout = 5000');
     const stuck = db.prepare("UPDATE broadcast_histories SET status = 'pending', updated_at = datetime('now') WHERE status = 'processing'").run();
     if (stuck.changes > 0) {
-      logger.info(`[Worker] Reset ${stuck.changes} stuck 'processing' messages to 'pending'`);
+      console.log(`[Worker] Reset ${stuck.changes} stuck 'processing' messages to 'pending'`);
     }
     db.close();
   } catch (err) {
-    logger.error('[Worker] Failed to reset stuck messages:', err.message);
+    console.error('[Worker] Failed to reset stuck messages:', err.message);
   }
 
   httpServer = http.createServer();
   createSocketServer(httpServer);
 
   httpServer.listen(SOCKET_PORT, () => {
-    logger.info(`[Worker] Socket.io server running on port ${SOCKET_PORT}`);
+    console.log(`[Worker] Socket.io server running on port ${SOCKET_PORT}`);
   });
 
   startQueue();
 
-  logger.info('[Worker] Ready. Waiting for user connections...');
+  console.log('[Worker] Ready. Waiting for user connections...');
 }
 
 function gracefulShutdown(signal) {
-  logger.info(`[Worker] Received ${signal}, shutting down gracefully...`);
-
-  // Stop queue from processing new messages
+  console.log(`[Worker] Received ${signal}, shutting down gracefully...`);
   stopQueue();
-
-  // Disconnect all WhatsApp connections cleanly
   disconnectAllConnections();
-
-  // Close singleton DB connection
   closeDb();
-
-  // Close socket.io server
   const io = getIO();
-  if (io) {
-    io.close();
-  }
-
+  if (io) { io.close(); }
   if (httpServer) {
     httpServer.close(() => {
-      logger.info('[Worker] HTTP server closed');
+      console.log('[Worker] HTTP server closed');
       process.exit(0);
     });
   }
@@ -103,15 +88,15 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 process.on('uncaughtException', (err) => {
-  logger.error('[Worker] Uncaught exception:', err);
+  console.error('[Worker] Uncaught exception:', err);
   gracefulShutdown('uncaughtException');
 });
 
 process.on('unhandledRejection', (reason) => {
-  logger.error('[Worker] Unhandled rejection:', reason);
+  console.error('[Worker] Unhandled rejection:', reason);
 });
 
 main().catch((err) => {
-  logger.error('[Worker] Fatal error:', err);
+  console.error('[Worker] Fatal error:', err);
   process.exit(1);
 });
