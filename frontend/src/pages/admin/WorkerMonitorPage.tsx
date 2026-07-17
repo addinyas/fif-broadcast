@@ -50,7 +50,7 @@ export function WorkerMonitorPage() {
     try {
       await broadcastService.cancelItem(id);
       toast('success', 'Pesan dibatalkan');
-      fetchData();
+      await fetchData();
     } catch {
       toast('error', 'Gagal membatalkan pesan');
     } finally {
@@ -62,9 +62,9 @@ export function WorkerMonitorPage() {
     if (!confirm('Batalkan SEMUA pesan yang masih pending?')) return;
     setCancellingAll(true);
     try {
-      await broadcastService.cancelPending();
-      toast('success', 'Semua pesan pending dibatalkan');
-      fetchData();
+      const result = await broadcastService.cancelPending();
+      toast('success', result.cancelled > 0 ? `${result.cancelled} pesan dibatalkan` : 'Tidak ada pesan untuk dibatalkan');
+      await fetchData();
     } catch {
       toast('error', 'Gagal membatalkan pesan');
     } finally {
