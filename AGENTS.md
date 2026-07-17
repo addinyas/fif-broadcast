@@ -1678,6 +1678,29 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-18 — Real-time fixes: WorkerMonitorPage + ProspectListPage batch stats
+
+**Sudah di-push ✅ (4 commits bertahap)**
+
+**Fix 1 — WorkerMonitorPage real-time (4 file):**
+- `worker/src/events.js`: tambah `emitBroadcastGlobalStatus()` — query aggregate stats dari DB, emit ke room `broadcast_monitor`
+- `worker/src/queue-consumer.js`: import + panggil `emitBroadcastGlobalStatus()` setelah tiap pesan & setelah batch selesai
+- `worker/src/socket-server.js`: superadmin + UH join room `broadcast_monitor` saat connect
+- `frontend/src/pages/admin/WorkerMonitorPage.tsx`: listen `broadcast:global_status` → re-fetch via REST; polling fallback naik 10s → 15s
+
+**Fix 2 — ProspectListPage batch stats (1 file):**
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: import `useBroadcastProgress` hook; ganti REST polling `getHistory` tiap 5s → pakai data `progress` dari hook (real-time via socket); tambah `batchBaselineRef` untuk per-batch progress yang akurat
+
+**Verification — Broadcast manual audit (UH + marketing):**
+- Manual send (`markSent`): ✅ berfungsi untuk UH (scope kios) dan marketing (scope assigned)
+- Batch broadcast (`prepare`): ✅ cek WA connection, daily limit, kios ownership
+- `interpolateMessage()`: ✅ tidak ada double-interpolation (frontend resolve dulu, backend no-op)
+- Auto-advance page: ✅ setelah semua customer ditandai, otomatis pindah halaman
+- `clearSentMarks()`: ✅ scope konsisten per role
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
