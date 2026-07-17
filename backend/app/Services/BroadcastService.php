@@ -256,7 +256,7 @@ class BroadcastService
 
     public function cancelPending(User $user): array
     {
-        $query = BroadcastHistory::where('status', 'pending');
+        $query = BroadcastHistory::whereIn('status', ['pending', 'processing']);
 
         if ($user->role === 'marketing') {
             $query->where('marketing_id', $user->id);
