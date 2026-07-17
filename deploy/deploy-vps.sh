@@ -226,10 +226,12 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/var/www/fif/worker
-ExecStartPre=/bin/bash -c 'fuser -k 3001/tcp 2>/dev/null || true'
 ExecStart=/usr/bin/node src/index.js
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=10
 Restart=always
-RestartSec=5
+RestartSec=8
 User=fif
 Group=fif
 Environment=NODE_ENV=production
