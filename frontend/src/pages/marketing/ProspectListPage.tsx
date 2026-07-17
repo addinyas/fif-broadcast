@@ -5,6 +5,7 @@ import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
 import { getSocket } from '../../services/socketService';
+import { useBroadcastProgress } from '../../hooks/useBroadcastProgress';
 import { useAuth } from '../../context/AuthContext';
 import { calcPlafon } from '../../finance/financeEngine';
 import { DataTable } from '../../components/ui/DataTable';
@@ -48,6 +49,8 @@ export function ProspectListPage() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { progress } = useBroadcastProgress();
+  const batchBaselineRef = useRef({ sent: 0, failed: 0 });
 
   const adjustHeight = () => {
     const ta = textareaRef.current;
@@ -239,22 +242,15 @@ export function ProspectListPage() {
   }, []);
 
   useEffect(() => {
-    if (!sendingBatch) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await broadcastService.getHistory({ per_page: '1' });
-        const meta = res as unknown as { stats?: { sent: number; failed: number; pending: number; processing: number } };
-        if (meta.stats) {
-          const pending = meta.stats.pending + meta.stats.processing;
-          setBatchStats({ sent: meta.stats.sent, failed: meta.stats.failed, pending });
-          if (pending === 0 && (meta.stats.sent > 0 || meta.stats.failed > 0)) {
-            setSendingBatch(false);
-          }
-        }
-      } catch { /* ignore */ }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [sendingBatch]);
+    if (!sendingBatch || !progress) return;
+    const sent = progress.sent - batchBaselineRef.current.sent;
+    const failed = progress.failed - batchBaselineRef.current.failed;
+    const pending = progress.pending + progress.processing;
+    setBatchStats({ sent, failed, pending });
+    if (pending === 0 && (sent > 0 || failed > 0)) {
+      setSendingBatch(false);
+    }
+  }, [sendingBatch, progress]);
 
   useEffect(() => {
     if (sendingBatch) {
@@ -361,6 +357,7 @@ export function ProspectListPage() {
     setSendingBatch(true);
     setBatchProgress(0);
     setBatchStats({ sent: 0, failed: 0, pending: 0 });
+    batchBaselineRef.current = { sent: progress?.sent ?? 0, failed: progress?.failed ?? 0 };
     abortRef.current = false;
 
     let success = 0;

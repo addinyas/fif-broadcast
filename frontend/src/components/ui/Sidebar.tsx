@@ -16,10 +16,13 @@ import {
   FileText,
   Store,
   ArrowLeftRight,
+  X,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useBroadcastProgress } from '../../hooks/useBroadcastProgress';
 import { NotificationBell } from './NotificationBell';
 import type { ReactNode } from 'react';
 
@@ -38,11 +41,14 @@ const adminLinks: LinkItem[] = [
   { to: '/admin/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
   { to: '/admin/rolling', label: 'Rolling Data', icon: <ArrowLeftRight className="h-5 w-5" />, feature: 'data_rolling' },
   { to: '/admin/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
+  { to: '/admin/worker-monitor', label: 'Worker Monitor', icon: <Activity className="h-5 w-5" />, feature: 'broadcast' },
   { to: '/admin/users', label: 'Users', icon: <Shield className="h-5 w-5" />, feature: 'user_management' },
   { to: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
 
 const superadminOnlyLinks: LinkItem[] = [
+  { to: '/admin/wa-monitor', label: 'WA Monitor', icon: <Smartphone className="h-5 w-5" /> },
+  { to: '/admin/broadcast-settings', label: 'Broadcast Settings', icon: <Settings2 className="h-5 w-5" /> },
   { to: '/admin/permissions', label: 'Permissions', icon: <Settings2 className="h-5 w-5" /> },
   { to: '/admin/templates', label: 'Templates', icon: <FileText className="h-5 w-5" /> },
   { to: '/admin/kios', label: 'Kios', icon: <Store className="h-5 w-5" /> },
@@ -55,6 +61,7 @@ const marketingLinks: LinkItem[] = [
   { to: '/marketing/customers', label: 'Customer', icon: <Users className="h-5 w-5" />, feature: 'customer_management' },
   { to: '/marketing/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
   { to: '/marketing/history', label: 'History', icon: <History className="h-5 w-5" />, feature: 'broadcast_history' },
+  { to: '/marketing/worker-monitor', label: 'Worker Monitor', icon: <Activity className="h-5 w-5" />, feature: 'broadcast' },
   { to: '/marketing/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
 ];
 
@@ -67,6 +74,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { hasFeature } = usePermissions();
+  const { progress, cancelling, cancel } = useBroadcastProgress();
   const extraLinks = user?.role === 'superadmin' ? superadminOnlyLinks : [];
 
   const allLinks = isAdmin ? [...adminLinks, ...extraLinks] : marketingLinks;
@@ -137,6 +145,32 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </NavLink>
         ))}
       </nav>
+
+      {progress && progress.is_active && (
+        <div className="mx-3 mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Broadcast Aktif</span>
+            <button
+              onClick={cancel}
+              disabled={cancelling}
+              className="flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
+            >
+              <X className="h-3 w-3" />
+              {cancelling ? 'Membatalkan...' : 'Batal'}
+            </button>
+          </div>
+          <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-slate-700">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
+              style={{ width: `${progress.total > 0 ? ((progress.sent + progress.failed) / progress.total) * 100 : 0}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-400">
+            <span>{progress.pending + progress.processing} antrian</span>
+            <span>{progress.sent} terkirim{progress.failed > 0 ? `, ${progress.failed} gagal` : ''}</span>
+          </div>
+        </div>
+      )}
 
       <div className="font-poppins border-t border-slate-800 p-4">
         <div className="mb-3 flex items-center gap-3.5 rounded-xl bg-slate-800/50 p-3">

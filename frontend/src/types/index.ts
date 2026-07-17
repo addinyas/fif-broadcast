@@ -18,6 +18,7 @@ export interface User {
   whatsapp_connection?: string;
   last_connected_at?: string | null;
   last_broadcast_at?: string | null;
+  wa_proxy?: string | null;
 }
 
 export interface Kios {
@@ -90,6 +91,48 @@ export interface BroadcastStats {
   processing: number;
   sent: number;
   failed: number;
+}
+
+export interface BroadcastProgress {
+  pending: number;
+  processing: number;
+  sent: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+  is_active: boolean;
+}
+
+export interface WorkerUser {
+  marketing_id: number;
+  marketing_name: string;
+  kios_id: string | null;
+  kios_name: string | null;
+  pending: number;
+  processing: number;
+  sent_today: number;
+  failed_today: number;
+  cancelled_today: number;
+  last_activity: string | null;
+}
+
+export interface WorkerPendingItem {
+  id: number;
+  customer_name: string;
+  marketing_id: number;
+  marketing_name: string;
+}
+
+export interface WorkerStatus {
+  summary: {
+    total_pending: number;
+    total_processing: number;
+    total_sent_today: number;
+    total_failed_today: number;
+    total_cancelled_today: number;
+  };
+  users: WorkerUser[];
+  pending_items: WorkerPendingItem[];
 }
 
 export interface MarketingSummary {

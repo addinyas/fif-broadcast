@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type ChangeEvent } from 'react';
-import { Camera, Trash, User, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
+import { Camera, Trash, User, Loader2, Lock, Eye, EyeOff, Network, Copy, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { profileService } from '../services/profileService';
 import { useToast } from '../components/ui/Toast';
@@ -24,6 +24,50 @@ export function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
+  const [waProxy, setWaProxy] = useState(user?.wa_proxy || '');
+  const [showTermuxGuide, setShowTermuxGuide] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState(false);
+  const [copiedProxy, setCopiedProxy] = useState(false);
+
+  const tunnelPort = user?.id ? 1080 + user.id : 1080;
+  const proxyAddress = `socks5://127.0.0.1:${tunnelPort}`;
+  const setupCmd = `pkg update -y && pkg upgrade -y && pkg install openssh autossh termux-api -y && mkdir -p ~/.termux/boot && cat > ~/fif << 'EOF'
+#!/bin/bash
+if ! pgrep -x sshd > /dev/null; then sshd; fi
+if pgrep -f "ssh -R ${tunnelPort}" > /dev/null; then
+  echo "[FIF] Tunnel sudah aktif. Buka FIF > WhatsApp > Connect"
+  exit 0
+fi
+echo "[FIF] Menjalankan tunnel..."
+autossh -M 0 -R ${tunnelPort}:localhost:8022 root@202.10.42.237 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" &
+sleep 2
+if kill -0 $! 2>/dev/null; then
+  echo "[FIF] Tunnel aktif! Buka FIF > WhatsApp > Connect"
+  echo "[FIF] Jangan tutup Termux. Tekan Ctrl+C untuk stop."
+  wait
+else
+  echo "[FIF] Gagal. Cek password & koneksi internet."
+fi
+EOF
+chmod +x ~/fif && cat > ~/.bashrc << 'EOF2'
+if command -v fif &>/dev/null && ! pgrep -f "ssh -R ${tunnelPort}" >/dev/null; then fif & fi
+EOF2
+echo "✅ Setup selesai! Tutup Termux, lalu buka lagi untuk test auto-start."`;
+
+  const copyToClipboard = async (text: string, type: 'cmd' | 'proxy') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (type === 'cmd') { setCopiedCmd(true); setTimeout(() => setCopiedCmd(false), 2000); }
+      else { setCopiedProxy(true); setTimeout(() => setCopiedProxy(false), 2000); }
+      toast('success', 'Berhasil disalin!');
+    } catch { toast('error', 'Gagal menyalin'); }
+  };
+
+  useEffect(() => {
+    if (user?.wa_proxy === null && user?.id) {
+      setWaProxy(proxyAddress);
+    }
+  }, [user?.wa_proxy, user?.id, proxyAddress]);
 
   useEffect(() => {
     if (user?.avatar_url) {
@@ -37,7 +81,8 @@ export function SettingsPage() {
     setPhoneNumber(user?.phone_number || '');
     setGender(user?.gender || '');
     setNpoMceId(user?.npo_mce_id || '');
-  }, [user?.name, user?.display_name, user?.phone_number, user?.gender, user?.npo_mce_id]);
+    setWaProxy(user?.wa_proxy || '');
+  }, [user?.name, user?.display_name, user?.phone_number, user?.gender, user?.npo_mce_id, user?.wa_proxy]);
 
   const handleAvatarChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -83,6 +128,7 @@ export function SettingsPage() {
         phone_number: phoneNumber.trim() || null,
         gender: gender || null,
         npo_mce_id: npoMceId || null,
+        wa_proxy: waProxy.trim() || null,
       });
       updateUser(res.data);
       toast('success', 'Profile berhasil disimpan');
@@ -317,6 +363,97 @@ export function SettingsPage() {
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-500 outline-none dark:border-slate-600 dark:bg-slate-700/50 dark:text-slate-400"
             />
             <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Hubungi superadmin untuk mengubah kios</p>
+          </div>
+
+          <div className="border-t border-slate-200/80 pt-5 dark:border-slate-700/80">
+            <div className="flex items-center gap-2 mb-4">
+              <Network className="h-4 w-4 text-amber-500" />
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">WhatsApp Tunnel (Termux)</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Proxy Address (otomatis per akun)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={waProxy}
+                    onChange={(e) => setWaProxy(e.target.value)}
+                    className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 font-mono outline-none transition-all focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:focus:border-amber-400"
+                    placeholder="socks5://127.0.0.1:PORT"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(waProxy || proxyAddress, 'proxy')}
+                    className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700 transition-all hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  >
+                    {copiedProxy ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedProxy ? 'Tersalin' : 'Salin'}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                  Isi sekali saja — tidak pernah berubah. Setiap akun punya port berbeda.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
+                  Setup Command (copy-paste ke Termux)
+                </label>
+                <div className="relative">
+                  <pre className="max-h-32 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] font-mono text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 whitespace-pre-wrap break-all">
+                    {setupCmd}
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(setupCmd, 'cmd')}
+                    className="absolute top-2 right-2 flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700 transition-all hover:bg-amber-100 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  >
+                    {copiedCmd ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    {copiedCmd ? 'Tersalin!' : 'Salin'}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
+                  Buka Termux di HP → paste command ini → Enter → selesai.
+                  <button type="button" onClick={() => setShowTermuxGuide(!showTermuxGuide)} className="ml-1 text-amber-600 hover:text-amber-700 dark:text-amber-400 underline font-medium">
+                    {showTermuxGuide ? 'Sembunyikan' : 'Lihat panduan'}
+                  </button>
+                </p>
+              </div>
+            </div>
+
+            {showTermuxGuide && (
+              <div className="mt-4 rounded-lg bg-amber-50/80 border border-amber-200 p-4 text-xs text-amber-800 dark:bg-amber-900/20 dark:border-amber-800/50 dark:text-amber-300 space-y-3">
+                <p className="font-semibold text-sm">Setup Awal (Sekali Saja)</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Install <b>F-Droid</b> dari <b>f-droid.org</b> → install <b>Termux</b></li>
+                  <li>Klik tombol <b>Salin</b> di Setup Command (di atas)</li>
+                  <li>Buka Termux di HP → paste → Enter → tunggu selesai</li>
+                  <li>Kembali ke halaman ini → klik <b>Simpan</b></li>
+                </ol>
+
+                <p className="font-semibold text-sm mt-3">Setiap Hari (Mau Connect WA)</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Buka <b>Termux</b> di HP → tunnel auto-start otomatis</li>
+                  <li>Buka FIF → <b>WhatsApp</b> → Connect (Pairing Code / QR)</li>
+                  <li>Selesai! Tidak perlu ketik apapun.</li>
+                </ol>
+
+                <p className="font-semibold text-sm mt-3">Setelah Broadcast Selesai</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><b>Biarkan saja</b> — WA auto-disconnect setelah 8 jam (otomatis)</li>
+                  <li><b>Stop sekarang</b> — Disconnect WA dari FIF → Ctrl+C di Termux</li>
+                </ul>
+
+                <p className="font-semibold text-sm mt-3">Paket Data</p>
+                <p className="ml-2">Matikan WiFi → buka Termux → tunnel pakai kuota HP. HP tetap online.</p>
+                <p className="mt-2 text-amber-700 dark:text-amber-400">
+                  <b>Panduan lengkap:</b> <code className="bg-amber-100 px-1 rounded dark:bg-amber-800/40">docs/termux-setup.md</code>
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end pt-2">

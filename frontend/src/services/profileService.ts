@@ -23,6 +23,7 @@ export const profileService = {
     phone_number?: string | null;
     gender?: string | null;
     npo_mce_id?: string | null;
+    wa_proxy?: string | null;
   }): Promise<{ message: string; data: User }> {
     const clean = Object.fromEntries(
       Object.entries(payload).filter(([, v]) => v !== undefined)

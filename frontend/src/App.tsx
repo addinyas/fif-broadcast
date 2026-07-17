@@ -24,6 +24,9 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then(m => ({ defa
 const TemplateManagementPage = lazy(() => import('./pages/admin/TemplateManagementPage').then(m => ({ default: m.TemplateManagementPage })));
 const KiosManagementPage = lazy(() => import('./pages/admin/KiosManagementPage').then(m => ({ default: m.KiosManagementPage })));
 const RollingApprovalPage = lazy(() => import('./pages/admin/RollingApprovalPage').then(m => ({ default: m.RollingApprovalPage })));
+const WhatsappMonitorPage = lazy(() => import('./pages/admin/WhatsappMonitorPage').then(m => ({ default: m.WhatsappMonitorPage })));
+const BroadcastSettingsPage = lazy(() => import('./pages/admin/BroadcastSettingsPage').then(m => ({ default: m.BroadcastSettingsPage })));
+const WorkerMonitorPage = lazy(() => import('./pages/admin/WorkerMonitorPage').then(m => ({ default: m.WorkerMonitorPage })));
 
 function LoadingScreen() {
   const { isDark } = useTheme();
@@ -183,6 +186,9 @@ export default function App() {
             <Route path="templates" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={TemplateManagementPage} /></ProtectedRoute>} />
             <Route path="kios" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={KiosManagementPage} /></ProtectedRoute>} />
             <Route path="rolling" element={<RequireFeature feature="data_rolling"><SuspendedPage Component={RollingApprovalPage} /></RequireFeature>} />
+            <Route path="wa-monitor" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={WhatsappMonitorPage} /></ProtectedRoute>} />
+            <Route path="broadcast-settings" element={<ProtectedRoute roles={['superadmin']}><SuspendedPage Component={BroadcastSettingsPage} /></ProtectedRoute>} />
+            <Route path="worker-monitor" element={<ProtectedRoute roles={['superadmin', 'UH']}><SuspendedPage Component={WorkerMonitorPage} /></ProtectedRoute>} />
           </Route>
 
           <Route path="/marketing" element={<ProtectedRoute roles={['marketing']}><MarketingLayout /></ProtectedRoute>}>
@@ -195,6 +201,7 @@ export default function App() {
             <Route path="connect" element={<RequireFeature feature="qr_scanner"><SuspendedPage Component={QRScannerPage} /></RequireFeature>} />
             <Route path="settings" element={<SuspendedPage Component={SettingsPage} />} />
             <Route path="calculator" element={<SuspendedPage Component={CalculatorPage} />} />
+            <Route path="worker-monitor" element={<SuspendedPage Component={WorkerMonitorPage} />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />

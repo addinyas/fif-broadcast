@@ -269,11 +269,18 @@ export function QRScannerPage() {
               </div>
             )}
 
-            {effectiveStatus === 'disconnected' && (
+            {effectiveStatus === 'disconnected' && !reconnecting && (
               <div className="flex justify-center">
-                <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect} disabled={reconnecting}>
+                <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect}>
                   Coba Hubungkan
                 </Button>
+              </div>
+            )}
+
+            {effectiveStatus === 'disconnected' && reconnecting && (
+              <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Menyiapkan koneksi ke WhatsApp server...
               </div>
             )}
           </div>
