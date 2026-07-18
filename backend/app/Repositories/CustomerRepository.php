@@ -72,10 +72,18 @@ class CustomerRepository implements CustomerRepositoryInterface
         }
 
         if (($filters['viewer_role'] ?? '') !== 'superadmin') {
-            $superadminIds = User::where('role', 'superadmin')->pluck('id');
-            if ($superadminIds->isNotEmpty()) {
-                $query->whereNotIn('uploaded_by', $superadminIds);
-            }
+            $existingUserIds = User::pluck('id');
+            $viewerKiosId = $filters['kios_id'] ?? null;
+            $query->where(function ($q) use ($existingUserIds, $viewerKiosId) {
+                $q->whereIn('uploaded_by', $existingUserIds);
+                if ($viewerKiosId) {
+                    $q->orWhere(function ($q2) use ($existingUserIds, $viewerKiosId) {
+                        $q2->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $viewerKiosId);
+                    });
+                }
+            });
         }
 
         return $query->latest()->paginate($filters['per_page'] ?? 50);
@@ -194,10 +202,18 @@ class CustomerRepository implements CustomerRepositoryInterface
         }
 
         if (($filters['viewer_role'] ?? '') !== 'superadmin') {
-            $superadminIds = User::where('role', 'superadmin')->pluck('id');
-            if ($superadminIds->isNotEmpty()) {
-                $query->whereNotIn('uploaded_by', $superadminIds);
-            }
+            $existingUserIds = User::pluck('id');
+            $viewerKiosId = $filters['kios_id'] ?? null;
+            $query->where(function ($q) use ($existingUserIds, $viewerKiosId) {
+                $q->whereIn('uploaded_by', $existingUserIds);
+                if ($viewerKiosId) {
+                    $q->orWhere(function ($q2) use ($existingUserIds, $viewerKiosId) {
+                        $q2->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $viewerKiosId);
+                    });
+                }
+            });
         }
 
         $paginator = $query->latest()->paginate($filters['per_page'] ?? 50);
@@ -242,9 +258,14 @@ class CustomerRepository implements CustomerRepositoryInterface
 
         $existingNoContracts = [];
         if (! empty($incomingNoContracts)) {
+            $existingUserIds = User::pluck('id');
             $chunks = array_chunk(array_keys($incomingNoContracts), 500);
             foreach ($chunks as $chunk) {
-                $query = Customer::whereIn('no_contract', $chunk);
+                $query = Customer::whereIn('no_contract', $chunk)
+                    ->where(function ($q) use ($existingUserIds) {
+                        $q->whereIn('uploaded_by', $existingUserIds)
+                            ->orWhereNull('uploaded_by');
+                    });
                 if ($kiosId) {
                     $query->where('kios_id', $kiosId);
                 }
@@ -302,13 +323,21 @@ class CustomerRepository implements CustomerRepositoryInterface
         return ['imported' => $imported, 'failed' => $failed, 'skipped' => $skipped];
     }
 
-    public function deleteAll(?string $kiosId = null): int
+    public function deleteAll(?string $kiosId = null, bool $isSuperadmin = false): int
     {
-        $customerIds = Customer::query()
+        $query = Customer::query()
             ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
-            ->whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'")
-            ->pluck('id')
-            ->toArray();
+            ->whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'");
+
+        if (! $isSuperadmin) {
+            $allowedUploaderIds = User::where('role', '!=', 'superadmin')->pluck('id');
+            $query->where(function ($q) use ($allowedUploaderIds) {
+                $q->whereIn('uploaded_by', $allowedUploaderIds)
+                    ->orWhereNull('uploaded_by');
+            });
+        }
+
+        $customerIds = $query->pluck('id')->toArray();
 
         $count = count($customerIds);
 
@@ -362,10 +391,17 @@ class CustomerRepository implements CustomerRepositoryInterface
             $query->where('kios_id', $kiosId);
         }
         if ($viewerRole !== 'superadmin') {
-            $superadminIds = User::where('role', 'superadmin')->pluck('id');
-            if ($superadminIds->isNotEmpty()) {
-                $query->whereNotIn('uploaded_by', $superadminIds);
-            }
+            $existingUserIds = User::pluck('id');
+            $query->where(function ($q) use ($existingUserIds, $kiosId) {
+                $q->whereIn('uploaded_by', $existingUserIds);
+                if ($kiosId) {
+                    $q->orWhere(function ($q2) use ($existingUserIds, $kiosId) {
+                        $q2->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $kiosId);
+                    });
+                }
+            });
         }
 
         $totalCustomers = (clone $query)->count();
@@ -395,6 +431,77 @@ class CustomerRepository implements CustomerRepositoryInterface
             'unassigned' => $unassigned,
             'by_marketing' => $byMarketingCollection,
         ];
+    }
+
+    public function getOrphanStats(): array
+    {
+        $existingUserIds = User::pluck('id')->toArray();
+
+        $orphanQuery = Customer::query()
+            ->whereNotNull('uploaded_by')
+            ->whereNotIn('uploaded_by', $existingUserIds);
+
+        $totalOrphans = (clone $orphanQuery)->count();
+
+        $byKios = (clone $orphanQuery)
+            ->selectRaw('kios_id, count(*) as total')
+            ->groupBy('kios_id')
+            ->pluck('total', 'kios_id');
+
+        $kiosNames = [];
+        if ($byKios->isNotEmpty()) {
+            $kiosRows = DB::table('kios')->whereIn('kios_id', $byKios->keys()->toArray())->get();
+            foreach ($kiosRows as $row) {
+                $kiosNames[$row->kios_id] = $row->kios_name;
+            }
+        }
+
+        $noKios = (clone $orphanQuery)->whereNull('kios_id')->count();
+
+        $details = [];
+        foreach ($byKios as $kiosId => $count) {
+            $details[] = [
+                'kios_id' => $kiosId,
+                'kios_name' => $kiosNames[$kiosId] ?? 'Unknown',
+                'count' => $count,
+            ];
+        }
+        if ($noKios > 0) {
+            $details[] = [
+                'kios_id' => null,
+                'kios_name' => 'Tanpa Kios',
+                'count' => $noKios,
+            ];
+        }
+
+        return [
+            'total_orphans' => $totalOrphans,
+            'details' => collect($details)->sortByDesc('count')->values()->toArray(),
+        ];
+    }
+
+    public function deleteOrphan(?string $kiosId = null): int
+    {
+        $existingUserIds = User::pluck('id')->toArray();
+
+        $customerIds = Customer::query()
+            ->whereNotNull('uploaded_by')
+            ->whereNotIn('uploaded_by', $existingUserIds)
+            ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
+            ->pluck('id')
+            ->toArray();
+
+        $count = count($customerIds);
+
+        if ($count > 0) {
+            $chunks = array_chunk($customerIds, 500);
+            foreach ($chunks as $chunk) {
+                DB::table('broadcast_histories')->whereIn('customer_id', $chunk)->delete();
+                Customer::whereIn('id', $chunk)->forceDelete();
+            }
+        }
+
+        return $count;
     }
 
     private function processBatch(array $batch, array $indexMap, int $uploadedBy, ?string $kiosId, int &$imported, array &$failed): void

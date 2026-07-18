@@ -26,9 +26,13 @@ interface CustomerRepositoryInterface
 
     public function getDistributionReport(): array;
 
-    public function deleteAll(?string $kiosId = null): int;
+    public function deleteAll(?string $kiosId = null, bool $isSuperadmin = false): int;
 
     public function deleteMyData(int $userId): int;
 
     public function batchDelete(array $ids): int;
+
+    public function getOrphanStats(): array;
+
+    public function deleteOrphan(?string $kiosId = null): int;
 }

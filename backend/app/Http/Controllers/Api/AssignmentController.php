@@ -134,7 +134,11 @@ class AssignmentController extends Controller
     public function marketingUsers(Request $request): JsonResponse
     {
         $user = $request->user();
-        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+        if ($user->role === 'superadmin') {
+            $kiosId = $request->input('kios_id');
+        } else {
+            $kiosId = $user->kios_id;
+        }
 
         return response()->json($this->authService->getMarketingUsers($kiosId));
     }

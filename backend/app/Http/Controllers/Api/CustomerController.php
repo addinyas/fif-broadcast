@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\Notification;
+use App\Models\User;
 use App\Services\CustomerService;
 use App\Services\GoogleSheetsService;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,7 @@ class CustomerController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'customer_type']);
+        $filters = $request->only(['search', 'assignment_status', 'marketing_id', 'marketing_ids', 'per_page', 'customer_type', 'kios_id']);
 
         $user = $request->user();
         $filters['viewer_role'] = $user->role;
@@ -62,6 +63,19 @@ class CustomerController extends Controller
         if ($user->role !== 'superadmin' && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
+        if ($user->role !== 'superadmin') {
+            $existingUserIds = User::pluck('id');
+            $query->where(function ($q) use ($existingUserIds, $user) {
+                $q->whereIn('uploaded_by', $existingUserIds);
+                if ($user->kios_id) {
+                    $q->orWhere(function ($q2) use ($existingUserIds, $user) {
+                        $q2->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $user->kios_id);
+                    });
+                }
+            });
+        }
         $customer = $query->first();
 
         if (! $customer) {
@@ -70,6 +84,19 @@ class CustomerController extends Controller
                 ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract]);
             if ($user->role !== 'superadmin' && $user->kios_id) {
                 $fallbackQuery->where('kios_id', $user->kios_id);
+            }
+            if ($user->role !== 'superadmin') {
+                $existingUserIds = User::pluck('id');
+                $fallbackQuery->where(function ($q) use ($existingUserIds, $user) {
+                    $q->whereIn('uploaded_by', $existingUserIds);
+                    if ($user->kios_id) {
+                        $q->orWhere(function ($q2) use ($existingUserIds, $user) {
+                            $q2->whereNotIn('uploaded_by', $existingUserIds)
+                                ->whereNotNull('uploaded_by')
+                                ->where('kios_id', $user->kios_id);
+                        });
+                    }
+                });
             }
             $customer = $fallbackQuery->first();
         }
@@ -105,10 +132,15 @@ class CustomerController extends Controller
             $data['no_contract'] = $dynamicData['no_contract'];
         }
 
-        // cek duplikat no_contract (per kios)
+        // cek duplikat no_contract (per kios, skip orphan)
         $noContract = $data['no_contract'] ?? null;
         if ($noContract) {
-            $dupQuery = Customer::where('no_contract', $noContract);
+            $existingUserIds = User::pluck('id');
+            $dupQuery = Customer::where('no_contract', $noContract)
+                ->where(function ($q) use ($existingUserIds) {
+                    $q->whereIn('uploaded_by', $existingUserIds)
+                        ->orWhereNull('uploaded_by');
+                });
             if (! empty($data['kios_id'])) {
                 $dupQuery->where('kios_id', $data['kios_id']);
             }
@@ -301,7 +333,12 @@ class CustomerController extends Controller
 
             return response()->json($result);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Gagal memproses spreadsheet'], 400);
+            Log::error('importSpreadsheet failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Gagal memproses spreadsheet: '.$e->getMessage()], 400);
         }
     }
 
@@ -319,12 +356,13 @@ class CustomerController extends Controller
         try {
             $user = $request->user();
             $kiosId = null;
-            if ($user->role !== 'superadmin') {
+            $isSuperadmin = $user->role === 'superadmin';
+            if (! $isSuperadmin) {
                 $kiosId = $user->kios_id;
             } elseif ($request->has('kios_id') && $request->kios_id !== '') {
                 $kiosId = $request->kios_id;
             }
-            $count = $this->customerService->deleteAll($kiosId);
+            $count = $this->customerService->deleteAll($kiosId, $isSuperadmin);
 
             return response()->json(['message' => "{$count} customer berhasil dihapus"]);
         } catch (\Exception $e) {
@@ -368,6 +406,19 @@ class CustomerController extends Controller
         $query = Customer::query();
         if ($user->role !== 'superadmin' && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
+        }
+        if ($user->role !== 'superadmin') {
+            $existingUserIds = User::pluck('id');
+            $query->where(function ($q) use ($existingUserIds, $user) {
+                $q->whereIn('uploaded_by', $existingUserIds);
+                if ($user->kios_id) {
+                    $q->orWhere(function ($q2) use ($existingUserIds, $user) {
+                        $q2->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $user->kios_id);
+                    });
+                }
+            });
         }
         $ids = $query->pluck('id');
 
@@ -475,10 +526,15 @@ class CustomerController extends Controller
         $data = $request->only(['name', 'phone_number', 'dynamic_data']);
         $dynamicData = $data['dynamic_data'] ?? [];
 
-        // ekstrak & cek duplikat no_contract (per kios)
+        // ekstrak & cek duplikat no_contract (per kios, skip orphan)
         $noContract = $dynamicData['no_contract'] ?? null;
         if ($noContract) {
-            $dupQuery = Customer::where('no_contract', $noContract);
+            $existingUserIds = User::pluck('id');
+            $dupQuery = Customer::where('no_contract', $noContract)
+                ->where(function ($q) use ($existingUserIds) {
+                    $q->whereIn('uploaded_by', $existingUserIds)
+                        ->orWhereNull('uploaded_by');
+                });
             $userKiosId = $request->user()->kios_id;
             if ($userKiosId) {
                 $dupQuery->where('kios_id', $userKiosId);
@@ -586,6 +642,39 @@ class CustomerController extends Controller
         return response()->json(['message' => 'Sent marks cleared']);
     }
 
+    public function orphanStats(Request $request): JsonResponse
+    {
+        $stats = $this->customerService->getOrphanStats();
+
+        return response()->json($stats);
+    }
+
+    public function deleteOrphan(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'confirm' => 'required|in:DELETE_ORPHAN',
+            'kios_id' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Konfirmasi diperlukan. Kirim confirm: "DELETE_ORPHAN"'], 422);
+        }
+
+        try {
+            $kiosId = $request->has('kios_id') && $request->kios_id !== '' ? $request->kios_id : null;
+            $count = $this->customerService->deleteOrphan($kiosId);
+
+            return response()->json(['message' => "{$count} data orphan berhasil dihapus"]);
+        } catch (\Exception $e) {
+            Log::error('deleteOrphan failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['message' => 'Gagal menghapus data orphan: '.$e->getMessage()], 500);
+        }
+    }
+
     public function searchCalculator(Request $request): JsonResponse
     {
         $q = $request->query('q', '');
@@ -601,6 +690,19 @@ class CustomerController extends Controller
         });
         if ($user->role !== 'superadmin' && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
+        }
+        if ($user->role !== 'superadmin') {
+            $existingUserIds = User::pluck('id');
+            $query->where(function ($q2) use ($existingUserIds, $user) {
+                $q2->whereIn('uploaded_by', $existingUserIds);
+                if ($user->kios_id) {
+                    $q2->orWhere(function ($q3) use ($existingUserIds, $user) {
+                        $q3->whereNotIn('uploaded_by', $existingUserIds)
+                            ->whereNotNull('uploaded_by')
+                            ->where('kios_id', $user->kios_id);
+                    });
+                }
+            });
         }
 
         $customers = $query->limit(20)

@@ -204,9 +204,9 @@ class CustomerService
         return $this->customerRepository->bulkImport($customers, $uploadedBy, $kiosId);
     }
 
-    public function deleteAll(?string $kiosId = null): int
+    public function deleteAll(?string $kiosId = null, bool $isSuperadmin = false): int
     {
-        return $this->customerRepository->deleteAll($kiosId);
+        return $this->customerRepository->deleteAll($kiosId, $isSuperadmin);
     }
 
     public function deleteMyData(int $userId): int
@@ -217,6 +217,16 @@ class CustomerService
     public function batchDelete(array $ids): int
     {
         return $this->customerRepository->batchDelete($ids);
+    }
+
+    public function getOrphanStats(): array
+    {
+        return $this->customerRepository->getOrphanStats();
+    }
+
+    public function deleteOrphan(?string $kiosId = null): int
+    {
+        return $this->customerRepository->deleteOrphan($kiosId);
     }
 
     public function getDistributionReport(?string $viewerRole = null, ?string $kiosId = null): array
