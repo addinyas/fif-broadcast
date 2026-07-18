@@ -372,7 +372,7 @@ export function ProspectListPage() {
       try {
         const message = interpolateMessage(customer);
         await broadcastService.prepare(customer.id, message, {});
-        await customerService.markSent(customer.id).catch(() => {});
+        await customerService.markSent(customer.id);
         setSentIds((prev) => prev.includes(customer.id) ? prev : [...prev, customer.id]);
         success++;
       } catch (e: unknown) {
@@ -695,7 +695,10 @@ export function ProspectListPage() {
             try {
               await customerService.clearSentMarks();
               fetchData();
-            } catch { /* silent */ }
+              toast('success', 'Tanda kirim direset');
+            } catch {
+              toast('error', 'Gagal mereset tanda kirim');
+            }
             setRefreshingSent(false);
           }}
           disabled={refreshingSent}

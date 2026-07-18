@@ -134,7 +134,7 @@ async function processUserQueue(userId) {
         totalSent++;
         sentThisSession++;
         restCounter++;
-        db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").run(row.id);
+        db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'processing'").run(row.id);
         emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'sent' });
         console.log(`[Queue:${userId}] Sent #${row.id} to ${row.phone_number} (session ${session + 1}: ${sentThisSession}/${settings.messages_per_session})`);
       } catch (err) {
@@ -142,12 +142,12 @@ async function processUserQueue(userId) {
         const currentRetry = row.retry_count || 0;
 
         if (currentRetry < settings.max_retry) {
-          db.prepare("UPDATE broadcast_histories SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now') WHERE id = ?")
+          db.prepare("UPDATE broadcast_histories SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
             .run(currentRetry + 1, errMsg, row.id);
           console.warn(`[Queue:${userId}] Failed #${row.id} (retry ${currentRetry + 1}/${settings.max_retry}): ${errMsg}`);
         } else {
           totalFailed++;
-          db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ?")
+          db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
             .run(errMsg, row.id);
           emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'failed', error: errMsg });
           console.error(`[Queue:${userId}] Failed #${row.id} (max retries): ${errMsg}`);

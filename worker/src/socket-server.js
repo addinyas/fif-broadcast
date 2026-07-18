@@ -13,6 +13,15 @@ const COOLDOWN_MS = 60_000;
 let io = null;
 const lastAttempt = new Map();
 
+let readonlyDb = null;
+function getReadonlyDb() {
+  if (!readonlyDb) {
+    readonlyDb = new Database(DB_PATH, { readonly: true });
+    readonlyDb.pragma('busy_timeout = 5000');
+  }
+  return readonlyDb;
+}
+
 function checkCooldown(userId) {
   const last = lastAttempt.get(userId) || 0;
   const elapsed = Date.now() - last;
@@ -37,10 +46,8 @@ function validateToken(token) {
 
   const hash = crypto.createHash('sha256').update(secret).digest('hex');
 
-  let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
-    db.pragma('busy_timeout = 5000');
+    const db = getReadonlyDb();
     const row = db.prepare('SELECT tokenable_id FROM personal_access_tokens WHERE id = ? AND token = ?').get(tokenId, hash);
     if (!row) return null;
     const userRow = db.prepare('SELECT id, role FROM users WHERE id = ?').get(row.tokenable_id);
@@ -48,22 +55,16 @@ function validateToken(token) {
   } catch (err) {
     console.error('[Socket] Token validation error:', err.message);
     return null;
-  } finally {
-    if (db) db.close();
   }
 }
 
 function getWAStatusFromDB(userId) {
-  let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
-    db.pragma('busy_timeout = 5000');
+    const db = getReadonlyDb();
     const row = db.prepare('SELECT status, qr_code FROM whatsapp_connections WHERE user_id = ?').get(userId);
     return row || null;
   } catch (err) {
     return null;
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -145,7 +146,8 @@ function createSocketServer(httpServer) {
         } else {
           await disconnect(userId);
         }
-        await new Promise((r) => setTimeout(r, 500));
+        socket.emit('wa:status', { status: 'reconnecting', message: 'Menyiapkan koneksi...' });
+        await new Promise((r) => setTimeout(r, 200));
         getOrCreateClient(userId, () => {
           console.log(`[Socket] WA client re-created for user ${userId}`);
         }).catch((err) => {
@@ -203,4 +205,11 @@ function getIO() {
   return io;
 }
 
-module.exports = { createSocketServer, getIO };
+function closeReadonlyDb() {
+  if (readonlyDb) {
+    try { readonlyDb.close(); } catch {}
+    readonlyDb = null;
+  }
+}
+
+module.exports = { createSocketServer, getIO, closeReadonlyDb };

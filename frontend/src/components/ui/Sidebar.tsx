@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useBroadcastProgress } from '../../hooks/useBroadcastProgress';
+import { useToast } from './Toast';
 import { NotificationBell } from './NotificationBell';
 import type { ReactNode } from 'react';
 
@@ -75,6 +76,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { isDark, toggleTheme } = useTheme();
   const { hasFeature } = usePermissions();
   const { progress, cancelling, cancel } = useBroadcastProgress();
+  const { toast } = useToast();
   const extraLinks = user?.role === 'superadmin' ? superadminOnlyLinks : [];
 
   const allLinks = isAdmin ? [...adminLinks, ...extraLinks] : marketingLinks;
@@ -151,7 +153,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Broadcast Aktif</span>
             <button
-              onClick={cancel}
+              onClick={async () => {
+                if (!confirm('Batalkan SEMUA pesan yang masih pending?')) return;
+                const result = await cancel();
+                toast('success', result?.cancelled ? `${result.cancelled} pesan dibatalkan` : 'Tidak ada pesan untuk dibatalkan');
+              }}
               disabled={cancelling}
               className="flex items-center gap-1 rounded-lg bg-red-500/10 px-2 py-1 text-[10px] font-semibold text-red-400 transition hover:bg-red-500/20 hover:text-red-300 disabled:opacity-50"
             >

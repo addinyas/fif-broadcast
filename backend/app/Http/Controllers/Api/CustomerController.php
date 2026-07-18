@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerShare;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\CustomerService;
@@ -592,7 +593,13 @@ class CustomerController extends Controller
         $user = $request->user();
         $query = Customer::where('id', $id);
         if ($user->role === 'marketing') {
-            $query->where('marketing_id', $user->id);
+            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
+                ->where('status', 'approved')
+                ->pluck('customer_id');
+            $query->where(function ($q) use ($user, $sharedIds) {
+                $q->where('marketing_id', $user->id)
+                    ->orWhereIn('id', $sharedIds);
+            });
         } elseif ($user->role !== 'superadmin' && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
@@ -615,7 +622,13 @@ class CustomerController extends Controller
         $user = $request->user();
         $query = Customer::whereNotNull('manual_sent_at');
         if ($user->role === 'marketing') {
-            $query->where('marketing_id', $user->id);
+            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
+                ->where('status', 'approved')
+                ->pluck('customer_id');
+            $query->where(function ($q) use ($user, $sharedIds) {
+                $q->where('marketing_id', $user->id)
+                    ->orWhereIn('id', $sharedIds);
+            });
         } elseif ($user->role === 'UH') {
             $query->where('manual_sent_by', $user->id);
         } elseif ($user->role !== 'superadmin' && $user->kios_id) {
@@ -631,7 +644,13 @@ class CustomerController extends Controller
         $user = $request->user();
         $query = Customer::whereNotNull('manual_sent_at');
         if ($user->role === 'marketing') {
-            $query->where('marketing_id', $user->id);
+            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
+                ->where('status', 'approved')
+                ->pluck('customer_id');
+            $query->where(function ($q) use ($user, $sharedIds) {
+                $q->where('marketing_id', $user->id)
+                    ->orWhereIn('id', $sharedIds);
+            });
         } elseif ($user->role === 'UH') {
             $query->where('manual_sent_by', $user->id);
         } else {

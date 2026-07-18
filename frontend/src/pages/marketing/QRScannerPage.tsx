@@ -12,6 +12,7 @@ export function QRScannerPage() {
   const [waQR, setWaQR] = useState<string | null>(null);
   const [waStatus, setWaStatus] = useState<string>('disconnected');
   const [reconnecting, setReconnecting] = useState(false);
+  const [reconnectMsg, setReconnectMsg] = useState('');
   const [connectMode, setConnectMode] = useState<'qr' | 'code'>('qr');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [pairingCode, setPairingCode] = useState<string | null>(null);
@@ -23,18 +24,18 @@ export function QRScannerPage() {
   useEffect(() => {
     if (!token) return;
 
-    api.get('/whatsapp/status').then((res) => {
-      setWaStatus(res.data.status);
-      if (res.data.qr_code) setWaQR(res.data.qr_code);
-    }).catch(() => {});
-
     const socket = getSocket();
     socket.auth = { token };
     socket.connect();
 
-    const handleWAStatus = (msg: { status: string; qr?: string }) => {
+    const handleWAStatus = (msg: { status: string; qr?: string; message?: string }) => {
+      if (msg.status === 'reconnecting') {
+        setReconnectMsg(msg.message || 'Menghubungkan...');
+      } else {
+        setReconnecting(false);
+        setReconnectMsg('');
+      }
       setWaStatus(msg.status);
-      setReconnecting(false);
       if (msg.qr) setWaQR(msg.qr);
       if (msg.status === 'connected' || msg.status === 'logged_out') {
         setWaQR(null);
@@ -67,8 +68,6 @@ export function QRScannerPage() {
     socket.on('connect_error', handleSocketError);
     socket.on('disconnect', handleDisconnect);
 
-    socket.emit('wa:request_status');
-
     return () => {
       socket.off('wa:status', handleWAStatus);
       socket.off('wa:pairing_code', handlePairingCode);
@@ -98,6 +97,7 @@ export function QRScannerPage() {
   const handleForceReconnect = useCallback(() => {
     const socket = getSocket();
     setReconnecting(true);
+    setReconnectMsg('Menyiapkan koneksi...');
     setWaQR(null);
     setPairingCode(null);
     socket.emit('wa:reconnect');
@@ -126,7 +126,7 @@ export function QRScannerPage() {
   const statusConfig: Record<string, { icon: React.ReactNode; label: string; variant: 'success' | 'warning' | 'danger' | 'info' }> = {
     connected: { icon: <Wifi className="h-5 w-5" />, label: 'Terhubung', variant: 'success' },
     awaiting_scan: { icon: <Smartphone className="h-5 w-5" />, label: 'Scan QR dengan WhatsApp Anda', variant: 'warning' },
-    reconnecting: { icon: <Loader2 className="h-5 w-5 animate-spin" />, label: 'Menghubungkan kembali...', variant: 'info' },
+    reconnecting: { icon: <Loader2 className="h-5 w-5 animate-spin" />, label: reconnectMsg || 'Menghubungkan kembali...', variant: 'info' },
     logged_out: { icon: <WifiOff className="h-5 w-5" />, label: 'Terputus — scan ulang QR untuk menghubungkan', variant: 'danger' },
     disconnected: { icon: <AlertTriangle className="h-5 w-5" />, label: 'Menunggu koneksi...', variant: 'info' },
   };
@@ -280,7 +280,7 @@ export function QRScannerPage() {
             {effectiveStatus === 'disconnected' && reconnecting && (
               <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Menyiapkan koneksi ke WhatsApp server...
+                {reconnectMsg || 'Menyiapkan koneksi ke WhatsApp server...'}
               </div>
             )}
           </div>

@@ -4,7 +4,7 @@ const fs = require('fs');
 const Database = require('better-sqlite3');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
-const { createSocketServer, getIO } = require('./socket-server');
+const { createSocketServer, getIO, closeReadonlyDb } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
 const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
 const { closeDb } = require('./db');
@@ -73,6 +73,7 @@ function gracefulShutdown(signal) {
   stopQueue();
   disconnectAllConnections();
   closeDb();
+  closeReadonlyDb();
   const io = getIO();
   if (io) { io.close(); }
   if (httpServer) {
