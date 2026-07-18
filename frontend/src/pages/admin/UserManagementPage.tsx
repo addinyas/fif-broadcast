@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Trash2, Wifi, WifiOff, Smartphone, AlertTriangle, Key, Pencil, ChevronDown, ChevronRight, Store } from 'lucide-react';
+import { Trash2, Wifi, WifiOff, Smartphone, AlertTriangle, Key, Pencil, ChevronDown, ChevronRight, Store, Eye, EyeOff } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Card } from '../../components/ui/Card';
@@ -36,6 +36,7 @@ export function UserManagementPage() {
   // Reset password modal
   const [resetModalUser, setResetModalUser] = useState<User | null>(null);
   const [resetPassword, setResetPassword] = useState('');
+  const [showResetPw, setShowResetPw] = useState(false);
   const [resetSaving, setResetSaving] = useState(false);
 
   // Edit kios modal
@@ -296,9 +297,15 @@ export function UserManagementPage() {
             <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">Untuk: {resetModalUser.name}</p>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-400">Password Baru</label>
-              <input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} autoFocus
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-                placeholder="Minimal 8 karakter" />
+              <div className="relative">
+                <input type={showResetPw ? 'text' : 'password'} value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} autoFocus
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 pr-9 text-sm outline-none focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+                  placeholder="Minimal 8 karakter" />
+                <button type="button" onClick={() => setShowResetPw(!showResetPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                  {showResetPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setResetModalUser(null)}>Batal</Button>

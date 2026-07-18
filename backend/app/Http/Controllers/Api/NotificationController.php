@@ -22,7 +22,7 @@ class NotificationController extends Controller
             ->toArray();
         $activeGroupSet = array_flip($activeShareGroups);
 
-        // Auto-trim: delete read notifications older than the latest 50, skip active rolling
+        // Auto-trim: delete read notifications older than the latest 50, skip active rolling + recent (<1 week)
         $cutoffId = Notification::where('user_id', $user->id)
             ->whereNotNull('read_at')
             ->latest()->skip(50)->value('id') ?? PHP_INT_MAX;
@@ -30,6 +30,7 @@ class NotificationController extends Controller
         Notification::where('user_id', $user->id)
             ->whereNotNull('read_at')
             ->where('id', '<', $cutoffId)
+            ->where('created_at', '<', Carbon::now()->subWeek())
             ->where(function ($q) use ($activeGroupSet) {
                 if (empty($activeGroupSet)) {
                     return;
@@ -45,13 +46,14 @@ class NotificationController extends Controller
             })
             ->delete();
 
-        // Cap total notifications at 100 — delete oldest if exceeded, skip active rolling
+        // Cap total notifications at 100 — delete oldest if exceeded, skip active rolling + recent (<1 week)
         $totalCount = Notification::where('user_id', $user->id)->count();
         if ($totalCount > 100) {
             $oldestToKeep = Notification::where('user_id', $user->id)->latest()->skip(100)->value('id');
             if ($oldestToKeep) {
                 Notification::where('user_id', $user->id)
                     ->where('id', '<', $oldestToKeep)
+                    ->where('created_at', '<', Carbon::now()->subWeek())
                     ->where(function ($q) use ($activeGroupSet) {
                         if (empty($activeGroupSet)) {
                             return;
@@ -106,7 +108,6 @@ class NotificationController extends Controller
     public function deleteAll(Request $request): JsonResponse
     {
         $user = $request->user();
-        $today = Carbon::today();
 
         // Collect active rolling share_groups (pending or approved)
         $activeShareGroups = CustomerShare::whereIn('status', ['pending', 'approved'])
@@ -115,9 +116,9 @@ class NotificationController extends Controller
             ->toArray();
         $activeGroupSet = array_flip($activeShareGroups);
 
-        // Only delete notifications from before today, skip active rolling
+        // Only delete notifications older than 1 week, skip active rolling
         Notification::where('user_id', $user->id)
-            ->where('created_at', '<', $today)
+            ->where('created_at', '<', Carbon::now()->subWeek())
             ->where(function ($q) use ($activeGroupSet) {
                 if (empty($activeGroupSet)) {
                     return;
