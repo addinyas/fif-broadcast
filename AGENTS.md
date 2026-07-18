@@ -1729,6 +1729,36 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-19 — Bug fixes: shared data markSent + cancel race condition + QR loading perf
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Shared data markSent (Backend):**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `markSent()`, `sentIds()`, `clearSentMarks()` — tambah `CustomerShare` check untuk marketing. Data dipinjam (shared/borrowed) sekarang bisa ditandai kirim tanpa 404
+- `backend/app/Http/Controllers/Api/CustomerController.php`: import `App\Models\CustomerShare`
+
+**MarkSent error handling (Frontend):**
+- `frontend/src/pages/marketing/ProspectListPage.tsx:375` — hapus `.catch(() => {})` di batch send. markSent error sekarang propagate ke try-catch utama
+- `frontend/src/pages/marketing/ProspectListPage.tsx:698` — `clearSentMarks()` error sekarang tampilkan toast error (sebelumnya silent)
+
+**Cancel race condition (Worker — P0):**
+- `worker/src/queue-consumer.js:137,145,150` — semua UPDATE queries tambah `AND status = 'processing'`. Prevent race condition: user cancel saat worker sedang kirim → sebelumnya worker overwrite `cancelled` → `sent`
+
+**Cancel UX (Frontend):**
+- `frontend/src/components/ui/Sidebar.tsx:153` — tombol "Batal" tambah `confirm('Batalkan SEMUA pesan yang masih pending?')` + toast feedback. Sebelumnya 1 klik langsung cancel tanpa konfirmasi
+
+**QR loading performance (Worker + Frontend):**
+- `frontend/src/pages/marketing/QRScannerPage.tsx` — hapus REST call `GET /whatsapp/status` (hemat ~200-500ms, redundant dengan socket)
+- `frontend/src/pages/marketing/QRScannerPage.tsx` — hapus `socket.emit('wa:request_status')` (socket auto-emits on connect, hilangkan double emission)
+- `frontend/src/pages/marketing/QRScannerPage.tsx` — tambah `reconnectMsg` state, tampilkan server progress message saat reconnecting (contoh: "Menyiapkan koneksi...")
+- `worker/src/socket-server.js` — singleton readonly DB connection (4→1 open/close per connect via `getReadonlyDb()`)
+- `worker/src/socket-server.js:148` — delay `500ms` → `200ms` + emit progress message
+- `worker/src/socket-server.js` — tambah `closeReadonlyDb()` export untuk graceful shutdown
+- `worker/src/index.js` — import + panggil `closeReadonlyDb()` di `gracefulShutdown()`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
