@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown, User } from 'lucide-react';
+import { Upload, UserCheck, Search, Download, Link, FileSpreadsheet, Type, AlertCircle, CheckCircle2, Eye, Trash2, Filter, ChevronDown, User, Store, Users, ArrowRight } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
 import { calcPlafon } from '../../finance/financeEngine';
@@ -66,12 +66,6 @@ export function CustomerManagementPage() {
   const [marketingUsers, setMarketingUsers] = useState<MarketingUser[]>([]);
   const [selectedMarketingId, setSelectedMarketingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isAdmin) {
-      customerService.getMarketingUsers().then(setAllMarketingUsers);
-      authService.getKios().then(setKiosList).catch(() => {});
-    }
-  }, [isAdmin]);
   const [assignSplitNmcRefi, setAssignSplitNmcRefi] = useState(false);
   const [assignMaxData, setAssignMaxData] = useState(1000);
   const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; unassigned_marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
@@ -91,6 +85,26 @@ export function CustomerManagementPage() {
   const [customerTypeFilter, setBussUnitFilter] = useState('');
   const [showCustomerTypeDropdown, setShowBussUnitDropdown] = useState(false);
   const customerTypeRef = useRef<HTMLDivElement>(null);
+  const [kiosDataCounts, setKiosDataCounts] = useState<Record<string, number>>({});
+  const [selectedKiosFilter, setSelectedKiosFilter] = useState('');
+
+  useEffect(() => {
+    if (isAdmin) {
+      const kiosParam = selectedKiosFilter || undefined;
+      customerService.getMarketingUsers(kiosParam).then(setAllMarketingUsers);
+    }
+  }, [isAdmin, selectedKiosFilter]);
+
+  useEffect(() => {
+    if (isAdmin) {
+      authService.getKios().then(setKiosList).catch(() => {});
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    setSelectedMceId(null);
+    setPage(1);
+  }, [selectedKiosFilter]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -111,7 +125,16 @@ export function CustomerManagementPage() {
 
   const mceFilterKey = selectedMceId ? selectedMceId.toString() : '';
 
+  const superadminReady = user?.role === 'superadmin' ? Boolean(selectedKiosFilter) : true;
+
   const fetchData = useCallback(async () => {
+    if (!superadminReady) {
+      setCustomers([]);
+      setLastPage(1);
+      setTotalCustomers(0);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const params: Record<string, string> = { page: page.toString(), search: debouncedSearch, per_page: '50' };
@@ -124,6 +147,9 @@ export function CustomerManagementPage() {
       if (customerTypeFilter) {
         params.customer_type = customerTypeFilter;
       }
+      if (selectedKiosFilter && isAdmin && user?.role === 'superadmin') {
+        params.kios_id = selectedKiosFilter;
+      }
       const res = await customerService.getAll(params);
       setCustomers(res.data);
       setLastPage(res.last_page);
@@ -131,7 +157,7 @@ export function CustomerManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin]);
+  }, [superadminReady, page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin, selectedKiosFilter, user?.role]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -387,26 +413,77 @@ export function CustomerManagementPage() {
   const isRupiahField = (key: string) => key === 'otr' || key === 'plafon';
 
   return (
-    <div className="font-poppins space-y-6 animate-fade-in">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5 animate-fade-in">
+
+      {/* ── Header ─────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Customer Management</h1>
-          <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">Kelola data customer dan assignment</p>
+          <h1 className="font-display text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">Customer Management</h1>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Kelola data customer dan assignment</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {isAdmin && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {isAdmin && user?.role === 'superadmin' && (
             <>
-              <Button variant="secondary" icon={<Upload className="h-4 w-4" />}
-                onClick={() => { setShowImport(true); resetImport(); }}>
-                Import
-              </Button>
+              <button
+                onClick={async () => {
+                  const res = await customerService.getAll({ page: '1', per_page: '1' });
+                  setDeleteMyDataTotal(res.total);
+                  setShowDeleteMyDataConfirm(true);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+              >
+                <User className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Hapus Data Saya</span>
+                <span className="sm:hidden">Data Saya</span>
+              </button>
+              <button
+                onClick={async () => {
+                  setSelectedDeleteKiosId('');
+                  setDeletePerKiosTotal(0);
+                  setShowDeletePerKiosConfirm(true);
+                  const totalRes = await customerService.getAll({ page: '1', per_page: '1' });
+                  setDeletePerKiosTotal(totalRes.total);
+                  const kiosIds = kiosList.map((k) => k.kios_id);
+                  if (kiosIds.length > 0) {
+                    const results = await Promise.all(
+                      kiosIds.map(async (kid) => {
+                        try {
+                          const res = await customerService.getAll({ page: '1', per_page: '1', kios_id: kid });
+                          return [kid, res.total] as const;
+                        } catch {
+                          return [kid, 0] as const;
+                        }
+                      })
+                    );
+                    const counts: Record<string, number> = {};
+                    for (const [kid, total] of results) counts[kid] = total;
+                    setKiosDataCounts(counts);
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Hapus Per Kios</span>
+                <span className="sm:hidden">Per Kios</span>
+              </button>
             </>
+          )}
+          {isAdmin && user?.role !== 'superadmin' && (
+            <button
+              onClick={async () => {
+                const res = await customerService.getAll({ page: '1', per_page: '1' });
+                setDeleteAllTotal(res.total);
+                setShowDeleteAllConfirm(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-900/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Hapus Semua
+            </button>
           )}
           {isAdmin && (
             <>
-              <Button
-                variant="secondary"
-                icon={<UserCheck className="h-4 w-4" />}
+              <button
                 onClick={async () => {
                   const users = await customerService.getMarketingUsers();
                   setMarketingUsers(users);
@@ -423,142 +500,212 @@ export function CustomerManagementPage() {
                   }
                   setShowAssign(true);
                 }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-fif-600 to-fif-500 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-fif-500/25 transition-all hover:from-fif-700 hover:to-fif-600 hover:shadow-md hover:shadow-fif-500/30"
               >
-                Assign {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}
-              </Button>
+                <UserCheck className="h-3.5 w-3.5" />
+                <span>Assign {selectedIds.length > 0 ? `(${selectedIds.length})` : ''}</span>
+              </button>
               {selectedIds.length > 0 && (
                 <button
                   onClick={() => setShowBatchDeleteConfirm(true)}
-                  className="relative flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-800 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                  className="inline-flex items-center gap-1 rounded-lg border border-red-200 dark:border-red-900/40 bg-white dark:bg-slate-800 px-2.5 py-2 text-xs font-medium text-red-600 dark:text-red-400 transition-all hover:bg-red-50 dark:hover:bg-red-900/20"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span className="-mr-0.5">{selectedIds.length}</span>
+                  <span>{selectedIds.length}</span>
                 </button>
               )}
-            </>
-          )}
-          {isAdmin && user?.role === 'superadmin' && (
-            <>
-              <Button
-                variant="secondary"
-                icon={<User className="h-4 w-4" />}
-                onClick={async () => {
-                  const res = await customerService.getAll({ page: '1', per_page: '1' });
-                  setDeleteMyDataTotal(res.total);
-                  setShowDeleteMyDataConfirm(true);
-                }}
+              <button
+                onClick={() => { setShowImport(true); resetImport(); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 transition-all hover:border-slate-300 hover:bg-slate-50 hover:text-slate-800 dark:hover:border-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
               >
-                Hapus Data Saya
-              </Button>
-              <Button
-                variant="danger"
-                icon={<Trash2 className="h-4 w-4" />}
-                onClick={() => {
-                  setSelectedDeleteKiosId('');
-                  setDeletePerKiosTotal(0);
-                  setShowDeletePerKiosConfirm(true);
-                }}
-              >
-                Hapus Per Kios
-              </Button>
+                <Upload className="h-3.5 w-3.5" />
+                Import
+              </button>
             </>
-          )}
-          {isAdmin && user?.role !== 'superadmin' && (
-            <Button
-              variant="danger"
-              icon={<Trash2 className="h-4 w-4" />}
-              onClick={async () => {
-                const res = await customerService.getAll({ page: '1', per_page: '1' });
-                setDeleteAllTotal(res.total);
-                setShowDeleteAllConfirm(true);
-              }}
-            >
-              Hapus Semua
-            </Button>
           )}
         </div>
       </div>
 
-      <div className="flex flex-wrap items-start gap-4">
-        <div className="relative max-w-xs flex-1">
+      {/* ── Superadmin stepped flow ────────────────────────── */}
+      {isAdmin && user?.role === 'superadmin' && (
+        <div className="rounded-2xl border border-slate-200/80 dark:border-slate-700/60 bg-white dark:bg-slate-900/50 p-4 sm:p-5">
+          <div className="mb-4 flex items-center gap-3">
+            <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-colors ${selectedKiosFilter ? 'bg-fif-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'}`}>
+              1
+            </div>
+            <span className={`text-sm font-semibold transition-colors ${selectedKiosFilter ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
+              Pilih Kios
+            </span>
+            {selectedKiosFilter && (
+              <>
+                <ArrowRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-fif-600 text-xs font-bold text-white">
+                  2
+                </div>
+                <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  Filter MCE <span className="font-normal text-slate-400 dark:text-slate-500">(opsional)</span>
+                </span>
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {kiosList.length > 0 && (
+              <div className="relative flex-1">
+                <Store className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={selectedKiosFilter}
+                  onChange={(e) => {
+                    setSelectedKiosFilter(e.target.value);
+                    setSelectedMceId(null);
+                    setPage(1);
+                    setSelectAllPages(false);
+                  }}
+                  className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-700 dark:text-slate-300 outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:focus:bg-slate-900"
+                >
+                  <option value="">Pilih kios terlebih dahulu...</option>
+                  {kiosList.map((k) => (
+                    <option key={k.kios_id} value={k.kios_id}>{k.kios_name} ({k.kios_id})</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            )}
+
+            {selectedKiosFilter && (
+              <div className="relative flex-1 animate-fade-in">
+                <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <select
+                  value={selectedMceId ?? ''}
+                  onChange={(e) => {
+                    setSelectedMceId(e.target.value ? parseInt(e.target.value) : null);
+                    setPage(1);
+                    setSelectAllPages(false);
+                  }}
+                  className="w-full appearance-none rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-2.5 pl-10 pr-8 text-sm font-medium text-slate-700 dark:text-slate-300 outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:focus:bg-slate-900"
+                >
+                  <option value="">Semua MCE / Marketing</option>
+                  {allMarketingUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── UH / Marketing search + filter ─────────────────── */}
+      {(!isAdmin || (isAdmin && user?.role !== 'superadmin')) && (
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 sm:max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); setSelectAllPages(false); }}
+              placeholder="Cari customer..."
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:focus:bg-slate-900"
+            />
+          </div>
+          {isAdmin && allMarketingUsers.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <select
+                value={selectedMceId ?? ''}
+                onChange={(e) => {
+                  setSelectedMceId(parseInt(e.target.value) || null);
+                  setPage(1);
+                  setSelectAllPages(false);
+                }}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              >
+                <option value="">Semua MCE</option>
+                {allMarketingUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Superadmin search (after filters selected) ─────── */}
+      {isAdmin && user?.role === 'superadmin' && superadminReady && (
+        <div className="relative animate-fade-in">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); setSelectAllPages(false); }}
             placeholder="Cari customer..."
-            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-2.5 pl-10 pr-3 text-sm outline-none transition-all placeholder:text-slate-400 focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:focus:bg-slate-900"
           />
-        </div>
-
-        {isAdmin && allMarketingUsers.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 px-3 py-2 shadow-sm backdrop-blur-xl">
-            <Filter className="h-4 w-4 text-slate-400" />
-                <select
-                  value={selectedMceId ?? ''}
-                  onChange={(e) => {
-                    setSelectedMceId(parseInt(e.target.value) || null);
-                    setPage(1);
-                    setSelectAllPages(false);
-                  }}
-                  className="rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
-                >
-                  <option value="">Semua MCE</option>
-                  {allMarketingUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-          </div>
-        )}
-      </div>
-
-      <Pagination page={page} lastPage={lastPage} onPageChange={(p) => { setPage(p); setSelectAllPages(false); }} />
-
-      <DataTable
-        columns={columns} data={customers} loading={loading}
-        onEdit={isAdmin ? handleEdit : undefined} onDelete={isAdmin ? handleDelete : undefined}
-        showCheckbox={isAdmin} selectedIds={selectedIds}
-        allPageSelected={isAdmin && customers.length > 0 && customers.every((c) => selectedIds.includes(c.id))}
-        onSelect={(id) => setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])}
-        onSelectAll={() => {
-          const allCurrentPageSelected = customers.every((c) => selectedIds.includes(c.id));
-          if (allCurrentPageSelected) {
-            setSelectedIds((prev) => prev.filter((id) => !customers.some((c) => c.id === id)));
-            setSelectAllPages(false);
-          } else {
-            setSelectedIds((prev) => {
-              const newIds = [...prev];
-              for (const c of customers) {
-                if (!newIds.includes(c.id)) newIds.push(c.id);
-              }
-              return newIds;
-            });
-            if (customers.length > 0 && totalCustomers > customers.length) {
-              setSelectAllPages(true);
-            }
-          }
-        }}
-      />
-
-      {selectAllPages && selectedIds.length === customers.length && totalCustomers > customers.length && (
-        <div className="-mt-2 text-center">
-          <button
-            onClick={async () => {
-              const res = await customerService.getAllIds();
-              const ids = (res.ids as number[]).slice(0, 500);
-              setSelectedIds(ids);
-              setSelectAllPages(false);
-            }}
-            className="text-sm font-medium text-fif-600 dark:text-fif-400 hover:text-fif-700 dark:hover:text-fif-300 hover:underline"
-          >
-            Pilih semua {Math.min(totalCustomers, 500)} customer
-          </button>
-          <span className="ml-1 text-sm text-slate-400 dark:text-slate-500">({selectedIds.length} dipilih)</span>
         </div>
       )}
 
-      <Pagination page={page} lastPage={lastPage} onPageChange={(p) => { setPage(p); setSelectAllPages(false); }} />
+      {/* ── Content ──────────────────────────────────────────── */}
+      {!superadminReady ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30 px-6 py-16 text-center animate-fade-in">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-fif-50 to-fif-100 dark:from-fif-900/20 dark:to-fif-800/10">
+            <Store className="h-6 w-6 text-fif-500 dark:text-fif-400" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pilih kios dan MCE terlebih dahulu</p>
+          <p className="mt-1 max-w-xs text-xs text-slate-400 dark:text-slate-500">
+            Gunakan filter di atas untuk memilih kios, lalu pilih MCE/marketing yang ingin dilihat datanya.
+          </p>
+        </div>
+      ) : (
+        <>
+          <DataTable
+                columns={columns} data={customers} loading={loading}
+                onEdit={isAdmin ? handleEdit : undefined} onDelete={isAdmin ? handleDelete : undefined}
+                showCheckbox={isAdmin} selectedIds={selectedIds}
+                allPageSelected={isAdmin && customers.length > 0 && customers.every((c) => selectedIds.includes(c.id))}
+                onSelect={(id) => setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])}
+                onSelectAll={() => {
+                  const allCurrentPageSelected = customers.every((c) => selectedIds.includes(c.id));
+                  if (allCurrentPageSelected) {
+                    setSelectedIds((prev) => prev.filter((id) => !customers.some((c) => c.id === id)));
+                    setSelectAllPages(false);
+                  } else {
+                    setSelectedIds((prev) => {
+                      const newIds = [...prev];
+                      for (const c of customers) {
+                        if (!newIds.includes(c.id)) newIds.push(c.id);
+                      }
+                      return newIds;
+                    });
+                    if (customers.length > 0 && totalCustomers > customers.length) {
+                      setSelectAllPages(true);
+                    }
+                  }
+                }}
+              />
 
+          {selectAllPages && selectedIds.length === customers.length && totalCustomers > customers.length && (
+            <div className="text-center animate-fade-in">
+              <button
+                onClick={async () => {
+                  const res = await customerService.getAllIds();
+                  const ids = (res.ids as number[]).slice(0, 500);
+                  setSelectedIds(ids);
+                  setSelectAllPages(false);
+                }}
+                className="text-sm font-medium text-fif-600 dark:text-fif-400 hover:text-fif-700 dark:hover:text-fif-300 hover:underline"
+              >
+                Pilih semua {Math.min(totalCustomers, 500)} customer
+              </button>
+              <span className="ml-1 text-sm text-slate-400 dark:text-slate-500">({selectedIds.length} dipilih)</span>
+            </div>
+          )}
+
+          <Pagination page={page} lastPage={lastPage} onPageChange={(p) => { setPage(p); setSelectAllPages(false); }} />
+        </>
+      )}
+
+      {/* ── Modals ───────────────────────────────────────────── */}
       <Modal open={showForm} onClose={() => setShowForm(false)} title={editId ? 'Edit Customer' : 'Tambah Customer'}>
         <div className="space-y-4">
           <Input label="Nama" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nama customer" />
@@ -868,31 +1015,36 @@ export function CustomerManagementPage() {
             <label className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">Pilih Kios</label>
             <select
               value={selectedDeleteKiosId}
-              onChange={async (e) => {
+              onChange={(e) => {
                 const kiosId = e.target.value;
                 setSelectedDeleteKiosId(kiosId);
                 if (kiosId) {
-                  const res = await customerService.getAll({ page: '1', per_page: '1', kios_id: kiosId });
-                  setDeletePerKiosTotal(res.total);
+                  setDeletePerKiosTotal(kiosDataCounts[kiosId] ?? 0);
                 } else {
-                  const res = await customerService.getAll({ page: '1', per_page: '1' });
-                  setDeletePerKiosTotal(res.total);
+                  const totalAll = Object.values(kiosDataCounts).reduce((a, b) => a + b, 0);
+                  setDeletePerKiosTotal(totalAll);
                 }
               }}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
             >
-              <option value="">Semua Kios</option>
-              {kiosList.map((k) => (
-                <option key={k.kios_id} value={k.kios_id}>{k.kios_name} ({k.kios_id})</option>
-              ))}
+              <option value="">Semua Kios ({Object.values(kiosDataCounts).reduce((a, b) => a + b, 0).toLocaleString('id-ID')} data)</option>
+              {kiosList.map((k) => {
+                const count = kiosDataCounts[k.kios_id] ?? null;
+                return (
+                  <option key={k.kios_id} value={k.kios_id}>
+                    {k.kios_name} ({k.kios_id}){count !== null ? ` — ${count.toLocaleString('id-ID')} data` : ' — Memuat...'}
+                  </option>
+                );
+              })}
             </select>
           </div>
-          {selectedDeleteKiosId !== '' && (
+
+          {selectedDeleteKiosId !== '' && deletePerKiosTotal > 0 && (
             <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div>
                 <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-                  {deletePerKiosTotal} data dari kios ini akan dihapus permanen
+                  {deletePerKiosTotal.toLocaleString('id-ID')} data akan dihapus permanen
                 </p>
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   Termasuk riwayat broadcast. Tindakan ini tidak bisa dibatalkan.
@@ -900,12 +1052,27 @@ export function CustomerManagementPage() {
               </div>
             </div>
           )}
+
+          {selectedDeleteKiosId !== '' && deletePerKiosTotal === 0 && (
+            <div className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
+              <div>
+                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Tidak ada data di kios ini
+                </p>
+                <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
+                  Tidak ada yang akan dihapus.
+                </p>
+              </div>
+            </div>
+          )}
+
           {selectedDeleteKiosId === '' && (
             <div className="flex items-start gap-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
               <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <div>
                 <p className="text-sm font-semibold text-red-700 dark:text-red-400">
-                  {deletePerKiosTotal} data SEMUA kios akan dihapus permanen
+                  {deletePerKiosTotal.toLocaleString('id-ID')} data SEMUA kios akan dihapus permanen
                 </p>
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                   Termasuk riwayat broadcast. Tindakan ini tidak bisa dibatalkan.
@@ -913,15 +1080,19 @@ export function CustomerManagementPage() {
               </div>
             </div>
           )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowDeletePerKiosConfirm(false)}>Batal</Button>
             <Button
               variant="danger"
-              disabled={!selectedDeleteKiosId}
+              disabled={!selectedDeleteKiosId || deletePerKiosTotal === 0}
               onClick={async () => {
                 try {
                   const res = await customerService.deleteAllByKios(selectedDeleteKiosId);
-                  toast('success', res.message);
+                  const orphanRes = await customerService.deleteOrphan(selectedDeleteKiosId || undefined);
+                  const msgs = [res.message];
+                  if (orphanRes.message) msgs.push(orphanRes.message);
+                  toast('success', msgs.join('. '));
                   setShowDeletePerKiosConfirm(false);
                   setSelectedIds([]);
                   fetchData();

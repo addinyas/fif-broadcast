@@ -198,4 +198,16 @@ export const customerService = {
     const { data } = await api.get('/customer-shares/my-shared');
     return data;
   },
+
+  async getOrphanStats(): Promise<{ total_orphans: number; details: { kios_id: string | null; kios_name: string; count: number }[] }> {
+    const { data } = await api.get('/customers/orphan-stats');
+    return data;
+  },
+
+  async deleteOrphan(kiosId?: string): Promise<{ message: string }> {
+    const payload: Record<string, string> = { confirm: 'DELETE_ORPHAN' };
+    if (kiosId) payload.kios_id = kiosId;
+    const { data } = await api.post('/customers/delete-orphan', payload);
+    return data;
+  },
 };
