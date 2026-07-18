@@ -27,6 +27,8 @@ class CustomerShareController extends Controller
             }
         }
 
+        Customer::applyOrphanFilter($query, $user->kios_id);
+
         $total = (clone $query)->count();
         $broadcastCount = (clone $query)->whereNotNull('manual_sent_at')->count();
         $pendingCount = $total - $broadcastCount;
@@ -60,12 +62,16 @@ class CustomerShareController extends Controller
         }
 
         $total = Customer::where('marketing_id', $fromMarketingId)
-            ->where('assignment_status', 'assigned')
-            ->count();
+            ->where('assignment_status', 'assigned');
+        Customer::applyOrphanFilter($total, $user->kios_id);
+        $total = (clone $total)->count();
+
         $broadcastCount = Customer::where('marketing_id', $fromMarketingId)
             ->where('assignment_status', 'assigned')
-            ->whereNotNull('manual_sent_at')
-            ->count();
+            ->whereNotNull('manual_sent_at');
+        Customer::applyOrphanFilter($broadcastCount, $user->kios_id);
+        $broadcastCount = (clone $broadcastCount)->count();
+
         $pendingCount = $total - $broadcastCount;
 
         // Validate availability
@@ -92,6 +98,8 @@ class CustomerShareController extends Controller
         // Pick customers
         $customerQuery = Customer::where('marketing_id', $fromMarketingId)
             ->where('assignment_status', 'assigned');
+
+        Customer::applyOrphanFilter($customerQuery, $user->kios_id);
 
         match ($shareType) {
             'pending_only' => $customerQuery->whereNull('manual_sent_at'),

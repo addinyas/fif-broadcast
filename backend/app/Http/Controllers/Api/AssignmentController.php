@@ -181,6 +181,8 @@ class AssignmentController extends Controller
                 $query->where('kios_id', $kiosId);
             }
 
+            Customer::applyOrphanFilter($query, $kiosId);
+
             $ids = $query->inRandomOrder()
                 ->limit($count)
                 ->pluck('id')
@@ -242,6 +244,9 @@ class AssignmentController extends Controller
             $nmcQuery->where('kios_id', $kiosId);
             $refiQuery->where('kios_id', $kiosId);
         }
+
+        Customer::applyOrphanFilter($nmcQuery, $kiosId);
+        Customer::applyOrphanFilter($refiQuery, $kiosId);
 
         $totalNmc = $nmcQuery->count();
         $totalRefi = $refiQuery->count();

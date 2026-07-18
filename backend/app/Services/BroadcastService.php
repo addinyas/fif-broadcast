@@ -99,6 +99,8 @@ class BroadcastService
             $historyQuery->where('broadcast_histories.marketing_id', $marketingId);
         }
 
+        Customer::applyOrphanFilter($customerQuery, $kiosId);
+
         $assignedCount = $customerQuery->count();
 
         $stats = $this->getStats($marketingId, $kiosId);
