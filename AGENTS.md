@@ -1703,7 +1703,7 @@ Ketik: `lanjut yang tadi`
 
 ### 2026-07-19 — Superadmin kios filter + CustomerManagementPage UI redesign
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅ & deployed ✅**
 
 **Bug fix — Superadmin lihat data semua kios:**
 - `backend/app/Http/Controllers/Api/CustomerController.php`: tambah `kios_id` ke `$request->only()` di `index()` — sebelumnya parameter dikirim frontend di-drop, superadmin selalu lihat semua data
