@@ -1701,6 +1701,34 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-19 — Superadmin kios filter + CustomerManagementPage UI redesign
+
+**Belum di-push ⏸️**
+
+**Bug fix — Superadmin lihat data semua kios:**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: tambah `kios_id` ke `$request->only()` di `index()` — sebelumnya parameter dikirim frontend di-drop, superadmin selalu lihat semua data
+- `backend/app/Http/Controllers/Api/AssignmentController.php`: `marketingUsers()` — superadmin bisa kirim `kios_id` query param (sebelumnya selalu `null`)
+
+**Feature — Stepped flow superadmin (kios → MCE → data):**
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: tambah state `selectedKiosFilter`, dropdown "Semua Kios" / "Pilih MCE" di toolbar
+- `superadminReady` = `Boolean(selectedKiosFilter)` — hanya perlu kios dipilih, MCE opsional
+- Empty state: kalau kios belum dipilih, tampil pesan "Pilih kios dan MCE terlebih dahulu" + icon Store
+- DataTable, Pagination, select-all hanya muncul setelah kios dipilih
+- Dropdown MCE default "Semua MCE / Marketing" (tidak wajib pilih spesifik)
+
+**Feature — CustomerManagementPage UI redesign:**
+- Header: compact layout, buttons inline (bukan `Button` component), Assign pakai gradient accent
+- Superadmin step indicator: `① Pilih Kios → ② Filter MCE (opsional)` dengan visual numbered circles
+- Dropdowns: icon `Store`/`Users` + `ChevronDown` custom, `appearance-none`, rounded-xl, bg-slate-50
+- Search bar: muncul setelah kios dipilih (superadmin), atau langsung (UH/marketing)
+- UH/marketing: search + filter MCE di satu baris
+- Empty state: centered, dashed border, icon gradient + teks panduan
+- Tabel: dibungkus conditional `{!superadminReady ? emptyState : (<>table</>)}`
+- Import icon: `Store` + `Users` + `ArrowRight` ditambah ke imports
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
