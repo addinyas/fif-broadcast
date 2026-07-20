@@ -1759,6 +1759,30 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-20 — Worker race condition fix + PM2 cleanup + EADDRINUSE handler
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Worker cancel race condition (P0 — deeper fix):**
+- `worker/src/queue-consumer.js:117` — UPDATE `status = 'processing'` sekarang punya `AND status = 'pending'`. Sebelumnya: tidak ada guard → worker overwrite `cancelled` → `processing` jika user cancel antara SELECT (line 104) dan UPDATE (line 117)
+- `worker/src/queue-consumer.js:117-121` — `procResult.changes === 0` → skip + continue. Prevent false `processing` event jika status sudah berubah
+- `worker/src/queue-consumer.js:137` — `result.changes > 0` → emit hanya jika UPDATE matched (prevent false `sent` event untuk cancelled items)
+- `worker/src/queue-consumer.js:152` — `failResult.changes > 0` → emit hanya jika UPDATE matched (prevent false `failed` event)
+
+**Worker EADDRINUSE recovery:**
+- `worker/src/index.js` — tambah `httpServer.on('error')` handler. Jika `EADDRINUSE`, wait 5s lalu retry `httpServer.listen()`. Prevent crash loop saat port conflict
+
+**PM2 cleanup (root cause port conflict):**
+- PM2 (`pm2-root.service`) menjalankan old instance `fif-worker` di port 3001 → conflict dengan systemd `fif-worker.service`
+- Fix: `pm2 stop all && pm2 delete all && pm2 unstartup`. PM2 tidak boleh manage worker — systemd adalah sole manager
+
+**Commits:**
+- `c88ba2a` — fix: worker race condition — all 4 UPDATE queries now check status before write
+- `5d37757` — fix: worker EADDRINUSE error handler — auto-retry on port conflict
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
