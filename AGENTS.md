@@ -1891,6 +1891,79 @@ ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-20 — Broadcast transparency (customer_sent_marks) + QRScannerPage redesign
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend — Broadcast transparency:**
+- `backend/database/migrations/2026_07_20_000002_create_customer_sent_marks_table.php`: pivot table `customer_sent_marks` (customer_id, user_id, sent_at, unique on both)
+- `backend/app/Models/CustomerSentMark.php`: new model with `customer()`, `user()` relations
+- `backend/app/Models/Customer.php`: `sentMarks()` HasMany relation added
+- `backend/app/Repositories/CustomerRepository.php`: eager loads `sentMarks.user` + `broadcastHistories.marketing` in `getAll()` & `getAssignedToMarketing()`
+- `backend/app/Http/Controllers/Api/CustomerController.php`: `markSent()` L593, `sentIds()` L623, `clearSentMarks()` L633, `broadcastMarks()` L776 — per-user independent sent marks
+- `backend/app/Http/Controllers/Api/CustomerShareController.php`: updated for `CustomerSentMark`
+- `backend/app/Http/Controllers/Api/UserController.php`: `destroy()` cleans up `CustomerSentMark`
+- `backend/routes/api.php`: `mark-sent` POST, `sent-ids` GET, `sent-marks` DELETE, `{id}/broadcast-marks` GET
+- `backend/app/Services/BroadcastService.php`: daily limit 150 → **100**
+
+**Frontend — Broadcast transparency:**
+- `frontend/src/types/index.ts`: `SentMark` interface + `sent_marks` on `Customer`
+- `frontend/src/services/customerService.ts`: `getSentIds()`, `clearSentMarks()`, `getBroadcastMarks()`
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: Status column popover (broadcast badge + `+N kirim` + `📨+N`), portal-based popover with sender details
+- `frontend/src/pages/admin/CustomerManagementPage.tsx`: Detail modal broadcast history section
+
+**Frontend — QRScannerPage modern redesign:**
+- `frontend/src/pages/marketing/QRScannerPage.tsx`: removed amber warning "VPS di-rate-limit oleh WhatsApp", redesigned with gradient text, status glow, glass frame for QR, improved toggle/pairing code design
+
+**Commits:** `ff9f36a`, `537a3e0`
+
+### 2026-07-20 — Anti-ban: WARP proxy + Baileys optimizations + business hours
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Cloudflare WARP (Docker):**
+- VPS kernel 4.18.0 tidak support WireGuard module → install Docker + `caomingjun/warp` image
+- WARP SOCKS5 proxy: `127.0.0.1:1080` → IP `104.28.166.112` (Cloudflare, bukan blacklisted VPS IP)
+- `docker run -d --name warp --restart=always --cap-add NET_ADMIN -p 1080:1080 caomingjun/warp`
+- Worker `WA_PROXY=socks5://127.0.0.1:1080` di `.env`
+
+**Worker — Baileys anti-ban:**
+- `worker/src/wa-client.js`:
+  - `connectTimeoutMs`: 30s → **60s**
+  - `keepAliveIntervalMs`: 20-30s → **180-300s** (3-5 menit)
+  - Hapus auto-disconnect 8 jam (koneksi permanen, WARP ganti IP tiap 24h)
+  - Typing simulation: `sendPresenceUpdate('composing')` + delay 2-8 detik sebelum kirim
+  - Hapus empty `messages.upsert` handler
+- `worker/src/queue-consumer.js`: `isWithinBusinessHours()` — hanya kirim jam 07:00-21:00 WIB
+- `worker/src/broadcast-config.js`: `messages_per_session` 50 → **20**
+- `worker/.env`: `MIN_DELAY_SEC=120`, `MAX_DELAY_SEC=300`, `MAX_CONNECTION_HOURS` dihapus
+
+**Deploy:**
+- `deploy/deploy-vps.sh`: tambah Docker WARP restart otomatis saat deploy
+
+**Commits:** `7212957`, `f24fae8`
+
+### Anti-Ban Configuration Reference
+
+| Setting | Nilai | Keterangan |
+|---------|-------|------------|
+| Proxy | Cloudflare WARP Docker | IP 104.28.166.112 |
+| Browser | `['WhatsApp', 'Chrome', '120.0.0.0']` | Match real WhatsApp Web |
+| Platform | `'Desktop'` | Explicit |
+| Typing sim | 2-8 detik | Sebelum kirim pesan |
+| Cooldown | 60 detik | Anti reconnect spam |
+| KeepAlive | 180-300 detik | Jitter agar tidak patterned |
+| connectTimeoutMs | 60 detik | Lebih lama |
+| Delay antar pesan | 120-300 detik | 2-3 pesan/jam |
+| Daily limit | 100 pesan/hari | Lebih konservatif |
+| Messages/session | 20 | Sebelumnya 50 |
+| Business hours | 07:00-21:00 WIB | Tidak kirim malam |
+| MAX_CONNECTION_HOURS | Dihapus | Koneksi permanen |
+| MAX_RECONNECT_ATTEMPTS | 10 | Sudah ada |
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
