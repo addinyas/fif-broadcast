@@ -84,6 +84,7 @@ export function BroadcastHistoryPage() {
       case 'processing': return 'info';
       case 'sent': return 'success';
       case 'failed': return 'danger';
+      case 'cancelled': return 'danger';
       default: return 'warning';
     }
   };

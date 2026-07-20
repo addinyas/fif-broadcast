@@ -14,6 +14,7 @@ const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger
     case 'processing': return 'info';
     case 'sent': return 'success';
     case 'failed': return 'danger';
+    case 'cancelled': return 'danger';
     default: return 'purple';
   }
 };

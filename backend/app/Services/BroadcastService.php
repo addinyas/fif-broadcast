@@ -324,8 +324,8 @@ class BroadcastService
             SUM(CASE WHEN broadcast_histories.status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN broadcast_histories.status = 'processing' THEN 1 ELSE 0 END) as processing,
             SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent_today,
-            SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today,
-            SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled_today,
+            SUM(CASE WHEN broadcast_histories.status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today,
+            COUNT(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 END) as cancelled_today,
             MAX(CASE WHEN broadcast_histories.status IN ('sent', 'processing', 'pending') THEN broadcast_histories.updated_at END) as last_activity
         ")->groupBy('broadcast_histories.marketing_id', 'users.name', 'users.kios_id', 'users.kios_name')
             ->orderByDesc('pending')
