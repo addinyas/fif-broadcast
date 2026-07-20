@@ -59,6 +59,17 @@ async function main() {
   httpServer = http.createServer();
   createSocketServer(httpServer);
 
+  httpServer.on('error', (err) => {
+    console.error('[Worker] HTTP server error:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Worker] Port ${SOCKET_PORT} already in use. Retrying in 5s...`);
+      setTimeout(() => {
+        httpServer.close();
+        httpServer.listen(SOCKET_PORT);
+      }, 5000);
+    }
+  });
+
   httpServer.listen(SOCKET_PORT, () => {
     console.log(`[Worker] Socket.io server running on port ${SOCKET_PORT}`);
   });
