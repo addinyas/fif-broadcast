@@ -1804,9 +1804,24 @@ Ketik: `lanjut yang tadi`
 
 **Commit:** `2b5bb16` — fix: add Gagal tab to BroadcastHistoryPage + fix cancelled items not showing in history
 
+### 2026-07-20 — Fix: UH broadcast history shows empty on "Gagal" tab
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+- UH broadcast history default `$marketingId = $user->id` → query `WHERE marketing_id = UH_id`
+- Cancelled items belong to `marketing_id = 7, 9` (marketing users), NOT the UH user
+- UH never broadcasts → their user ID never appears in `broadcast_histories` → 0 results on ALL tabs
+
+**Fix (`BroadcastController.php`):**
+- `history()` + `stats()` — UH default kios-wide (`$marketingId = null`), not user-scoped
+- UH only gets user-scoped when explicitly selecting a specific marketing user
+
+**Commit:** `01fe807` — fix: UH broadcast history default to kios-wide (not own ID)
+
 ### Revert instructions
 ```bash
-git revert 2b5bb16 && git push origin main
+git revert 01fe807 && git revert 2b5bb16 && git push origin main
 ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"
 ```
 
