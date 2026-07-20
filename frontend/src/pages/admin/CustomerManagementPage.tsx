@@ -70,6 +70,7 @@ export function CustomerManagementPage() {
   const [assignMaxData, setAssignMaxData] = useState(1000);
   const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; unassigned_marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
+  const [broadcastMarks, setBroadcastMarks] = useState<{ sent_marks: { user_id: number; user_name: string; role: string; sent_at: string }[]; broadcasts: { user_id: number; user_name: string; role: string; status: string; sent_at: string | null; created_at: string }[] } | null>(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [deleteAllTotal, setDeleteAllTotal] = useState(0);
   const [showBatchDeleteConfirm, setShowBatchDeleteConfirm] = useState(false);
@@ -160,6 +161,16 @@ export function CustomerManagementPage() {
   }, [superadminReady, page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin, selectedKiosFilter, user?.role]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  useEffect(() => {
+    if (!detailCustomer) { setBroadcastMarks(null); return; }
+    let cancelled = false;
+    customerService.getBroadcastMarks(detailCustomer.id).then((data) => {
+      if (!cancelled) setBroadcastMarks(data);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailCustomer?.id]);
 
   const handleSave = async () => {
     try {
@@ -1353,6 +1364,69 @@ export function CustomerManagementPage() {
 
             {(!detailCustomer.dynamic_data || Object.keys(detailCustomer.dynamic_data).length === 0) && (
               <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Tidak ada data tambahan</p>
+            )}
+
+            {/* Broadcast History */}
+            {broadcastMarks && (
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-slate-700 dark:text-slate-300">Riwayat Broadcast</h3>
+                {broadcastMarks.sent_marks.length === 0 && broadcastMarks.broadcasts.length === 0 ? (
+                  <p className="py-3 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada riwayat broadcast</p>
+                ) : (
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-100 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                          <th className="px-4 py-2.5">User</th>
+                          <th className="px-4 py-2.5">Tipe</th>
+                          <th className="px-4 py-2.5">Status</th>
+                          <th className="px-4 py-2.5">Waktu</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {broadcastMarks.broadcasts.map((b, i) => (
+                          <tr key={`b-${i}`} className="even:bg-slate-50 dark:even:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-700/80">
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-fif-400 to-fif-600 text-[10px] font-bold text-white">
+                                  {b.user_name?.charAt(0)}
+                                </div>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{b.user_name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5"><Badge variant="info">{b.role}</Badge></td>
+                            <td className="px-4 py-2.5">
+                              <Badge variant={b.status === 'sent' ? 'success' : b.status === 'failed' ? 'danger' : 'warning'}>
+                                {b.status}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                              {b.sent_at ? new Date(b.sent_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                        {broadcastMarks.sent_marks.map((s, i) => (
+                          <tr key={`s-${i}`} className="even:bg-slate-50 dark:even:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-700/80">
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-cyan-600 text-[10px] font-bold text-white">
+                                  {s.user_name?.charAt(0)}
+                                </div>
+                                <span className="font-medium text-slate-700 dark:text-slate-300">{s.user_name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5"><Badge variant="default">{s.role}</Badge></td>
+                            <td className="px-4 py-2.5"><Badge variant="success">marked</Badge></td>
+                            <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">
+                              {new Date(s.sent_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         )}

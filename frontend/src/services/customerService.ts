@@ -210,4 +210,9 @@ export const customerService = {
     const { data } = await api.post('/customers/delete-orphan', payload);
     return data;
   },
+
+  async getBroadcastMarks(customerId: number): Promise<{ sent_marks: { user_id: number; user_name: string; role: string; sent_at: string }[]; broadcasts: { user_id: number; user_name: string; role: string; status: string; sent_at: string | null; created_at: string }[] }> {
+    const { data } = await api.get(`/customers/${customerId}/broadcast-marks`);
+    return data;
+  },
 };

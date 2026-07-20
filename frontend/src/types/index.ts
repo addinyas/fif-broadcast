@@ -41,13 +41,12 @@ export interface Customer {
   marketing_id: number | null;
   assignment_status: 'unassigned' | 'assigned';
   dynamic_data: Record<string, string> | null;
-  manual_sent_at: string | null;
-  manual_sent_by: number | null;
   created_at: string;
   updated_at: string;
   uploader?: User;
   marketing?: User;
   broadcast_histories?: BroadcastHistory[];
+  sent_marks?: SentMark[];
   from_marketing_name?: string;
   from_marketing_id?: number;
   share_group?: string;
@@ -69,12 +68,20 @@ export interface BroadcastHistory {
   customer_id: number;
   marketing_id: number;
   exact_message: string;
-  status: 'pending' | 'processing' | 'sent' | 'failed';
+  status: 'pending' | 'processing' | 'sent' | 'failed' | 'cancelled';
   error_log?: string;
   sent_at?: string;
   created_at?: string;
   customer?: Customer;
   marketing?: User;
+}
+
+export interface SentMark {
+  id: number;
+  customer_id: number;
+  user_id: number;
+  sent_at: string;
+  user?: User;
 }
 
 export interface PaginatedResponse<T> {

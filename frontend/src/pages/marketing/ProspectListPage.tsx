@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon, AlertTriangle, Settings, MessageCircle, CheckCheck } from 'lucide-react';
+import { Search, Send, Save, Loader2, Plus, Trash2, RotateCw, ChevronDown, CheckCircle2, History, Users, WifiOff, Smartphone, ArrowLeftRight, UserIcon, AlertTriangle, Settings, MessageCircle, CheckCheck, X } from 'lucide-react';
 import { customerService } from '../../services/customerService';
 import { broadcastService } from '../../services/broadcastService';
 import { templateService } from '../../services/templateService';
@@ -76,7 +77,7 @@ export function ProspectListPage() {
   const [deletingTemplate, setDeletingTemplate] = useState(false);
   const abortRef = useRef(false);
   const wasSendingRef = useRef(false);
-  const skipAutoAdvanceRef = useRef(false);
+
   const [addModal, setAddModal] = useState(false);
   const [newNoContract, setNewNoContract] = useState('');
   const [newName, setNewName] = useState('');
@@ -105,7 +106,11 @@ export function ProspectListPage() {
   const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'own' | 'shared'>('all');
   const [showOwnershipDropdown, setShowOwnershipDropdown] = useState(false);
   const ownershipRef = useRef<HTMLDivElement>(null);
+  const [selectedMarketingFilter, setSelectedMarketingFilter] = useState<number | ''>('');
+  const [showMarketingFilterDropdown, setShowMarketingFilterDropdown] = useState(false);
+  const marketingFilterRef = useRef<HTMLDivElement>(null);
   const [useDefaultTemplate, setUseDefaultTemplate] = useState(false);
+  const [statusPopover, setStatusPopover] = useState<{ customerId: number; type: 'broadcast' | 'manual'; anchorEl: HTMLElement } | null>(null);
 
   const handleNoContractChange = (val: string) => {
     setNewNoContract(val);
@@ -146,23 +151,29 @@ export function ProspectListPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await customerService.getAssignedToMe({ page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter, ownership: ownershipFilter });
+      const params: Record<string, string> = { page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter, ownership: ownershipFilter };
+      if (user?.role === 'UH' && selectedMarketingFilter !== '') {
+        params.marketing_id = String(selectedMarketingFilter);
+      }
+      const res = await customerService.getAssignedToMe(params);
       setCustomers(res.data);
       setLastPage(res.last_page || 1);
-      setSentIds(res.data.filter((c) => user?.role === 'UH' ? c.manual_sent_by === user?.id : !!c.manual_sent_at).map((c) => c.id));
 
-      if (!skipAutoAdvanceRef.current && res.data.length > 0 && res.data.every((c) => c.manual_sent_at) && page < (res.last_page || 1)) {
-        setPage((p) => p + 1);
-      } else {
-        skipAutoAdvanceRef.current = false;
+      // Fetch this user's sent marks from the new per-user pivot table
+      try {
+        const ids = await customerService.getSentIds();
+        setSentIds(ids);
+      } catch {
+        // ignore — sentIds stays empty
       }
+
     } catch {
       setCustomers([]);
       setLastPage(1);
     } finally {
       setLoading(false);
     }
-  }, [page, search, customerTypeFilter, sisaAngsuranFilter, ownershipFilter]);
+  }, [page, search, customerTypeFilter, sisaAngsuranFilter, ownershipFilter, selectedMarketingFilter, user?.role]);
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -223,7 +234,7 @@ export function ProspectListPage() {
     return () => { socket.off('wa:status', handler); };
   }, [token]);
 
-  useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter, ownershipFilter]);
+  useEffect(() => { setPage(1); }, [customerTypeFilter, sisaAngsuranFilter, ownershipFilter, selectedMarketingFilter]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -236,10 +247,25 @@ export function ProspectListPage() {
       if (ownershipRef.current && !ownershipRef.current.contains(e.target as Node)) {
         setShowOwnershipDropdown(false);
       }
+      if (marketingFilterRef.current && !marketingFilterRef.current.contains(e.target as Node)) {
+        setShowMarketingFilterDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  useEffect(() => {
+    if (!statusPopover) return;
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setStatusPopover(null); };
+    const handleClick = (e: MouseEvent) => {
+      const pop = document.getElementById('status-popover');
+      if (pop && !pop.contains(e.target as Node)) setStatusPopover(null);
+    };
+    document.addEventListener('keydown', handleKey);
+    document.addEventListener('mousedown', handleClick);
+    return () => { document.removeEventListener('keydown', handleKey); document.removeEventListener('mousedown', handleClick); };
+  }, [statusPopover]);
 
   useEffect(() => {
     if (!sendingBatch || !progress) return;
@@ -681,9 +707,42 @@ export function ProspectListPage() {
     ) },
     {
       key: 'status', header: 'Status', render: (c: Customer) => {
-        const latest = c.broadcast_histories?.[0];
-        if (!latest) return <span className="text-xs text-slate-400 dark:text-slate-500">&mdash;</span>;
-        return <Badge variant={statusVariant(latest.status)} size="sm">{statusLabel(latest.status)}</Badge>;
+        const broadcasts = c.broadcast_histories || [];
+        const marks = c.sent_marks || [];
+        if (broadcasts.length === 0 && marks.length === 0) {
+          return <span className="text-xs text-slate-400 dark:text-slate-500">&mdash;</span>;
+        }
+        const latestBroadcast = broadcasts[0];
+        const uniqueSenderIds = [...new Set(broadcasts.map((b) => b.marketing_id))];
+        const broadcastCount = uniqueSenderIds.length;
+        const markCount = marks.length;
+        return (
+          <div className="flex items-center gap-1.5">
+            {latestBroadcast && (
+              <button
+                type="button"
+                onClick={(e) => setStatusPopover({ customerId: c.id, type: 'broadcast', anchorEl: e.currentTarget })}
+                className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs transition-all hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700"
+              >
+                <Badge variant={statusVariant(latestBroadcast.status)} size="sm">{statusLabel(latestBroadcast.status)}</Badge>
+                {broadcastCount > 1 && (
+                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
+                    +{broadcastCount - 1} kirim
+                  </span>
+                )}
+              </button>
+            )}
+            {markCount > 0 && (
+              <button
+                type="button"
+                onClick={(e) => setStatusPopover({ customerId: c.id, type: 'manual', anchorEl: e.currentTarget })}
+                className="inline-flex items-center gap-1 rounded-lg bg-violet-50 px-1.5 py-0.5 text-xs font-medium text-violet-700 transition-all hover:bg-violet-100 hover:ring-1 hover:ring-violet-300 dark:bg-violet-900/20 dark:text-violet-400 dark:hover:bg-violet-900/30 dark:hover:ring-violet-700"
+              >
+                📨 +{markCount}
+              </button>
+            )}
+          </div>
+        );
       }
     },
     {
@@ -909,51 +968,99 @@ export function ProspectListPage() {
           />
         </div>
 
-        <div ref={ownershipRef} className="relative">
-          <button
-            onClick={() => setShowOwnershipDropdown((p) => !p)}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
-              ownershipFilter !== 'all'
-                ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-            }`}
-          >
-            {ownershipFilter === 'all' && <Users className="h-3.5 w-3.5" />}
-                {ownershipFilter === 'own' && <UserIcon className="h-3.5 w-3.5" />}
-            {ownershipFilter === 'shared' && <ArrowLeftRight className="h-3.5 w-3.5" />}
-            {ownershipFilter === 'all' ? 'Semua Data' : ownershipFilter === 'own' ? 'Data Saya' : 'Dipinjam'}
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOwnershipDropdown ? 'rotate-180' : ''}`} />
-          </button>
-          {showOwnershipDropdown && (
-            <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
-              {([
-                { value: 'all' as const, label: 'Semua Data', icon: <Users className="h-4 w-4" />, desc: 'Data sendiri + dipinjam' },
-                { value: 'own' as const, label: 'Data Saya', icon: <UserIcon className="h-4 w-4" />, desc: 'Hanya data milik Anda' },
-                { value: 'shared' as const, label: 'Dipinjam', icon: <ArrowLeftRight className="h-4 w-4" />, desc: 'Hanya data pinjaman' },
-              ]).map((opt) => {
-                const active = ownershipFilter === opt.value;
-                return (
+        {user?.role === 'marketing' && (
+          <div ref={ownershipRef} className="relative">
+            <button
+              onClick={() => setShowOwnershipDropdown((p) => !p)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                ownershipFilter !== 'all'
+                  ? 'border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+              }`}
+            >
+              {ownershipFilter === 'all' && <Users className="h-3.5 w-3.5" />}
+              {ownershipFilter === 'own' && <UserIcon className="h-3.5 w-3.5" />}
+              {ownershipFilter === 'shared' && <ArrowLeftRight className="h-3.5 w-3.5" />}
+              {ownershipFilter === 'all' ? 'Semua Data' : ownershipFilter === 'own' ? 'Data Saya' : 'Dipinjam'}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showOwnershipDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showOwnershipDropdown && (
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg">
+                {([
+                  { value: 'all' as const, label: 'Semua Data', icon: <Users className="h-4 w-4" />, desc: 'Data sendiri + dipinjam' },
+                  { value: 'own' as const, label: 'Data Saya', icon: <UserIcon className="h-4 w-4" />, desc: 'Hanya data milik Anda' },
+                  { value: 'shared' as const, label: 'Dipinjam', icon: <ArrowLeftRight className="h-4 w-4" />, desc: 'Hanya data pinjaman' },
+                ]).map((opt) => {
+                  const active = ownershipFilter === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => { setOwnershipFilter(opt.value); setShowOwnershipDropdown(false); setPage(1); }}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
+                        active
+                          ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
+                          : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      <span className={active ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}>{opt.icon}</span>
+                      <div>
+                        <div className="text-sm font-medium">{opt.label}</div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500">{opt.desc}</div>
+                      </div>
+                      {active && <CheckCircle2 className="ml-auto h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {user?.role === 'UH' && marketingUsers.length > 0 && (
+          <div ref={marketingFilterRef} className="relative">
+            <button
+              onClick={() => setShowMarketingFilterDropdown((p) => !p)}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-all ${
+                selectedMarketingFilter !== ''
+                  ? 'border-fif-300 bg-fif-50 text-fif-700 dark:border-fif-700 dark:bg-fif-900/20 dark:text-fif-300'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              {selectedMarketingFilter === '' ? 'Semua MCE' : marketingUsers.find((u) => u.id === selectedMarketingFilter)?.name || 'MCE'}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showMarketingFilterDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            {showMarketingFilterDropdown && (
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-[180px] rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 py-1 shadow-lg max-h-60 overflow-y-auto">
+                <button
+                  onClick={() => { setSelectedMarketingFilter(''); setShowMarketingFilterDropdown(false); setPage(1); }}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                    selectedMarketingFilter === '' ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Users className="h-4 w-4 text-slate-400" />
+                  <span>Semua MCE</span>
+                  {selectedMarketingFilter === '' && <CheckCircle2 className="ml-auto h-4 w-4 text-fif-600" />}
+                </button>
+                {marketingUsers.map((u) => (
                   <button
-                    key={opt.value}
-                    onClick={() => { setOwnershipFilter(opt.value); setShowOwnershipDropdown(false); setPage(1); }}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${
-                      active
-                        ? 'bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300'
-                        : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                    key={u.id}
+                    onClick={() => { setSelectedMarketingFilter(u.id); setShowMarketingFilterDropdown(false); setPage(1); }}
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                      selectedMarketingFilter === u.id ? 'bg-fif-50 text-fif-700 dark:bg-fif-900/20 dark:text-fif-300' : 'text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
                     }`}
                   >
-                    <span className={active ? 'text-cyan-600 dark:text-cyan-400' : 'text-slate-400 dark:text-slate-500'}>{opt.icon}</span>
-                    <div>
-                      <div className="text-sm font-medium">{opt.label}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500">{opt.desc}</div>
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-fif-400 to-fif-600 text-[10px] font-bold text-white">
+                      {u.name.charAt(0)}
                     </div>
-                    {active && <CheckCircle2 className="ml-auto h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
+                    <span className="truncate">{u.name}</span>
+                    {selectedMarketingFilter === u.id && <CheckCircle2 className="ml-auto h-4 w-4 text-fif-600" />}
                   </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <button
           onClick={() => navigate('/marketing/history')}
@@ -962,13 +1069,15 @@ export function ProspectListPage() {
           <History className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           History
         </button>
-        <button
-          onClick={() => setShowRollingModal(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
-        >
-          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          Rolling Data
-        </button>
+        {user?.role === 'marketing' && (
+          <button
+            onClick={() => setShowRollingModal(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-fif-500 to-fif-700 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-fif-200/50 transition-all duration-300 hover:shadow-xl hover:shadow-fif-300/50 hover:brightness-110 active:scale-[0.97] sm:gap-2 sm:px-5 sm:py-2.5 sm:text-sm dark:shadow-fif-900/30 dark:hover:shadow-fif-800/40"
+          >
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Rolling Data
+          </button>
+        )}
       </div>
 
       {sendingBatch && (
@@ -1079,7 +1188,7 @@ export function ProspectListPage() {
         <div className="flex items-center gap-1">
           <button
             disabled={page <= 1 || sendingBatch}
-            onClick={() => { skipAutoAdvanceRef.current = true; setPage(page - 1); setSelectedIds([]); }}
+            onClick={() => { setPage(page - 1); setSelectedIds([]); }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &lt;
@@ -1091,7 +1200,7 @@ export function ProspectListPage() {
               <button
                 key={p}
                 disabled={sendingBatch}
-                onClick={() => { skipAutoAdvanceRef.current = true; setPage(p); setSelectedIds([]); }}
+                onClick={() => { setPage(p); setSelectedIds([]); }}
                 className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-medium transition-all ${
                   p === page
                     ? 'bg-gradient-to-br from-fif-600 to-fif-500 text-white shadow-md shadow-fif-500/20'
@@ -1104,7 +1213,7 @@ export function ProspectListPage() {
           )}
           <button
             disabled={page >= lastPage || sendingBatch}
-            onClick={() => { skipAutoAdvanceRef.current = true; setPage(page + 1); setSelectedIds([]); }}
+            onClick={() => { setPage(page + 1); setSelectedIds([]); }}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-30 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
           >
             &gt;
@@ -1188,6 +1297,79 @@ export function ProspectListPage() {
       </Modal>
 
       <RollingDataModal open={showRollingModal} onClose={() => setShowRollingModal(false)} marketingUsers={marketingUsers} />
+
+      {statusPopover && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/10" />
+          {(() => {
+            const c = customers.find((x) => x.id === statusPopover.customerId);
+            if (!c) return null;
+            if (statusPopover.type === 'broadcast') {
+              const broadcasts = c.broadcast_histories || [];
+              const grouped: { sender: string; role: string; entries: typeof broadcasts }[] = [];
+              for (const b of broadcasts) {
+                const senderName = b.marketing?.name || `User #${b.marketing_id}`;
+                const existing = grouped.find((g) => g.sender === senderName);
+                if (existing) { existing.entries.push(b); } else { grouped.push({ sender: senderName, role: (b.marketing as User)?.role || 'marketing', entries: [b] }); }
+              }
+              return (
+                <div id="status-popover" className="relative w-[92vw] max-w-sm rounded-2xl border border-blue-200/60 bg-white/95 p-5 shadow-2xl backdrop-blur-xl dark:border-blue-800/40 dark:bg-slate-800/95 dark:shadow-black/40">
+                  <button onClick={() => setStatusPopover(null)} className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"><X className="h-4 w-4" /></button>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-xs font-bold text-white shadow-sm">📡</div>
+                    <div><p className="text-sm font-bold text-slate-800 dark:text-slate-100">Riwayat Broadcast</p><p className="text-[10px] text-slate-400 dark:text-slate-500">{c.no_contract || dyn(c, 'no_contract')}</p></div>
+                  </div>
+                  <div className="max-h-60 space-y-2 overflow-y-auto">
+                    {grouped.map((g, i) => (
+                      <div key={i} className="rounded-xl bg-blue-50/80 p-3 dark:bg-blue-950/20">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-fif-500 to-fif-600 text-[10px] font-bold text-white">{g.sender.charAt(0).toUpperCase()}</div>
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{g.sender}</span>
+                          {g.role === 'UH' && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">UH</span>}
+                        </div>
+                        <div className="mt-1.5 space-y-1">
+                          {g.entries.map((e, j) => (
+                            <div key={j} className="flex items-center justify-between text-[11px]">
+                              <Badge variant={statusVariant(e.status)} size="sm">{statusLabel(e.status)}</Badge>
+                              <span className="text-slate-400 dark:text-slate-500">{e.sent_at ? new Date(e.sent_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            } else {
+              const marks = c.sent_marks || [];
+              return (
+                <div id="status-popover" className="relative w-[92vw] max-w-sm rounded-2xl border border-violet-200/60 bg-white/95 p-5 shadow-2xl backdrop-blur-xl dark:border-violet-800/40 dark:bg-slate-800/95 dark:shadow-black/40">
+                  <button onClick={() => setStatusPopover(null)} className="absolute right-3 top-3 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"><X className="h-4 w-4" /></button>
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 text-xs text-white shadow-sm">📨</div>
+                    <div><p className="text-sm font-bold text-slate-800 dark:text-slate-100">Penandaaan Manual</p><p className="text-[10px] text-slate-400 dark:text-slate-500">{c.no_contract || dyn(c, 'no_contract')}</p></div>
+                  </div>
+                  <div className="max-h-60 space-y-1.5 overflow-y-auto">
+                    {marks.map((m, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-xl bg-violet-50/80 px-3 py-2 dark:bg-violet-950/20">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-600 text-[10px] font-bold text-white">{(m.user?.name || '?').charAt(0).toUpperCase()}</div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{m.user?.name || `User #${m.user_id}`}</p>
+                            {m.user?.role && <p className="text-[9px] text-slate-400 dark:text-slate-500">{m.user.role}</p>}
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500">{m.sent_at ? new Date(m.sent_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+          })()}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
