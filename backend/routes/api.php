@@ -160,6 +160,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
         Route::post('customers/delete-orphan', [CustomerController::class, 'deleteOrphan']);
+        Route::get('customers/{id}/broadcast-marks', [CustomerController::class, 'broadcastMarks']);
     });
 
     Route::get('notifications', [NotificationController::class, 'index']);

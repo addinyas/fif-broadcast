@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\CustomerSentMark;
 use App\Models\CustomerShare;
 use App\Models\Notification;
 use App\Models\User;
@@ -485,11 +487,11 @@ class CustomerController extends Controller
 
     public function assignedToMe(Request $request): JsonResponse
     {
-        $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran', 'ownership']);
+        $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran', 'ownership', 'marketing_id']);
         $user = $request->user();
 
-        // Marketing: only their assigned customers. Superadmin/UH: all (scoped by kios below).
-        $marketingId = $user->role === 'marketing' ? $user->id : null;
+        // Marketing: only their assigned customers. UH: filtered by marketing_id param (or all if empty).
+        $marketingId = $user->role === 'marketing' ? $user->id : ($request->query('marketing_id') ? (int) $request->query('marketing_id') : null);
 
         // UH/marketing: scope to their kios
         if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
@@ -610,9 +612,10 @@ class CustomerController extends Controller
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
-        $customer->manual_sent_at = now();
-        $customer->manual_sent_by = $request->user()->id;
-        $customer->save();
+        CustomerSentMark::updateOrCreate(
+            ['customer_id' => $id, 'user_id' => $user->id],
+            ['sent_at' => now()]
+        );
 
         return response()->json(['message' => 'Marked as sent']);
     }
@@ -620,21 +623,9 @@ class CustomerController extends Controller
     public function sentIds(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Customer::whereNotNull('manual_sent_at');
-        if ($user->role === 'marketing') {
-            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
-                ->where('status', 'approved')
-                ->pluck('customer_id');
-            $query->where(function ($q) use ($user, $sharedIds) {
-                $q->where('marketing_id', $user->id)
-                    ->orWhereIn('id', $sharedIds);
-            });
-        } elseif ($user->role === 'UH') {
-            $query->where('manual_sent_by', $user->id);
-        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
-            $query->where('kios_id', $user->kios_id);
-        }
-        $ids = $query->pluck('id');
+
+        $ids = CustomerSentMark::where('user_id', $user->id)
+            ->pluck('customer_id');
 
         return response()->json(['ids' => $ids]);
     }
@@ -642,21 +633,8 @@ class CustomerController extends Controller
     public function clearSentMarks(Request $request): JsonResponse
     {
         $user = $request->user();
-        $query = Customer::whereNotNull('manual_sent_at');
-        if ($user->role === 'marketing') {
-            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
-                ->where('status', 'approved')
-                ->pluck('customer_id');
-            $query->where(function ($q) use ($user, $sharedIds) {
-                $q->where('marketing_id', $user->id)
-                    ->orWhereIn('id', $sharedIds);
-            });
-        } elseif ($user->role === 'UH') {
-            $query->where('manual_sent_by', $user->id);
-        } else {
-            $query->where('manual_sent_by', $user->id);
-        }
-        $query->update(['manual_sent_at' => null, 'manual_sent_by' => null]);
+
+        CustomerSentMark::where('user_id', $user->id)->delete();
 
         return response()->json(['message' => 'Sent marks cleared']);
     }
@@ -792,6 +770,36 @@ class CustomerController extends Controller
         return Response::make($contents, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment;filename="template_import_customer.xlsx"',
+        ]);
+    }
+
+    public function broadcastMarks(int $id, Request $request): JsonResponse
+    {
+        $marks = CustomerSentMark::where('customer_id', $id)
+            ->with('user:id,name,role,kios_id')
+            ->get()
+            ->map(fn ($mark) => [
+                'user_id' => $mark->user_id,
+                'user_name' => $mark->user->name ?? 'Unknown',
+                'role' => $mark->user->role ?? 'unknown',
+                'sent_at' => $mark->sent_at->toIso8601String(),
+            ]);
+
+        $broadcasts = BroadcastHistory::where('customer_id', $id)
+            ->with('marketing:id,name,role')
+            ->get()
+            ->map(fn ($b) => [
+                'user_id' => $b->marketing_id,
+                'user_name' => $b->marketing->name ?? 'Unknown',
+                'role' => $b->marketing->role ?? 'unknown',
+                'status' => $b->status,
+                'sent_at' => $b->sent_at?->toIso8601String(),
+                'created_at' => $b->created_at->toIso8601String(),
+            ]);
+
+        return response()->json([
+            'sent_marks' => $marks,
+            'broadcasts' => $broadcasts,
         ]);
     }
 }

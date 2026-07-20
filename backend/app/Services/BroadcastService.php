@@ -29,8 +29,8 @@ class BroadcastService
             ->where('created_at', '>=', now()->startOfDay())
             ->count();
 
-        if ($sentToday >= 150) {
-            throw new \Exception('Batas broadcast 150 pesan per hari sudah tercapai');
+        if ($sentToday >= 100) {
+            throw new \Exception('Batas broadcast 100 pesan per hari sudah tercapai');
         }
 
         $marketingUser = User::find($marketingId);

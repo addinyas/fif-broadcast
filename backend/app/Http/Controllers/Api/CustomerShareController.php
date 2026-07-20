@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CustomerSentMark;
 use App\Models\CustomerShare;
 use App\Models\Notification;
 use App\Models\User;
@@ -30,7 +31,8 @@ class CustomerShareController extends Controller
         Customer::applyOrphanFilter($query, $user->kios_id);
 
         $total = (clone $query)->count();
-        $broadcastCount = (clone $query)->whereNotNull('manual_sent_at')->count();
+        $broadcastedIds = CustomerSentMark::whereIn('customer_id', (clone $query)->pluck('id'))->distinct()->pluck('customer_id');
+        $broadcastCount = $broadcastedIds->count();
         $pendingCount = $total - $broadcastCount;
 
         return response()->json([
@@ -66,11 +68,9 @@ class CustomerShareController extends Controller
         Customer::applyOrphanFilter($total, $user->kios_id);
         $total = (clone $total)->count();
 
-        $broadcastCount = Customer::where('marketing_id', $fromMarketingId)
-            ->where('assignment_status', 'assigned')
-            ->whereNotNull('manual_sent_at');
-        Customer::applyOrphanFilter($broadcastCount, $user->kios_id);
-        $broadcastCount = (clone $broadcastCount)->count();
+        $broadcastedIds = CustomerSentMark::whereIn('customer_id', Customer::where('marketing_id', $fromMarketingId)->where('assignment_status', 'assigned')->pluck('id'))
+            ->distinct()->pluck('customer_id');
+        $broadcastCount = $broadcastedIds->count();
 
         $pendingCount = $total - $broadcastCount;
 
@@ -102,8 +102,8 @@ class CustomerShareController extends Controller
         Customer::applyOrphanFilter($customerQuery, $user->kios_id);
 
         match ($shareType) {
-            'pending_only' => $customerQuery->whereNull('manual_sent_at'),
-            'broadcast_only' => $customerQuery->whereNotNull('manual_sent_at'),
+            'pending_only' => $customerQuery->whereNotIn('id', $broadcastedIds),
+            'broadcast_only' => $customerQuery->whereIn('id', $broadcastedIds),
             default => null,
         };
 

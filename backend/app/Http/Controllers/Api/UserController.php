@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\CustomerSentMark;
 use App\Models\CustomerShare;
 use App\Models\Kios;
 use App\Models\Notification;
@@ -97,8 +98,8 @@ class UserController extends Controller
 
             WhatsappConnection::where('user_id', $user->id)->delete();
             Notification::where('user_id', $user->id)->delete();
+            CustomerSentMark::where('user_id', $user->id)->delete();
             Customer::where('uploaded_by', $user->id)->forceDelete();
-            Customer::where('manual_sent_by', $user->id)->update(['manual_sent_by' => null]);
             $user->delete();
         });
 

@@ -21,8 +21,6 @@ class Customer extends Model
         'marketing_id',
         'assignment_status',
         'dynamic_data',
-        'manual_sent_at',
-        'manual_sent_by',
     ];
 
     protected function casts(): array
@@ -45,6 +43,11 @@ class Customer extends Model
     public function broadcastHistories(): HasMany
     {
         return $this->hasMany(BroadcastHistory::class);
+    }
+
+    public function sentMarks(): HasMany
+    {
+        return $this->hasMany(CustomerSentMark::class);
     }
 
     /**

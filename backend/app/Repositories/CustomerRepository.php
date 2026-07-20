@@ -13,7 +13,11 @@ class CustomerRepository implements CustomerRepositoryInterface
 {
     public function getAll(array $filters = []): LengthAwarePaginator
     {
-        $query = Customer::query()->with(['uploader', 'marketing']);
+        $query = Customer::query()->with(['uploader', 'marketing', 'broadcastHistories' => function ($q) {
+            $q->with('marketing:id,name')->latest();
+        }, 'sentMarks' => function ($q) {
+            $q->with('user:id,name,role')->latest();
+        }]);
 
         if (! empty($filters['kios_id'])) {
             $query->where('kios_id', $filters['kios_id']);
@@ -151,7 +155,9 @@ class CustomerRepository implements CustomerRepositoryInterface
         $ownership = $filters['ownership'] ?? 'all';
 
         $query = Customer::with(['broadcastHistories' => function ($q) {
-            $q->latest();
+            $q->with('marketing:id,name')->latest();
+        }, 'sentMarks' => function ($q) {
+            $q->with('user:id,name,role')->latest();
         }]);
 
         if ($marketingId !== null) {
