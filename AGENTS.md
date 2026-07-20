@@ -1756,6 +1756,68 @@ Ketik: `lanjut yang tadi`
 - `worker/src/socket-server.js` — tambah `closeReadonlyDb()` export untuk graceful shutdown
 - `worker/src/index.js` — import + panggil `closeReadonlyDb()` di `gracefulShutdown()`
 
+**Commit:** `e2ec947`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-19 — Uppercase name + notification retention + case-insensitive login + password eye toggle
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Auto-uppercase name (Register):**
+- `frontend/src/pages/auth/RegisterPage.tsx`: `toUpperCase()` pada input name → nama selalu uppercase saat registrasi
+
+**Notification 1-week retention:**
+- `backend/app/Http/Controllers/Api/NotificationController.php`: auto-trim hapus notif `created_at < minggu lalu` (sebelumnya 24 jam)
+
+**Case-insensitive login:**
+- `backend/app/Services/AuthService.php`: `strtoupper()` pada npo_mce_id → login tidak case-sensitive
+
+**Password eye toggle:**
+- `frontend/src/pages/auth/LoginPage.tsx`: tombol show/hide password (Eye/EyeOff icon)
+- `frontend/src/pages/auth/RegisterPage.tsx`: sama
+- `frontend/src/pages/SettingsPage.tsx`: same
+- `frontend/src/pages/admin/UserManagementPage.tsx`: same (reset password modal)
+
+**Commit:** `ba6c908`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-20 — SQLite CHECK constraint: add 'cancelled' to broadcast_histories
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+- `broadcast_histories.status` CHECK constraint hanya memperbolehkan `pending`, `processing`, `sent`, `failed`
+- `cancelled` tidak ada di constraint → semua operasi cancel (`cancelPending`, `cancelItem`, Sidebar "Batal") **gagal diam-diam** (CHECK constraint violation, tidak throw error ke user)
+- Status tetap `pending`/`processing` meskipun user sudah klik cancel
+
+**Fix:**
+- `backend/database/migrations/2026_07_20_000001_add_cancelled_status_to_broadcast_histories.php`: recreate tabel dengan `CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'cancelled'))`. SQLite tidak support `ALTER CHECK`, jadi tabel harus di-recreate via rename → create new → copy data → drop old
+
+**Commit:** `14ffde2`
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
+### 2026-07-20 — Dashboard stats: count 'cancelled' as 'failed'
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+- Setelah CHECK constraint fix, `cancelled` items masuk database, tapi statistik dashboard tidak menghitungnya
+- `failed_today` hanya `SUM(WHERE status = 'failed')` — `cancelled` terpisah dan tidak terlihat
+
+**Fix (4 lokasi):**
+- `backend/app/Repositories/BroadcastRepository.php:getStats()` — `failed` → `WHERE status IN ('failed', 'cancelled')`
+- `backend/app/Services/CustomerService.php:getDistributionReport()` — `failed` → `WHERE status IN ('failed', 'cancelled')`
+- `backend/app/Services/BroadcastService.php:getWorkerStatus()` — `failed_today` → `WHERE status IN ('failed', 'cancelled')`
+- Frontend `BroadcastHistoryPage.tsx` + `MarketingDashboardPage.tsx` — `cancelled` badge = `danger` (sama dengan `failed`)
+
+**Commit:** `41c310a`
+
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
@@ -1821,7 +1883,8 @@ Ketik: `lanjut yang tadi`
 
 ### Revert instructions
 ```bash
-git revert 01fe807 && git revert 2b5bb16 && git push origin main
+# Revert semua fix di session 2026-07-20 (terbaru → terlama)
+git revert 01fe807 && git revert 2b5bb16 && git revert 41c310a && git revert 14ffde2 && git push origin main
 ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"
 ```
 
