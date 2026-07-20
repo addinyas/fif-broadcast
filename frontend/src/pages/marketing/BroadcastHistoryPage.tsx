@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Clock, Filter, User, Users } from 'lucide-react';
+import { Send, Clock, Filter, User, Users, XCircle } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
@@ -9,7 +9,7 @@ import { DataTable } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
 import type { BroadcastHistory, Kios } from '../../types';
 
-type Tab = 'sent' | 'not_sent';
+type Tab = 'sent' | 'not_sent' | 'failed';
 
 export function BroadcastHistoryPage() {
   const { user, token } = useAuth();
@@ -47,6 +47,8 @@ export function BroadcastHistoryPage() {
     try {
       const params: Record<string, string> = { page: page.toString() };
       if (tab === 'sent') params.status = 'sent';
+      if (tab === 'failed') params.status = 'failed';
+      if (tab === 'not_sent') params.status = 'pending_processing';
       if (isSuperadmin && selectedKiosId) params.kios_id = selectedKiosId;
       if (isSuperadmin && selectedMarketingId) {
         params.marketing_id = selectedMarketingId.toString();
@@ -110,6 +112,7 @@ export function BroadcastHistoryPage() {
   const tabs: { key: Tab; label: string; icon: typeof Send }[] = [
     { key: 'not_sent', label: 'Belum Dikirim', icon: Clock },
     { key: 'sent', label: 'Terkirim', icon: Send },
+    { key: 'failed', label: 'Gagal', icon: XCircle },
   ];
 
   return (

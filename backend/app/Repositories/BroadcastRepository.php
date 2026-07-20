@@ -27,7 +27,13 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         }
 
         if (! empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+            if ($filters['status'] === 'failed') {
+                $query->whereIn('status', ['failed', 'cancelled']);
+            } elseif ($filters['status'] === 'pending_processing') {
+                $query->whereIn('status', ['pending', 'processing']);
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
 
         return $query->latest()->paginate($filters['per_page'] ?? 50);
