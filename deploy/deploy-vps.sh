@@ -263,4 +263,12 @@ systemctl daemon-reload
 systemctl enable --now nginx php-fpm fif-queue fif-worker
 systemctl restart nginx fif-queue fif-worker
 
+# --- Cloudflare WARP proxy (Docker) ---
+if command -v docker &>/dev/null; then
+    if docker ps -a --format '{{.Names}}' | grep -q '^warp$'; then
+        echo "=> Ensuring WARP proxy is running..."
+        docker start warp 2>/dev/null || true
+    fi
+fi
+
 echo "=== Deploy complete ==="
