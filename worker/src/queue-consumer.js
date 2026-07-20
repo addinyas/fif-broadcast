@@ -114,7 +114,11 @@ async function processUserQueue(userId) {
         continue;
       }
 
-      db.prepare("UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now') WHERE id = ?").run(row.id);
+      const procResult = db.prepare("UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now') WHERE id = ? AND status = 'pending'").run(row.id);
+      if (procResult.changes === 0) {
+        console.log(`[Queue:${userId}] Skipping #${row.id} (status changed)`);
+        continue;
+      }
       emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'processing' });
 
       const lastConn = lastConnectedAt.get(userId) || 0;
@@ -134,8 +138,10 @@ async function processUserQueue(userId) {
         totalSent++;
         sentThisSession++;
         restCounter++;
-        db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'processing'").run(row.id);
-        emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'sent' });
+        const result = db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'processing'").run(row.id);
+        if (result.changes > 0) {
+          emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'sent' });
+        }
         console.log(`[Queue:${userId}] Sent #${row.id} to ${row.phone_number} (session ${session + 1}: ${sentThisSession}/${settings.messages_per_session})`);
       } catch (err) {
         const errMsg = err.message || 'Unknown error';
@@ -147,9 +153,11 @@ async function processUserQueue(userId) {
           console.warn(`[Queue:${userId}] Failed #${row.id} (retry ${currentRetry + 1}/${settings.max_retry}): ${errMsg}`);
         } else {
           totalFailed++;
-          db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
+          const failResult = db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
             .run(errMsg, row.id);
-          emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'failed', error: errMsg });
+          if (failResult.changes > 0) {
+            emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'failed', error: errMsg });
+          }
           console.error(`[Queue:${userId}] Failed #${row.id} (max retries): ${errMsg}`);
         }
       }
