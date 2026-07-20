@@ -8,7 +8,6 @@ const { emitWAStatus, emitPairingCode, emitGlobalWAStatus } = require('./events'
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
-const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
@@ -134,8 +133,8 @@ async function createWAClientForUser(userId, onReady) {
     browser: ['WhatsApp', 'Chrome', '120.0.0.0'],
     platform: 'Desktop',
     markOnlineOnConnect: false,
-    connectTimeoutMs: 30_000,
-    keepAliveIntervalMs: 20_000 + Math.floor(Math.random() * 10_000),
+    connectTimeoutMs: 60_000,
+    keepAliveIntervalMs: 180_000 + Math.floor(Math.random() * 120_000),
     ...(userProxyAgent ? { agent: userProxyAgent, fetchAgent: userFetchAgent } : {}),
   });
 
@@ -196,28 +195,6 @@ async function createWAClientForUser(userId, onReady) {
         entry.connected = true;
         entry.connectedAt = Date.now();
         entry.intentionalDisconnect = false;
-
-        if (entry.disconnectTimer) clearTimeout(entry.disconnectTimer);
-        entry.disconnectTimer = setTimeout(() => {
-          console.log(`[WA] User ${userId} auto-disconnect after ${MAX_CONNECTION_MS / 3600000}h`);
-          const e = connections.get(userId);
-          if (e) {
-            e.intentionalDisconnect = true;
-            if (e.sock) {
-              try { e.sock.ev.removeAllListeners('connection.update'); } catch {}
-              try { e.sock.end(undefined); } catch {}
-            }
-          }
-          connections.delete(userId);
-          reconnectState.delete(userId);
-          const authDir = getAuthDir(userId);
-          if (fs.existsSync(authDir)) {
-            fs.rmSync(authDir, { recursive: true, force: true });
-          }
-          saveConnectionStatus(userId, 'logged_out', null);
-          emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected (8h timeout)' });
-          emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected (8h timeout)' });
-        }, MAX_CONNECTION_MS);
       }
       saveConnectionStatus(userId, 'connected', null);
       emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
@@ -303,8 +280,6 @@ async function createWAClientForUser(userId, onReady) {
     }
   });
 
-  sock.ev.on('messages.upsert', () => {});
-
   return sock;
 }
 
@@ -314,6 +289,9 @@ async function sendWAMessageForUser(userId, jid, text) {
   if (!entry.connected) throw new Error('WA connection not open for user');
 
   const sock = entry.sock;
+  try { await sock.sendPresenceUpdate('composing', jid); } catch {}
+  const typingDelay = 2000 + Math.floor(Math.random() * 6000);
+  await new Promise((r) => setTimeout(r, typingDelay));
   const result = await sock.sendMessage(jid, { text });
   return result;
 }

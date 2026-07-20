@@ -4,7 +4,7 @@ const Database = require('better-sqlite3');
 const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
 const DEFAULTS = {
-  messages_per_session: 50,
+  messages_per_session: 20,
   min_delay_sec: 6,
   max_delay_sec: 12,
   rest_every_x_messages: 12,

@@ -10,6 +10,12 @@ const PENDING_STUCK_THRESHOLD = 5;
 const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 const WARMUP_GRACE_MS = 10_000;
 
+function isWithinBusinessHours() {
+  const now = new Date();
+  const wibHour = (now.getUTCHours() + 7) % 24;
+  return wibHour >= 7 && wibHour < 21;
+}
+
 let running = false;
 let pollIntervalId = null;
 let notifIntervalId = null;
@@ -85,6 +91,11 @@ async function processUserQueue(userId) {
     while (sentThisSession < settings.messages_per_session) {
       if (!running) {
         console.log(`[Queue:${userId}] Queue stopped, aborting`);
+        return { sent: totalSent, failed: totalFailed };
+      }
+
+      if (!isWithinBusinessHours()) {
+        console.log(`[Queue:${userId}] Outside business hours (07:00-21:00 WIB), pausing queue`);
         return { sent: totalSent, failed: totalFailed };
       }
 
@@ -196,6 +207,7 @@ async function pollAndDispatch() {
 
   const settings = loadSettings();
   if (!settings.queue_enabled) return;
+  if (!isWithinBusinessHours()) return;
 
   const db = getWritableDb();
   const usersWithPending = db.prepare(`
