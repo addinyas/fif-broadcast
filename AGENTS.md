@@ -1783,6 +1783,36 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-20 — Fix: broadcast history "Gagal" tab + cancelled items visibility
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Root cause:**
+- Frontend BroadcastHistoryPage hanya punya 2 tab: "Belum Dikirim" (tanpa filter) dan "Terkirim" (`status=sent`)
+- Tidak ada cara melihat list item gagal/cancelled, meskipun statistik menampilkan angkanya
+- Backend `BroadcastRepository::getHistory()` filter `WHERE status = 'failed'` — `cancelled` tidak masuk
+
+**Fix — 2 file, 12 baris:**
+
+**Frontend (`BroadcastHistoryPage.tsx`):**
+- Tambah tab "Gagal" (`XCircle` icon, `status=failed`)
+- "Belum Dikirim" sekarang kirim `status=pending_processing` (bukan tanpa filter — mencegah duplikat item di 2 tab)
+
+**Backend (`BroadcastRepository.php`):**
+- `failed` → `whereIn('status', ['failed', 'cancelled'])`
+- `pending_processing` → `whereIn('status', ['pending', 'processing'])`
+
+**Commit:** `2b5bb16` — fix: add Gagal tab to BroadcastHistoryPage + fix cancelled items not showing in history
+
+### Revert instructions
+```bash
+git revert 2b5bb16 && git push origin main
+ssh root@202.10.42.237 "bash /var/www/fif/deploy/deploy-vps.sh"
+```
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
