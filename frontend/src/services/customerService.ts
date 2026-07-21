@@ -88,6 +88,11 @@ export const customerService = {
     return data;
   },
 
+  async updateSisaAngsuran(id: number, sisaAngsuran: number): Promise<Customer> {
+    const { data } = await api.patch(`/customers/${id}/sisa-angsuran`, { sisa_angsuran: sisaAngsuran });
+    return data;
+  },
+
   async batchDelete(ids: number[]): Promise<{ message: string }> {
     const { data } = await api.post('/customers/batch-delete', { ids });
     return data;

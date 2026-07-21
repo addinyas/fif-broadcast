@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('customers', [CustomerController::class, 'index']);
             Route::get('customers/{id}', [CustomerController::class, 'show']);
             Route::patch('customers/{id}/cori', [CustomerController::class, 'updateCori']);
+            Route::patch('customers/{id}/sisa-angsuran', [CustomerController::class, 'updateSisaAngsuran']);
             Route::post('customers/marketing-add', [CustomerController::class, 'marketingAdd']);
             Route::get('customers/by-no-contract/{noContract}', [CustomerController::class, 'byNoContract']);
             Route::delete('customers/{id}/manual-entry', [CustomerController::class, 'destroyManual']);

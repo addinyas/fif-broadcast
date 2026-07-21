@@ -457,6 +457,34 @@ class CustomerController extends Controller
         }
     }
 
+    public function updateSisaAngsuran(Request $request, int $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'sisa_angsuran' => 'required|integer|min:0',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $customer = $this->customerService->findById($id);
+            $user = $request->user();
+            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+                return response()->json(['message' => 'Customer not found'], 404);
+            }
+            $dynamicData = $customer->dynamic_data ?? [];
+
+            $dynamicData['sisa_angsuran'] = (string) $request->sisa_angsuran;
+
+            $customer = $this->customerService->update($id, ['dynamic_data' => $dynamicData]);
+
+            return response()->json($customer);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+    }
+
     public function batchDelete(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [

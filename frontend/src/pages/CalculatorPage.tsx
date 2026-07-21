@@ -89,7 +89,7 @@ export function CalculatorPage() {
   const pelunasan = pelunasanBase + dendaVal;
   const terima = Math.max(0, pinjaman - pelunasan);
 
-  const hasRequiredInput = sisaAngsuran > 0 && angsuranPerBulan > 0 && pinjaman > 0 && nopol.trim() !== '';
+  const hasRequiredInput = sisaAngsuran >= 0 && angsuranPerBulan > 0 && pinjaman > 0 && nopol.trim() !== '';
 
   const formatAngka = (val: number | string) => {
     const nums = typeof val === 'string' ? val.replace(/\D/g, '') : String(val);
@@ -329,7 +329,7 @@ export function CalculatorPage() {
                 className={violetInput}
               >
                 <option value="">Pilih</option>
-                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                {Array.from({ length: 21 }, (_, i) => i).map((n) => (
                   <option key={n} value={n}>{n}×</option>
                 ))}
               </select>
@@ -487,11 +487,19 @@ export function CalculatorPage() {
             <div>
               <label className={labelClass}>Sisa Angsuran (kali) <span className="text-red-400">*</span></label>
               <select value={sisaAngsuran || ''}
-                onChange={(e) => setSisaAngsuran(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  setSisaAngsuran(val);
+                  if (selected) {
+                    const customerId = selected.id;
+                    setSelected((prev) => prev ? { ...prev, dynamic_data: { ...prev.dynamic_data, sisa_angsuran: String(val) } } : prev);
+                    customerService.updateSisaAngsuran(customerId, val).catch(() => {});
+                  }
+                }}
                 className={indigoInput}
               >
                 <option value="">Pilih</option>
-                {Array.from({ length: 20 }, (_, i) => i + 1).map((n) => (
+                {Array.from({ length: 21 }, (_, i) => i).map((n) => (
                   <option key={n} value={n}>{n}×</option>
                 ))}
               </select>

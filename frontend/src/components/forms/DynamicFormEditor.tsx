@@ -13,7 +13,7 @@ interface DynamicFormEditorProps {
   disabledReason?: string;
 }
 
-const READ_ONLY_FIELDS = new Set(['nomor_contract', 'no_contract', 'nomor', 'namapanggilan', 'nama', 'pelunasan', 'terima']);
+const READ_ONLY_FIELDS = new Set(['nomor_contract', 'no_contract', 'nomor', 'namapanggilan', 'nama', 'pelunasan', 'terima', 'sisa_angsuran']);
 const COMPUTED_FIELDS = new Set(['pelunasan', 'terima']);
 
 export function DynamicFormEditor({ templateBody, onSubmit, onCancel, loading, disabled, disabledReason }: DynamicFormEditorProps) {
