@@ -1964,6 +1964,26 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-21 — Calculator: sisa_angsuran editable + 0× option
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Http/Controllers/Api/CustomerController.php`: tambah `updateSisaAngsuran()` — save `dynamic_data['sisa_angsuran']` ke database, kios ownership check, validasi `integer|min:0`
+- `backend/routes/api.php`: tambah route `PATCH customers/{id}/sisa-angsuran`
+
+**Frontend:**
+- `frontend/src/services/customerService.ts`: tambah `updateSisaAngsuran(id, sisaAngsuran)` → `PATCH /customers/{id}/sisa-angsuran`
+- `frontend/src/pages/CalculatorPage.tsx`:
+  - Sisa Angsuran dropdown di Input card: `onChange` sekarang save ke backend (fire-and-forget, seperti CORI)
+  - Update local `selected.dynamic_data.sisa_angsuran` untuk sync UI instan
+  - Dropdown opsi: `1×` → `20×` diubah jadi `0×` → `20×` (21 opsi)
+  - `hasRequiredInput`: `sisaAngsuran > 0` → `sisaAngsuran >= 0` (supaya `0×` tetap tampilkan hasil)
+- `frontend/src/components/forms/DynamicFormEditor.tsx`: tambah `sisa_angsuran` ke `READ_ONLY_FIELDS` (edit hanya via kalkulator)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
