@@ -104,6 +104,25 @@ export interface BroadcastStats {
   failed_today: number;
 }
 
+export interface DailyBroadcastUser {
+  marketing_id: number;
+  marketing_name: string;
+  sent_today: number;
+  failed_today: number;
+  pending_today: number;
+  manual_today: number;
+}
+
+export interface DailyBroadcastStats {
+  users: DailyBroadcastUser[];
+  totals: {
+    sent_today: number;
+    failed_today: number;
+    pending_today: number;
+    manual_today: number;
+  };
+}
+
 export interface BroadcastProgress {
   pending: number;
   processing: number;

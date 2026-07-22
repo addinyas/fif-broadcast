@@ -85,6 +85,11 @@ class BroadcastService
         return $this->broadcastRepository->getStats($marketingId, $kiosId);
     }
 
+    public function getDailyStats(?string $kiosId = null): array
+    {
+        return $this->broadcastRepository->getDailyStats($kiosId);
+    }
+
     public function marketingSummary(?int $marketingId, ?string $kiosId = null): array
     {
         $customerQuery = Customer::where('assignment_status', 'assigned');

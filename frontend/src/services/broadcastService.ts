@@ -1,5 +1,5 @@
 import api from './api';
-import type { BroadcastHistory, PaginatedResponse, BroadcastStats, BroadcastProgress, MarketingSummary, WorkerStatus } from '../types';
+import type { BroadcastHistory, PaginatedResponse, BroadcastStats, BroadcastProgress, MarketingSummary, WorkerStatus, DailyBroadcastStats } from '../types';
 
 export const broadcastService = {
   async prepare(customerId: number, templateBody: string, formValues: Record<string, string>): Promise<BroadcastHistory> {
@@ -18,6 +18,11 @@ export const broadcastService = {
 
   async getStats(): Promise<BroadcastStats> {
     const { data } = await api.get('/broadcast/stats');
+    return data;
+  },
+
+  async getDailyStats(): Promise<DailyBroadcastStats> {
+    const { data } = await api.get('/broadcast/daily-stats');
     return data;
   },
 

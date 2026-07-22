@@ -17,6 +17,8 @@ return new class extends Migration
         Schema::dropIfExists('users_backup');
         Schema::rename('users', 'users_backup');
 
+        DB::statement('DROP INDEX IF EXISTS users_email_unique');
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');

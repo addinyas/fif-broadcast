@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
 import { getSocket } from '../../services/socketService';
-import type { BroadcastStats, DistributionReport } from '../../types';
+import type { BroadcastStats, DistributionReport, DailyBroadcastStats } from '../../types';
 
 const MARKETING_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444'];
 
@@ -57,16 +57,20 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<BroadcastStats | null>(null);
   const [dist, setDist] = useState<DistributionReport | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyBroadcastStats | null>(null);
   const [showBroadcastDetail, setShowBroadcastDetail] = useState(false);
+  const [showDailyDetail, setShowDailyDetail] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [s, d] = await Promise.all([
+      const [s, d, ds] = await Promise.all([
         broadcastService.getStats(),
         customerService.getDistribution(),
+        broadcastService.getDailyStats(),
       ]);
       setStats(s);
       setDist(d);
+      setDailyStats(ds);
     } catch { /* silent */ }
   }, []);
 
@@ -139,7 +143,14 @@ export function DashboardPage() {
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={stats?.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Broadcast Harian" value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}>
+              <button
+                onClick={() => setShowDailyDetail(true)}
+                className="w-full cursor-pointer"
+              >
+                <StatCard title="Broadcast Harian" value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" />
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -410,6 +421,78 @@ export function DashboardPage() {
               <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                 Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{totalBroadcasted}</span> broadcast
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDailyDetail && dailyStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDailyDetail(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-blue-500" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Broadcast Hari Ini</h3>
+              </div>
+              <button
+                onClick={() => setShowDailyDetail(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto px-6 py-4">
+              <div className="space-y-3">
+                {dailyStats.users
+                  .filter((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today > 0)
+                  .map((item, idx) => {
+                    const total = item.sent_today + item.manual_today + item.failed_today + item.pending_today;
+                    const maxTotal = Math.max(1, ...dailyStats.users.map((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today));
+                    const pct = Math.round((total / maxTotal) * 100);
+                    const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
+                    return (
+                      <div key={item.marketing_id} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                              {item.marketing_name}
+                            </span>
+                          </div>
+                          <span className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                            {total}
+                          </span>
+                        </div>
+                        <div className="flex gap-1.5 text-[11px] font-medium tabular-nums">
+                          {item.sent_today > 0 && <span className="text-emerald-600">{item.sent_today} terkirim</span>}
+                          {item.manual_today > 0 && <span className="text-blue-600">{item.manual_today} manual</span>}
+                          {item.pending_today > 0 && <span className="text-amber-600">{item.pending_today} pending</span>}
+                          {item.failed_today > 0 && <span className="text-red-600">{item.failed_today} gagal</span>}
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                {dailyStats.users.filter((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today > 0).length === 0 && (
+                  <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+                <span>Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{dailyStats.totals.sent_today + dailyStats.totals.manual_today}</span> terkirim</span>
+                {dailyStats.totals.failed_today > 0 && <span>Gagal: <span className="font-semibold text-red-500">{dailyStats.totals.failed_today}</span></span>}
+                {dailyStats.totals.pending_today > 0 && <span>Pending: <span className="font-semibold text-amber-500">{dailyStats.totals.pending_today}</span></span>}
+              </div>
             </div>
           </div>
         </div>

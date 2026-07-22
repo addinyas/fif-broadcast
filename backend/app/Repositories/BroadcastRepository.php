@@ -92,6 +92,66 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         ];
     }
 
+    public function getDailyStats(?string $kiosId = null): array
+    {
+        // Automated broadcasts today per MCE
+        $autoQuery = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->where('broadcast_histories.created_at', '>=', now()->startOfDay())
+            ->selectRaw("
+                broadcast_histories.marketing_id,
+                SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent_today,
+                SUM(CASE WHEN status IN ('failed', 'cancelled') THEN 1 ELSE 0 END) as failed_today,
+                SUM(CASE WHEN status IN ('pending', 'processing') THEN 1 ELSE 0 END) as pending_today
+            ")
+            ->groupBy('broadcast_histories.marketing_id');
+
+        // Manual sends today per MCE
+        $manualQuery = CustomerSentMark::query()
+            ->where('sent_at', '>=', now()->startOfDay())
+            ->selectRaw('user_id, COUNT(*) as manual_today')
+            ->groupBy('user_id');
+
+        if ($kiosId) {
+            $userIds = User::where('kios_id', $kiosId)->pluck('id');
+            $autoQuery->whereIn('broadcast_histories.marketing_id', $userIds);
+            $manualQuery->whereIn('user_id', $userIds);
+        }
+
+        $autoRows = $autoQuery->get()->keyBy('marketing_id');
+        $manualRows = $manualQuery->get()->keyBy('user_id');
+
+        $allUserIds = $autoRows->keys()->merge($manualRows->keys())->unique()->values()->toArray();
+        if (empty($allUserIds)) {
+            return ['users' => [], 'totals' => ['sent_today' => 0, 'failed_today' => 0, 'pending_today' => 0, 'manual_today' => 0]];
+        }
+
+        $users = User::whereIn('id', $allUserIds)->select('id', 'name')->get()->keyBy('id');
+
+        $result = collect($allUserIds)->map(function ($userId) use ($autoRows, $manualRows, $users) {
+            $auto = $autoRows->get($userId);
+            $manual = $manualRows->get($userId);
+
+            return [
+                'marketing_id' => $userId,
+                'marketing_name' => $users->get($userId)?->name ?? "User #{$userId}",
+                'sent_today' => (int) ($auto->sent_today ?? 0),
+                'failed_today' => (int) ($auto->failed_today ?? 0),
+                'pending_today' => (int) ($auto->pending_today ?? 0),
+                'manual_today' => (int) ($manual->manual_today ?? 0),
+            ];
+        })->sortByDesc(fn ($r) => $r['sent_today'] + $r['manual_today'])->values()->toArray();
+
+        $totals = [
+            'sent_today' => array_sum(array_column($result, 'sent_today')),
+            'failed_today' => array_sum(array_column($result, 'failed_today')),
+            'pending_today' => array_sum(array_column($result, 'pending_today')),
+            'manual_today' => array_sum(array_column($result, 'manual_today')),
+        ];
+
+        return ['users' => $result, 'totals' => $totals];
+    }
+
     public function getPendingBroadcasts(int $limit = 10)
     {
         return BroadcastHistory::where('status', 'pending')

@@ -89,6 +89,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:superadmin,UH,marketing')->group(function () {
         Route::middleware('feature:dashboard')->group(function () {
             Route::get('broadcast/marketing-summary', [BroadcastController::class, 'marketingSummary']);
+            Route::get('broadcast/daily-stats', [BroadcastController::class, 'dailyStats']);
         });
     });
 

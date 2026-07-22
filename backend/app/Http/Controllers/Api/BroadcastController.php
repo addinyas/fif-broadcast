@@ -127,6 +127,16 @@ class BroadcastController extends Controller
         );
     }
 
+    public function dailyStats(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : ($request->query('kios_id') ?: null);
+
+        return response()->json(
+            $this->broadcastService->getDailyStats($kiosId)
+        );
+    }
+
     public function progress(Request $request): JsonResponse
     {
         $user = $request->user();

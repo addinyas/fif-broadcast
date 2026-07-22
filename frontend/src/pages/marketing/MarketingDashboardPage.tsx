@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight, RefreshCw, X } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
 import { getSocket } from '../../services/socketService';
-import type { MarketingSummary } from '../../types';
+import type { MarketingSummary, DailyBroadcastStats } from '../../types';
 
 const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' | 'purple' => {
   switch (status) {
@@ -61,11 +61,17 @@ function Greeting({ onRefresh }: { onRefresh?: () => void }) {
 export function MarketingDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MarketingSummary | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyBroadcastStats | null>(null);
+  const [showDailyDetail, setShowDailyDetail] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const data = await broadcastService.getMarketingSummary();
+      const [data, ds] = await Promise.all([
+        broadcastService.getMarketingSummary(),
+        broadcastService.getDailyStats(),
+      ]);
       setSummary(data);
+      setDailyStats(ds);
     } catch { /* silent */ }
   }, []);
 
@@ -151,7 +157,14 @@ export function MarketingDashboardPage() {
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={summary?.broadcast.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="yellow" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Diproses" value={summary?.broadcast.processing ?? 0} icon={<Activity className="h-5 w-5" />} color="purple" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Broadcast Harian" value={(summary?.broadcast.sent_today ?? 0) + (summary?.broadcast.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}>
+              <button
+                onClick={() => setShowDailyDetail(true)}
+                className="w-full cursor-pointer"
+              >
+                <StatCard title="Broadcast Harian" value={(summary?.broadcast.sent_today ?? 0) + (summary?.broadcast.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" />
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -279,6 +292,65 @@ export function MarketingDashboardPage() {
           <p className="py-8 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada aktivitas broadcast</p>
         )}
       </Card>
+
+      {showDailyDetail && dailyStats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDailyDetail(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-blue-500" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Broadcast Hari Ini</h3>
+              </div>
+              <button
+                onClick={() => setShowDailyDetail(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5">
+              {(() => {
+                const myStats = dailyStats.users[0];
+                if (!myStats || (myStats.sent_today + myStats.manual_today + myStats.failed_today + myStats.pending_today === 0)) {
+                  return <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>;
+                }
+                const total = myStats.sent_today + myStats.manual_today;
+                return (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-800/40">
+                        <p className="font-satoshi text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{total}</p>
+                        <p className="mt-1 text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">Terkirim</p>
+                      </div>
+                      <div className="rounded-xl bg-red-50 p-4 text-center ring-1 ring-red-100 dark:bg-red-950/40 dark:ring-red-800/40">
+                        <p className="font-satoshi text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">{myStats.failed_today}</p>
+                        <p className="mt-1 text-xs font-medium text-red-600/60 dark:text-red-400/60">Gagal</p>
+                      </div>
+                      <div className="rounded-xl bg-amber-50 p-4 text-center ring-1 ring-amber-100 dark:bg-amber-950/40 dark:ring-amber-800/40">
+                        <p className="font-satoshi text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{myStats.pending_today}</p>
+                        <p className="mt-1 text-xs font-medium text-amber-600/60 dark:text-amber-400/60">Pending</p>
+                      </div>
+                      <div className="rounded-xl bg-blue-50 p-4 text-center ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-800/40">
+                        <p className="font-satoshi text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{myStats.manual_today}</p>
+                        <p className="mt-1 text-xs font-medium text-blue-600/60 dark:text-blue-400/60">Manual</p>
+                      </div>
+                    </div>
+                    {myStats.sent_today > 0 && myStats.failed_today > 0 && (
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                          style={{ width: `${Math.round((myStats.sent_today / (myStats.sent_today + myStats.failed_today)) * 100)}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
