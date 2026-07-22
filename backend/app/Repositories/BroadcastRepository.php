@@ -92,7 +92,7 @@ class BroadcastRepository implements BroadcastRepositoryInterface
         ];
     }
 
-    public function getDailyStats(?string $kiosId = null): array
+    public function getDailyStats(?string $kiosId = null, ?int $marketingId = null): array
     {
         // Automated broadcasts today per MCE
         $autoQuery = BroadcastHistory::query()
@@ -112,7 +112,11 @@ class BroadcastRepository implements BroadcastRepositoryInterface
             ->selectRaw('user_id, COUNT(*) as manual_today')
             ->groupBy('user_id');
 
-        if ($kiosId) {
+        // Scope to specific marketing user if provided (marketing role isolation)
+        if ($marketingId) {
+            $autoQuery->where('broadcast_histories.marketing_id', $marketingId);
+            $manualQuery->where('user_id', $marketingId);
+        } elseif ($kiosId) {
             $userIds = User::where('kios_id', $kiosId)->pluck('id');
             $autoQuery->whereIn('broadcast_histories.marketing_id', $userIds);
             $manualQuery->whereIn('user_id', $userIds);

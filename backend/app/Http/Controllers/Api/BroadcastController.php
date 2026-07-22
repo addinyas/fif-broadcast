@@ -131,9 +131,10 @@ class BroadcastController extends Controller
     {
         $user = $request->user();
         $kiosId = $user->role !== 'superadmin' ? $user->kios_id : ($request->query('kios_id') ?: null);
+        $marketingId = $user->role === 'marketing' ? $user->id : null;
 
         return response()->json(
-            $this->broadcastService->getDailyStats($kiosId)
+            $this->broadcastService->getDailyStats($kiosId, $marketingId)
         );
     }
 

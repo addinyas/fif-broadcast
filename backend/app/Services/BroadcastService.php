@@ -85,9 +85,9 @@ class BroadcastService
         return $this->broadcastRepository->getStats($marketingId, $kiosId);
     }
 
-    public function getDailyStats(?string $kiosId = null): array
+    public function getDailyStats(?string $kiosId = null, ?int $marketingId = null): array
     {
-        return $this->broadcastRepository->getDailyStats($kiosId);
+        return $this->broadcastRepository->getDailyStats($kiosId, $marketingId);
     }
 
     public function marketingSummary(?int $marketingId, ?string $kiosId = null): array

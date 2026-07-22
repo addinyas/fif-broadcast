@@ -312,7 +312,7 @@ export function MarketingDashboardPage() {
             </div>
             <div className="max-h-96 overflow-y-auto px-6 py-4">
               {(() => {
-                const myStats = dailyStats.users.find((u) => u.marketing_id === user?.id) ?? dailyStats.users[0];
+                const myStats = dailyStats.users.find((u) => u.marketing_id === user?.id);
                 if (!myStats || !myStats.items || myStats.items.length === 0) {
                   return <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>;
                 }
@@ -337,7 +337,7 @@ export function MarketingDashboardPage() {
             </div>
             <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
               <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{(dailyStats.users.find((u) => u.marketing_id === user?.id) ?? dailyStats.users[0])?.items?.length ?? 0}</span> pesan hari ini
+                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{dailyStats.users.find((u) => u.marketing_id === user?.id)?.items?.length ?? 0}</span> pesan hari ini
               </p>
             </div>
           </div>
