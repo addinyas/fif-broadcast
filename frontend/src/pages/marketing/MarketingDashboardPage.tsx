@@ -59,6 +59,7 @@ function Greeting({ onRefresh }: { onRefresh?: () => void }) {
 }
 
 export function MarketingDashboardPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MarketingSummary | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyBroadcastStats | null>(null);
@@ -311,7 +312,7 @@ export function MarketingDashboardPage() {
             </div>
             <div className="px-6 py-5">
               {(() => {
-                const myStats = dailyStats.users[0];
+                const myStats = dailyStats.users.find((u) => u.marketing_id === user?.id) ?? dailyStats.users[0];
                 if (!myStats || (myStats.sent_today + myStats.manual_today + myStats.failed_today + myStats.pending_today === 0)) {
                   return <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>;
                 }
