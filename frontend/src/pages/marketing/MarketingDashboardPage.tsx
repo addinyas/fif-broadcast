@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, Loader2, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight } from 'lucide-react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
@@ -58,7 +58,7 @@ export function MarketingDashboardPage() {
   }, []);
 
   const completionPct = summary && summary.assigned_count > 0
-    ? Math.round((summary.broadcast.total / summary.assigned_count) * 100)
+    ? Math.round(((summary.broadcast.total + (summary.broadcast.broadcast_manual ?? 0)) / summary.assigned_count) * 100)
     : 0;
 
   const formatDate = (iso: string | null | undefined) => {
@@ -86,7 +86,7 @@ export function MarketingDashboardPage() {
         ) : (
           <>
             <div className="animate-slide-up" style={{ animationDelay: '0ms' }}><StatCard title="Ditugaskan" value={summary?.assigned_count ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '50ms' }}><StatCard title="Sudah Broadcast" value={summary?.broadcast.total ?? '-'} icon={<Send className="h-5 w-5" />} color="emerald" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '50ms' }}><StatCard title="Sudah Broadcast" value={(summary?.broadcast.total ?? 0) + (summary?.broadcast.broadcast_manual ?? 0)} icon={<Send className="h-5 w-5" />} color="emerald" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '100ms' }}><StatCard title="Belum Broadcast" value={summary?.not_broadcast_count ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '150ms' }}><StatCard title="Terkirim" value={summary?.broadcast.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="blue" /></div>
           </>
@@ -122,9 +122,9 @@ export function MarketingDashboardPage() {
         ) : (
           <>
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={summary?.broadcast.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="yellow" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Processing" value={summary?.broadcast.processing ?? '-'} icon={<Loader2 className="h-5 w-5" />} color="blue" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Sukses" value={summary?.broadcast.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Sukses" value={summary?.broadcast.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Broadcast Harian" value={(summary?.broadcast.sent_today ?? 0) + (summary?.broadcast.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" /></div>
           </>
         )}
       </div>
@@ -149,7 +149,7 @@ export function MarketingDashboardPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="pl-7 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{completionPct}%</span>
               <span className="text-slate-400 dark:text-slate-500">
-                {summary?.broadcast.total ?? 0} / {summary?.assigned_count ?? 0} pelanggan
+                {(summary?.broadcast.total ?? 0) + (summary?.broadcast.broadcast_manual ?? 0)} / {summary?.assigned_count ?? 0} pelanggan
               </span>
             </div>
             <div className="h-3.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">

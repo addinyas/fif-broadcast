@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
+use App\Models\CustomerSentMark;
+use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class BroadcastRepository implements BroadcastRepositoryInterface
@@ -36,6 +38,10 @@ class BroadcastRepository implements BroadcastRepositoryInterface
             }
         }
 
+        if (! empty($filters['date'])) {
+            $query->whereDate('broadcast_histories.created_at', $filters['date']);
+        }
+
         return $query->latest()->paginate($filters['per_page'] ?? 50);
     }
 
@@ -56,15 +62,33 @@ class BroadcastRepository implements BroadcastRepositoryInterface
             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
-            SUM(CASE WHEN status IN ('failed', 'cancelled') THEN 1 ELSE 0 END) as failed
+            SUM(CASE WHEN status IN ('failed', 'cancelled') THEN 1 ELSE 0 END) as failed,
+            SUM(CASE WHEN status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent_today,
+            SUM(CASE WHEN status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today
         ")->first();
+
+        // Count manual broadcasts from customer_sent_marks
+        $manualQuery = CustomerSentMark::query();
+        $manualTodayQuery = CustomerSentMark::query()->where('sent_at', '>=', now()->startOfDay());
+        if ($marketingId) {
+            $manualQuery->where('user_id', $marketingId);
+            $manualTodayQuery->where('user_id', $marketingId);
+        } elseif ($kiosId) {
+            $userIds = User::where('kios_id', $kiosId)->pluck('id');
+            $manualQuery->whereIn('user_id', $userIds);
+            $manualTodayQuery->whereIn('user_id', $userIds);
+        }
 
         return [
             'total' => (int) $stats->total,
             'pending' => (int) $stats->pending,
             'processing' => (int) $stats->processing,
+            'broadcast_manual' => $manualQuery->count(),
+            'broadcast_manual_today' => $manualTodayQuery->count(),
             'sent' => (int) $stats->sent,
             'failed' => (int) $stats->failed,
+            'sent_today' => (int) $stats->sent_today,
+            'failed_today' => (int) $stats->failed_today,
         ];
     }
 

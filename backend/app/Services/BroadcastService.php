@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
 use App\Models\Customer;
+use App\Models\CustomerSentMark;
 use App\Models\CustomerShare;
 use App\Models\Template;
 use App\Models\User;
@@ -105,9 +106,26 @@ class BroadcastService
 
         $stats = $this->getStats($marketingId, $kiosId);
 
-        // Count unique customers who received broadcasts (not total rows)
+        // Count unique customers who received broadcasts (automated + manual)
         $broadcastedCustomerQuery = (clone $historyQuery)->select('customer_id')->distinct();
-        $broadcastedCount = $broadcastedCustomerQuery->count();
+        $automatedCount = $broadcastedCustomerQuery->count();
+
+        // Count unique customers with manual sent marks
+        $manualQuery = CustomerSentMark::query();
+        if ($marketingId !== null) {
+            $manualQuery->where('user_id', $marketingId);
+        } elseif ($kiosId) {
+            $marketingIds = User::where('role', 'marketing')->where('kios_id', $kiosId)->pluck('id');
+            $manualQuery->whereIn('user_id', $marketingIds);
+        }
+        $manualCustomerIds = $manualQuery->pluck('customer_id')->unique();
+        $manualCount = $manualCustomerIds->count();
+
+        // Customers already counted in automated broadcasts
+        $automatedCustomerIds = (clone $historyQuery)->pluck('customer_id')->unique();
+        $manualOnlyCount = $manualCustomerIds->diff($automatedCustomerIds)->count();
+
+        $totalBroadcasted = $automatedCount + $manualOnlyCount;
 
         $lastBroadcast = (clone $historyQuery)->with('customer:id,name')
             ->latest('created_at')
@@ -136,7 +154,7 @@ class BroadcastService
         return [
             'assigned_count' => $assignedCount,
             'broadcast' => $stats,
-            'not_broadcast_count' => max(0, $assignedCount - $broadcastedCount),
+            'not_broadcast_count' => max(0, $assignedCount - $totalBroadcasted),
             'shared_data' => $sharedData,
             'last_broadcast' => $lastBroadcast ? [
                 'customer_name' => $lastBroadcast->customer?->name ?? "Customer #{$lastBroadcast->customer_id}",
@@ -245,6 +263,17 @@ class BroadcastService
             COUNT(*) as total
         ")->first();
 
+        // Count manual broadcast (sent marks) today
+        $manualQuery = CustomerSentMark::query()
+            ->where('sent_at', '>=', now()->startOfDay());
+        if ($user->role === 'marketing') {
+            $manualQuery->where('user_id', $user->id);
+        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
+            $marketingIds = User::where('role', 'marketing')->where('kios_id', $user->kios_id)->pluck('id');
+            $manualQuery->whereIn('user_id', $marketingIds);
+        }
+        $broadcastManual = $manualQuery->count();
+
         return [
             'pending' => (int) ($stats->pending ?? 0),
             'processing' => (int) ($stats->processing ?? 0),
@@ -252,7 +281,8 @@ class BroadcastService
             'failed' => (int) ($stats->failed ?? 0),
             'cancelled' => (int) ($stats->cancelled ?? 0),
             'total' => (int) ($stats->total ?? 0),
-            'is_active' => ((int) ($stats->pending ?? 0) + (int) ($stats->processing ?? 0)) > 0,
+            'broadcast_manual' => $broadcastManual,
+            'is_active' => ((int) ($stats->pending ?? 0) + (int) ($stats->processing ?? 0) + $broadcastManual) > 0,
         ];
     }
 

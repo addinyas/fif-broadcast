@@ -96,8 +96,12 @@ export interface BroadcastStats {
   total: number;
   pending: number;
   processing: number;
+  broadcast_manual: number;
+  broadcast_manual_today: number;
   sent: number;
   failed: number;
+  sent_today: number;
+  failed_today: number;
 }
 
 export interface BroadcastProgress {
@@ -106,6 +110,7 @@ export interface BroadcastProgress {
   sent: number;
   failed: number;
   cancelled: number;
+  broadcast_manual: number;
   total: number;
   is_active: boolean;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Send, Clock, Filter, User, Users, XCircle } from 'lucide-react';
+import { Send, Clock, Filter, User, Users, XCircle, Calendar } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { authService } from '../../services/authService';
@@ -17,6 +17,7 @@ export function BroadcastHistoryPage() {
   const isUH = user?.role === 'UH';
   const isAdmin = isSuperadmin || isUH;
 
+  const today = new Date().toISOString().split('T')[0];
   const [history, setHistory] = useState<BroadcastHistory[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -27,6 +28,7 @@ export function BroadcastHistoryPage() {
   const [kiosList, setKiosList] = useState<Kios[]>([]);
   const [selectedKiosId, setSelectedKiosId] = useState<string>('');
   const [uhScope, setUhScope] = useState<'own' | 'all_kios'>('own');
+  const [selectedDate, setSelectedDate] = useState(today);
   const fetchIdRef = useRef(0);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export function BroadcastHistoryPage() {
           params.marketing_id = 'all';
         }
       }
+      if (selectedDate) params.date = selectedDate;
       const res = await broadcastService.getHistory(params);
       if (fetchId === fetchIdRef.current) {
         setHistory(res.data);
@@ -65,7 +68,7 @@ export function BroadcastHistoryPage() {
     } finally {
       if (fetchId === fetchIdRef.current) setLoading(false);
     }
-  }, [page, tab, selectedMarketingId, selectedKiosId, isSuperadmin, isUH, uhScope]);
+  }, [page, tab, selectedMarketingId, selectedKiosId, isSuperadmin, isUH, uhScope, selectedDate]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -143,10 +146,21 @@ export function BroadcastHistoryPage() {
         </div>
       </div>
 
-      {(isUH || isSuperadmin) && (
-        <div className="flex flex-wrap items-center gap-2">
-          <Filter className="h-4 w-4 text-slate-400" />
-          {isUH && (
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200/80 bg-slate-100/80 px-3 py-2 backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-800/80">
+          <Calendar className="h-4 w-4 text-slate-400" />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => { setSelectedDate(e.target.value); setPage(1); }}
+            className="bg-transparent text-sm font-medium text-slate-600 outline-none dark:text-slate-400"
+          />
+        </div>
+
+        {(isUH || isSuperadmin) && (
+          <>
+            <Filter className="h-4 w-4 text-slate-400" />
+            {isUH && (
             <div className="flex gap-1 rounded-lg border border-slate-200/80 bg-slate-100/80 p-1 backdrop-blur-sm dark:border-slate-600/80 dark:bg-slate-800/80">
               <button
                 onClick={() => { setUhScope('own'); setPage(1); }}
@@ -196,8 +210,9 @@ export function BroadcastHistoryPage() {
               ))}
             </select>
           )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <DataTable columns={columns} data={history} loading={loading} />
 

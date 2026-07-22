@@ -168,12 +168,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-slate-700">
             <div
               className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
-              style={{ width: `${progress.total > 0 ? ((progress.sent + progress.failed) / progress.total) * 100 : 0}%` }}
+              style={{ width: `${(progress.total + progress.broadcast_manual) > 0 ? ((progress.sent + progress.failed + progress.broadcast_manual) / (progress.total + progress.broadcast_manual)) * 100 : 0}%` }}
             />
           </div>
           <div className="flex justify-between text-[10px] text-slate-400">
             <span>{progress.pending + progress.processing} antrian</span>
-            <span>{progress.sent} terkirim{progress.failed > 0 ? `, ${progress.failed} gagal` : ''}</span>
+            <span>{progress.sent} terkirim{progress.broadcast_manual > 0 ? `, ${progress.broadcast_manual} manual` : ''}{progress.failed > 0 ? `, ${progress.failed} gagal` : ''}</span>
           </div>
         </div>
       )}

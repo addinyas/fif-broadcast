@@ -63,14 +63,21 @@ function emitUserProgress(db, userId) {
     WHERE marketing_id = ?
   `).get(userId);
 
+  const manualCount = db.prepare(`
+    SELECT COUNT(*) as cnt
+    FROM customer_sent_marks
+    WHERE user_id = ? AND sent_at >= date('now', 'start of day')
+  `).get(userId);
+
   emitBroadcastProgress(userId, {
     pending: progress?.pending || 0,
     processing: progress?.processing || 0,
     sent: progress?.sent || 0,
     failed: progress?.failed || 0,
     cancelled: progress?.cancelled || 0,
+    broadcast_manual: manualCount?.cnt || 0,
     total: progress?.total || 0,
-    is_active: ((progress?.pending || 0) + (progress?.processing || 0)) > 0,
+    is_active: ((progress?.pending || 0) + (progress?.processing || 0) + (manualCount?.cnt || 0)) > 0,
   });
 }
 

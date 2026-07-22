@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, Loader2, UserCheck, UserX, TrendingUp, BarChart3, PieChart } from 'lucide-react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, UserX, TrendingUp, BarChart3, PieChart } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { useAuth } from '../../context/AuthContext';
@@ -79,7 +79,7 @@ export function DashboardPage() {
             <div className="animate-slide-up" style={{ animationDelay: '0ms' }}><StatCard title="Total Customer" value={dist?.total_customers ?? '-'} icon={<Users className="h-5 w-5" />} color="blue" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '50ms' }}><StatCard title="Assigned" value={dist?.assigned ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '100ms' }}><StatCard title="Unassigned" value={dist?.unassigned ?? '-'} icon={<UserX className="h-5 w-5" />} color="amber" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '150ms' }}><StatCard title="Total Broadcast" value={stats?.total ?? '-'} icon={<Send className="h-5 w-5" />} color="green" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '150ms' }}><StatCard title="Total Broadcast" value={(stats?.total ?? 0) + (stats?.broadcast_manual ?? 0)} icon={<Send className="h-5 w-5" />} color="green" /></div>
           </>
         )}
       </div>
@@ -95,9 +95,9 @@ export function DashboardPage() {
         ) : (
           <>
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={stats?.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Processing" value={stats?.processing ?? '-'} icon={<Loader2 className="h-5 w-5" />} color="blue" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Broadcast Harian" value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" /></div>
           </>
         )}
       </div>
