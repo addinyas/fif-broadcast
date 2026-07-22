@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity, TrendingUp, CalendarDays, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { useAuth } from '../../context/AuthContext';
 import { StatCard } from '../../components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
+import { getSocket } from '../../services/socketService';
 import type { MarketingSummary } from '../../types';
 
 const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' | 'purple' => {
@@ -19,7 +20,7 @@ const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger
   }
 };
 
-function Greeting() {
+function Greeting({ onRefresh }: { onRefresh?: () => void }) {
   const { user } = useAuth();
   const hour = parseInt(new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }), 10);
   let greeting = 'Selamat Malam';
@@ -33,14 +34,25 @@ function Greeting() {
       <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/[0.03]" />
       <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-white/[0.03]" />
       <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-white/20 to-transparent" />
-      <div className="relative">
-        <p className="text-sm font-medium text-fif-200/80">{greeting}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <span className="font-satoshi font-bold tracking-wide">{user?.name || 'Marketing'}</span>
-        </h1>
-        <p className="mt-1 text-sm text-fif-200/60">
-          Pantau progress broadcast WhatsApp Anda
-        </p>
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-fif-200/80">{greeting}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            <span className="font-satoshi font-bold tracking-wide">{user?.name || 'Marketing'}</span>
+          </h1>
+          <p className="mt-1 text-sm text-fif-200/60">
+            Pantau progress broadcast WhatsApp Anda
+          </p>
+        </div>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            title="Refresh data"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -50,15 +62,30 @@ export function MarketingDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<MarketingSummary | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
-    broadcastService.getMarketingSummary()
-      .then(setSummary)
-      .finally(() => setLoading(false));
+  const fetchData = useCallback(async () => {
+    try {
+      const data = await broadcastService.getMarketingSummary();
+      setSummary(data);
+    } catch { /* silent */ }
   }, []);
 
+  useEffect(() => {
+    setLoading(true);
+    fetchData().finally(() => setLoading(false));
+
+    const interval = setInterval(fetchData, 15000);
+    const socket = getSocket();
+    const onBroadcastStatus = () => fetchData();
+    socket.on('broadcast:status', onBroadcastStatus);
+
+    return () => {
+      clearInterval(interval);
+      socket.off('broadcast:status', onBroadcastStatus);
+    };
+  }, [fetchData]);
+
   const completionPct = summary && summary.assigned_count > 0
-    ? Math.round(((summary.broadcast.total + (summary.broadcast.broadcast_manual ?? 0)) / summary.assigned_count) * 100)
+    ? Math.min(100, Math.round(((summary.assigned_count - summary.not_broadcast_count) / summary.assigned_count) * 100))
     : 0;
 
   const formatDate = (iso: string | null | undefined) => {
@@ -72,7 +99,7 @@ export function MarketingDashboardPage() {
   return (
     <div className="font-poppins space-y-6">
       <div className="animate-fade-in">
-        <Greeting />
+        <Greeting onRefresh={() => { setLoading(true); fetchData().finally(() => setLoading(false)); }} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -122,7 +149,7 @@ export function MarketingDashboardPage() {
         ) : (
           <>
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={summary?.broadcast.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="yellow" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Sukses" value={summary?.broadcast.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Diproses" value={summary?.broadcast.processing ?? 0} icon={<Activity className="h-5 w-5" />} color="purple" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Broadcast Harian" value={(summary?.broadcast.sent_today ?? 0) + (summary?.broadcast.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" /></div>
           </>
@@ -149,7 +176,7 @@ export function MarketingDashboardPage() {
             <div className="flex items-center justify-between text-sm">
               <span className="pl-7 font-semibold tabular-nums text-slate-700 dark:text-slate-200">{completionPct}%</span>
               <span className="text-slate-400 dark:text-slate-500">
-                {(summary?.broadcast.total ?? 0) + (summary?.broadcast.broadcast_manual ?? 0)} / {summary?.assigned_count ?? 0} pelanggan
+                {(summary?.assigned_count ?? 0) - (summary?.not_broadcast_count ?? 0)} / {summary?.assigned_count ?? 0} pelanggan
               </span>
             </div>
             <div className="h-3.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
@@ -212,7 +239,7 @@ export function MarketingDashboardPage() {
             </div>
             <div className="rounded-xl bg-purple-50 p-4 text-center ring-1 ring-purple-100 dark:bg-purple-950/40 dark:ring-purple-800/40">
               <p className="font-satoshi text-3xl font-bold tabular-nums text-purple-600 dark:text-purple-400">{summary?.not_broadcast_count ?? 0}</p>
-              <p className="mt-1 text-xs font-medium text-purple-600/60 dark:text-purple-400/60">Belum dikerjakan</p>
+              <p className="mt-1 text-xs font-medium text-purple-600/60 dark:text-purple-400/60">Belum Dikerjakan</p>
             </div>
           </div>
         </Card>

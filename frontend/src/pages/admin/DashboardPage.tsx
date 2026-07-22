@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, UserX, TrendingUp, BarChart3, PieChart } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, UserX, TrendingUp, BarChart3, PieChart, RefreshCw, X } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { useAuth } from '../../context/AuthContext';
@@ -7,11 +7,12 @@ import { StatCard } from '../../components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Skeleton, CardSkeleton } from '../../components/ui/Skeleton';
 import { Badge } from '../../components/ui/Badge';
+import { getSocket } from '../../services/socketService';
 import type { BroadcastStats, DistributionReport } from '../../types';
 
 const MARKETING_COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4', '#f97316', '#ef4444'];
 
-function Greeting() {
+function Greeting({ onRefresh }: { onRefresh?: () => void }) {
   const { user } = useAuth();
   const hour = parseInt(new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false }), 10);
   let greeting = 'Selamat Malam';
@@ -27,43 +28,77 @@ function Greeting() {
       <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/[0.03]" />
       <div className="absolute -bottom-10 -left-10 h-36 w-36 rounded-full bg-white/[0.03]" />
       <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-white/20 to-transparent" />
-      <div className="relative">
-        <p className="text-sm font-medium text-fif-200/80">{greeting}</p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-          <span className="font-satoshi font-bold tracking-wide">{user?.name || 'Admin'}</span>
-        </h1>
-        <p className="mt-1 text-sm text-fif-200/60">
-          {roleLabel[user?.role || ''] || user?.role}{user?.kios_id ? ` · ${user.kios_id} ${user.kios_name || ''}` : ''}
-        </p>
+      <div className="relative flex items-start justify-between">
+        <div>
+          <p className="text-sm font-medium text-fif-200/80">{greeting}</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            <span className="font-satoshi font-bold tracking-wide">{user?.name || 'Admin'}</span>
+          </h1>
+          <p className="mt-1 text-sm text-fif-200/60">
+            {roleLabel[user?.role || ''] || user?.role}{user?.kios_id ? ` · ${user.kios_id} ${user.kios_name || ''}` : ''}
+          </p>
+        </div>
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/70 transition-all hover:bg-white/20 hover:text-white"
+            title="Refresh data"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 export function DashboardPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<BroadcastStats | null>(null);
   const [dist, setDist] = useState<DistributionReport | null>(null);
+  const [showBroadcastDetail, setShowBroadcastDetail] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [s, d] = await Promise.all([
+        broadcastService.getStats(),
+        customerService.getDistribution(),
+      ]);
+      setStats(s);
+      setDist(d);
+    } catch { /* silent */ }
+  }, []);
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      broadcastService.getStats(),
-      customerService.getDistribution(),
-    ]).then(([s, d]) => {
-      setStats(s);
-      setDist(d);
-    }).finally(() => setLoading(false));
-  }, []);
+    fetchData().finally(() => setLoading(false));
+
+    const interval = setInterval(fetchData, 15000);
+    const socket = getSocket();
+    const onBroadcastStatus = () => fetchData();
+    socket.on('broadcast:status', onBroadcastStatus);
+
+    return () => {
+      clearInterval(interval);
+      socket.off('broadcast:status', onBroadcastStatus);
+    };
+  }, [fetchData]);
 
   const maxAssigned = Math.max(1, ...(dist?.by_marketing.map((m) => m.total) ?? [1]));
 
   const totalBroadcasted = dist?.by_marketing.reduce((acc, m) => acc + m.total_broadcasts, 0) ?? 0;
 
+  const mceActive = dist?.by_marketing.filter((m) => m.total > 0).length ?? 0;
+
+  const completionPct = dist && dist.total_customers > 0
+    ? Math.round((dist.assigned / dist.total_customers) * 100)
+    : 0;
+
   return (
     <div className="font-poppins space-y-6">
       <div className="animate-fade-in">
-        <Greeting />
+        <Greeting onRefresh={() => { setLoading(true); fetchData().finally(() => setLoading(false)); }} />
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -79,7 +114,14 @@ export function DashboardPage() {
             <div className="animate-slide-up" style={{ animationDelay: '0ms' }}><StatCard title="Total Customer" value={dist?.total_customers ?? '-'} icon={<Users className="h-5 w-5" />} color="blue" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '50ms' }}><StatCard title="Assigned" value={dist?.assigned ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '100ms' }}><StatCard title="Unassigned" value={dist?.unassigned ?? '-'} icon={<UserX className="h-5 w-5" />} color="amber" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '150ms' }}><StatCard title="Total Broadcast" value={(stats?.total ?? 0) + (stats?.broadcast_manual ?? 0)} icon={<Send className="h-5 w-5" />} color="green" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '150ms' }}>
+              <button
+                onClick={() => (user?.role === 'superadmin' || user?.role === 'UH') && dist?.by_marketing && dist.by_marketing.length > 0 && setShowBroadcastDetail(true)}
+                className={`w-full ${(user?.role === 'superadmin' || user?.role === 'UH') && dist && dist.by_marketing.length > 0 ? 'cursor-pointer' : 'cursor-default'}`}
+              >
+                <StatCard title="Total Broadcast" value={(stats?.total ?? 0) + (stats?.broadcast_manual ?? 0)} icon={<Send className="h-5 w-5" />} color="green" />
+              </button>
+            </div>
           </>
         )}
       </div>
@@ -173,22 +215,22 @@ export function DashboardPage() {
           ) : (
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-fif-100 p-4 text-center ring-1 ring-fif-200 dark:bg-fif-900/30 dark:ring-fif-700/40">
-                <p className="font-satoshi text-3xl font-bold tabular-nums text-fif-600 dark:text-fif-400">{dist?.assigned ?? 0}</p>
-                <p className="mt-1 text-xs font-medium text-fif-600/60 dark:text-fif-400/60">Terassign</p>
+                <p className="font-satoshi text-3xl font-bold tabular-nums text-fif-600 dark:text-fif-400">{completionPct}%</p>
+                <p className="mt-1 text-xs font-medium text-fif-600/60 dark:text-fif-400/60">Progress Assign</p>
               </div>
               <div className="rounded-xl bg-amber-50 p-4 text-center ring-1 ring-amber-100 dark:bg-amber-950/40 dark:ring-amber-800/40">
-                <p className="font-satoshi text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{dist?.unassigned ?? 0}</p>
-                <p className="mt-1 text-xs font-medium text-amber-600/60 dark:text-amber-400/60">Belum diassign</p>
+                <p className="font-satoshi text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{totalBroadcasted}</p>
+                <p className="mt-1 text-xs font-medium text-amber-600/60 dark:text-amber-400/60">Total Broadcast</p>
               </div>
               <div className="rounded-xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-800/40">
-                <p className="font-satoshi text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{totalBroadcasted}</p>
-                <p className="mt-1 text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">Total Broadcast</p>
+                <p className="font-satoshi text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{mceActive}</p>
+                <p className="mt-1 text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">MCE Aktif</p>
               </div>
               <div className="rounded-xl bg-purple-50 p-4 text-center ring-1 ring-purple-100 dark:bg-purple-950/40 dark:ring-purple-800/40">
                 <p className="font-satoshi text-3xl font-bold tabular-nums text-purple-600 dark:text-purple-400">
-                  {dist ? dist.by_marketing.length : '-'}
+                  {(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)}
                 </p>
-                <p className="mt-1 text-xs font-medium text-purple-600/60 dark:text-purple-400/60">Marketing Aktif</p>
+                <p className="mt-1 text-xs font-medium text-purple-600/60 dark:text-purple-400/60">Broadcast Hari Ini</p>
               </div>
             </div>
           )}
@@ -217,22 +259,26 @@ export function DashboardPage() {
                     {item.marketing?.name || `User #${item.marketing_id}`}
                   </span>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-5 gap-1.5">
                   <div className="text-center">
-                    <p className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total}</p>
+                    <p className="font-satoshi text-base font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total}</p>
                     <p className="text-[10px] font-medium text-slate-400">Ditugaskan</p>
                   </div>
                   <div className="text-center">
-                    <p className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total_broadcasts}</p>
+                    <p className="font-satoshi text-base font-bold tabular-nums text-slate-800 dark:text-slate-200">{item.total_broadcasts}</p>
                     <p className="text-[10px] font-medium text-slate-400">Broadcast</p>
                   </div>
                   <div className="text-center">
-                    <p className="font-satoshi text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{item.sent}</p>
+                    <p className="font-satoshi text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{item.sent}</p>
                     <p className="text-[10px] font-medium text-emerald-500">Terkirim</p>
                   </div>
                   <div className="text-center">
-                    <p className="font-satoshi text-lg font-bold tabular-nums text-red-600 dark:text-red-400">{item.failed}</p>
+                    <p className="font-satoshi text-base font-bold tabular-nums text-red-600 dark:text-red-400">{item.failed}</p>
                     <p className="text-[10px] font-medium text-red-500">Gagal</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-satoshi text-base font-bold tabular-nums text-amber-600 dark:text-amber-400">{item.pending}</p>
+                    <p className="text-[10px] font-medium text-amber-500">Pending</p>
                   </div>
                 </div>
               </div>
@@ -304,6 +350,70 @@ export function DashboardPage() {
           </table>
         </div>
       </Card>
+
+      {showBroadcastDetail && dist && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowBroadcastDetail(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl dark:bg-slate-800">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+              <div className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-emerald-500" />
+                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Total Broadcast per MCE</h3>
+              </div>
+              <button
+                onClick={() => setShowBroadcastDetail(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto px-6 py-4">
+              <div className="space-y-3">
+                {dist.by_marketing
+                  .filter((m) => m.total_broadcasts > 0)
+                  .sort((a, b) => b.total_broadcasts - a.total_broadcasts)
+                  .map((item, idx) => {
+                    const maxBc = Math.max(1, ...dist.by_marketing.map((m) => m.total_broadcasts));
+                    const pct = Math.round((item.total_broadcasts / maxBc) * 100);
+                    const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
+                    return (
+                      <div key={item.marketing_id} className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                              {item.marketing?.name || `User #${item.marketing_id}`}
+                            </span>
+                          </div>
+                          <span className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                            {item.total_broadcasts}
+                          </span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              background: `linear-gradient(90deg, ${color}cc, ${color})`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                {dist.by_marketing.filter((m) => m.total_broadcasts > 0).length === 0 && (
+                  <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast</p>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{totalBroadcasted}</span> broadcast
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
