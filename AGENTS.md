@@ -1984,7 +1984,7 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
-### 2026-07-22 — Broadcast Harian popup + dashboard real-time + Total Broadcast popup + DB fix
+### 2026-07-22 — Broadcast Harian popup + dashboard real-time + Total Broadcast popup + DB fix + marketing popup bugfix
 
 **Sudah di-push ✅ & deployed ✅**
 
@@ -2008,9 +2008,13 @@ Ketik: `lanjut yang tadi`
 **Backend — Migration fix:**
 - `backend/database/migrations/2026_07_13_000003_make_email_nullable_in_users_table.php`: tambah `DB::statement('DROP INDEX IF EXISTS users_email_unique')` sebelum `Schema::create('users', ...)` — fix SQLite global index conflict saat `migrate:fresh`
 
+**Frontend — Marketing dashboard popup bug fix:**
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: fix `dailyStats.users[0]` → `dailyStats.users.find(u => u.marketing_id === user?.id)` — sebelumnya popup menampilkan data MCE lain (sorted by activity, bukan by current user)
+
 **Commits:**
 - `01ea7a6` — dashboard real-time + fix duplikasi + Total Broadcast popup per MCE
 - `a4d5703` — broadcast harian popup per MCE + fix migrate:fresh
+- `9a5a7c8` — fix marketing dashboard popup shows wrong user's daily stats
 
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
