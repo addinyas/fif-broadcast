@@ -1984,6 +1984,37 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-22 — Broadcast Harian popup + dashboard real-time + Total Broadcast popup + DB fix
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Backend:**
+- `backend/app/Repositories/BroadcastRepository.php`: tambah `getDailyStats(?string $kiosId)` — GROUP BY `marketing_id`, aggregate `sent_today`, `failed_today`, `pending_today`, `manual_today`
+- `backend/app/Services/BroadcastService.php`: tambah `getDailyStats()` passthrough
+- `backend/app/Http/Controllers/Api/BroadcastController.php`: tambah `dailyStats()` — kios-scoped by role
+- `backend/routes/api.php`: tambah route `GET broadcast/daily-stats` di group `feature:dashboard`
+
+**Frontend — Dashboard real-time + Total Broadcast popup:**
+- `frontend/src/pages/admin/DashboardPage.tsx`: real-time polling 15s + socket `broadcast:status`; stat card "Total Broadcast" clickable → modal per-MCE breakdown (sorted by count, progress bars, MARKETING_COLORS)
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: real-time polling 15s + socket; hapus duplikasi "Sukses" → "Diproses"; fix completion % ≤100%; refresh button; label "Belum Dikerjakan"
+- `frontend/src/services/broadcastService.ts`: tambah `getDailyStats()`
+- `frontend/src/types/index.ts`: tambah `DailyBroadcastUser`, `DailyBroadcastStats`
+
+**Frontend — Broadcast Harian popup:**
+- Admin/UH: stat card "Broadcast Hari Ini" clickable → popup per-MCE (terkirim, manual, pending, gagal) + progress bar + success rate
+- Marketing: stat card clickable → 4 cards (Terkirim, Gagal, Pending, Manual) + success rate bar
+- Kedua card selalu bisa diklik (tidak ada guard data kosong)
+
+**Backend — Migration fix:**
+- `backend/database/migrations/2026_07_13_000003_make_email_nullable_in_users_table.php`: tambah `DB::statement('DROP INDEX IF EXISTS users_email_unique')` sebelum `Schema::create('users', ...)` — fix SQLite global index conflict saat `migrate:fresh`
+
+**Commits:**
+- `01ea7a6` — dashboard real-time + fix duplikasi + Total Broadcast popup per MCE
+- `a4d5703` — broadcast harian popup per MCE + fix migrate:fresh
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
