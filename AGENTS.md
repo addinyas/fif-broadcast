@@ -2019,6 +2019,38 @@ Ketik: `lanjut yang tadi`
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
 
+### 2026-07-22 — Dashboard 6 tasks: sidebar progress fix + template guard + belumbroadcast + popup redesign + combined progress bar
+
+**Sudah di-push ✅ & deployed ✅**
+
+**Task 1 — Sidebar progress stuck permanen (CRITICAL):**
+- `backend/app/Services/BroadcastService.php`: `getProgress()` — tambah `AND created_at >= datetime('now', '-24 hours')` ke pending/processing. Hapus `$broadcastManual` dari `is_active`. Fix: stuck items lama (hari sebelumnya) tidak lagi bikin progress bar permanen.
+
+**Task 2 — Manual send tanpa template (HIGH):**
+- `frontend/src/pages/marketing/ProspectListPage.tsx`: `handleManualSend()` — tambah guard: `if (!templateBody.trim())` → toast error "Tulis atau pilih template terlebih dahulu". Mencegah user buka wa.me tanpa pesan.
+
+**Task 3 — "Unassigned" → "Belum Broadcast" (MEDIUM):**
+- `backend/app/Repositories/CustomerRepository.php`: `getDistributionReport()` — ganti `$unassigned` (assignment_status = unassigned) dengan `$notBroadcast` (customer yang belum pernah dikirim via WA broadcast ATAU manual send). Query: `whereNotIn('id', broadcast_histories) AND whereNotIn('id', customer_sent_marks)`.
+- `frontend/src/types/index.ts`: `unassigned` → `not_broadcast`
+- `frontend/src/pages/admin/DashboardPage.tsx`: StatCard "Unassigned" → "Belum Broadcast", icon `Clock`, color `amber`. Hapus unused import `UserX`.
+
+**Task 4 — Mobile reorder Broadcast Harian (LOW):**
+- `frontend/src/pages/admin/DashboardPage.tsx`: Grid order → Pending, Broadcast Harian, Sent, Failed (sebelumnya: Pending, Sent, Failed, Broadcast Harian). Lebih intuitif di mobile.
+
+**Task 5 — Marketing popup: nama + waktu + tipe (MEDIUM):**
+- `backend/app/Repositories/BroadcastRepository.php`: `getDailyStats()` — tambah query `broadcast_histories` + `customer_sent_marks` hari ini join `customers` → return `items: [{customer_name, sent_at, type: 'broadcast'|'manual'}]` per user (limit 50 terakhir).
+- `frontend/src/types/index.ts`: tambah `DailyBroadcastItem` interface + `items` ke `DailyBroadcastUser`
+- `frontend/src/pages/admin/DashboardPage.tsx`: popup "Broadcast Hari Ini" redesign — per-MCE sections dengan scrollable list nama + waktu + badge (Broadcast=purple, Manual=green). Hapus progress bar / angka per-kategori.
+- `frontend/src/pages/marketing/MarketingDashboardPage.tsx`: popup "Broadcast Hari Ini" redesign — list nama + waktu + badge (sama). Hapus 4 cards angka + success rate bar.
+
+**Task 6 — Total Broadcast popup: gabung WA + manual (MEDIUM):**
+- `backend/app/Services/CustomerService.php`: `getDistributionReport()` — tambah query `CustomerSentMark` count per marketing_id → `$manual_broadcasts`.
+- `frontend/src/types/index.ts`: tambah `manual_broadcasts` ke `DistributionReport.by_marketing[]`
+- `frontend/src/pages/admin/DashboardPage.tsx`: Total Broadcast popup — total = `total_broadcasts + manual_broadcasts`. Progress bar dua arah: kuning (kiri→kanan) = WA broadcast, hijau (kanan→kiri) = manual send. Footer: legend warna + jumlah per tipe + total.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
+
 ## Mandatory Question Before Execution
 
 **WAJIB — Sebelum eksekusi perubahan/apapun di kode:**
