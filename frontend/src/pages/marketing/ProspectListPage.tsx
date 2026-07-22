@@ -536,6 +536,10 @@ export function ProspectListPage() {
   };
 
   const handleManualSend = async (c: Customer) => {
+    if (!templateBody.trim()) {
+      toast('error', 'Tulis atau pilih template terlebih dahulu');
+      return;
+    }
     try {
       await customerService.markSent(c.id);
       setSentIds((prev) => {

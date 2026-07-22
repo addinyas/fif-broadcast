@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, UserX, TrendingUp, BarChart3, PieChart, RefreshCw, X } from 'lucide-react';
+import { Users, Send, Clock, CheckCircle2, XCircle, UserCheck, TrendingUp, BarChart3, PieChart, RefreshCw, X } from 'lucide-react';
 import { broadcastService } from '../../services/broadcastService';
 import { customerService } from '../../services/customerService';
 import { useAuth } from '../../context/AuthContext';
@@ -117,7 +117,7 @@ export function DashboardPage() {
           <>
             <div className="animate-slide-up" style={{ animationDelay: '0ms' }}><StatCard title="Total Customer" value={dist?.total_customers ?? '-'} icon={<Users className="h-5 w-5" />} color="blue" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '50ms' }}><StatCard title="Assigned" value={dist?.assigned ?? '-'} icon={<UserCheck className="h-5 w-5" />} color="purple" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}><StatCard title="Unassigned" value={dist?.unassigned ?? '-'} icon={<UserX className="h-5 w-5" />} color="amber" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '100ms' }}><StatCard title="Belum Broadcast" value={dist?.not_broadcast ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" /></div>
             <div className="animate-slide-up" style={{ animationDelay: '150ms' }}>
               <button
                 onClick={() => (user?.role === 'superadmin' || user?.role === 'UH') && dist?.by_marketing && dist.by_marketing.length > 0 && setShowBroadcastDetail(true)}
@@ -141,9 +141,7 @@ export function DashboardPage() {
         ) : (
           <>
             <div className="animate-slide-up" style={{ animationDelay: '200ms' }}><StatCard title="Pending" value={stats?.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="amber" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}><StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
-            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}>
+            <div className="animate-slide-up" style={{ animationDelay: '250ms' }}>
               <button
                 onClick={() => setShowDailyDetail(true)}
                 className="w-full cursor-pointer"
@@ -151,6 +149,8 @@ export function DashboardPage() {
                 <StatCard title="Broadcast Harian" value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)} icon={<Send className="h-5 w-5" />} color="blue" />
               </button>
             </div>
+            <div className="animate-slide-up" style={{ animationDelay: '300ms' }}><StatCard title="Sent" value={stats?.sent ?? '-'} icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" /></div>
+            <div className="animate-slide-up" style={{ animationDelay: '350ms' }}><StatCard title="Failed" value={stats?.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" /></div>
           </>
         )}
       </div>
@@ -379,48 +379,55 @@ export function DashboardPage() {
               </button>
             </div>
             <div className="max-h-80 overflow-y-auto px-6 py-4">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {dist.by_marketing
-                  .filter((m) => m.total_broadcasts > 0)
-                  .sort((a, b) => b.total_broadcasts - a.total_broadcasts)
-                  .map((item, idx) => {
-                    const maxBc = Math.max(1, ...dist.by_marketing.map((m) => m.total_broadcasts));
-                    const pct = Math.round((item.total_broadcasts / maxBc) * 100);
-                    const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
+                  .filter((m) => m.total_broadcasts > 0 || m.manual_broadcasts > 0)
+                  .sort((a, b) => (b.total_broadcasts + b.manual_broadcasts) - (a.total_broadcasts + a.manual_broadcasts))
+                  .map((item) => {
+                    const total = item.total_broadcasts + item.manual_broadcasts;
+                    const maxBc = Math.max(1, ...dist.by_marketing.map((m) => m.total_broadcasts + m.manual_broadcasts));
+                    const waPct = total > 0 ? Math.round((item.total_broadcasts / maxBc) * 100) : 0;
+                    const manualPct = total > 0 ? Math.round((item.manual_broadcasts / maxBc) * 100) : 0;
                     return (
                       <div key={item.marketing_id} className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                              {item.marketing?.name || `User #${item.marketing_id}`}
-                            </span>
-                          </div>
-                          <span className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-100">
-                            {item.total_broadcasts}
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                            {item.marketing?.name || `User #${item.marketing_id}`}
+                          </span>
+                          <span className="font-satoshi text-sm font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                            {total}
                           </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                        <div className="flex gap-1 text-[11px] font-medium tabular-nums">
+                          {item.total_broadcasts > 0 && <span className="text-yellow-600 dark:text-yellow-400">{item.total_broadcasts} WA</span>}
+                          {item.manual_broadcasts > 0 && <span className="text-emerald-600 dark:text-emerald-400">{item.manual_broadcasts} Manual</span>}
+                        </div>
+                        <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                          {/* Manual: right to left (hijau) */}
                           <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${pct}%`,
-                              background: `linear-gradient(90deg, ${color}cc, ${color})`,
-                            }}
+                            className="absolute right-0 top-0 h-full rounded-l-full bg-emerald-400 transition-all duration-500"
+                            style={{ width: `${manualPct}%` }}
+                          />
+                          {/* WA: left to right (kuning) */}
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-r-full bg-yellow-400 transition-all duration-500"
+                            style={{ width: `${waPct}%` }}
                           />
                         </div>
                       </div>
                     );
                   })}
-                {dist.by_marketing.filter((m) => m.total_broadcasts > 0).length === 0 && (
+                {dist.by_marketing.filter((m) => m.total_broadcasts > 0 || m.manual_broadcasts > 0).length === 0 && (
                   <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast</p>
                 )}
               </div>
             </div>
             <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{totalBroadcasted}</span> broadcast
-              </p>
+              <div className="flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-yellow-400" /> WA: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts, 0)}</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full bg-emerald-400" /> Manual: {dist.by_marketing.reduce((a, m) => a + m.manual_broadcasts, 0)}</span>
+                <span className="font-semibold text-slate-600 dark:text-slate-300">Total: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts + m.manual_broadcasts, 0)}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -442,57 +449,42 @@ export function DashboardPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="max-h-80 overflow-y-auto px-6 py-4">
-              <div className="space-y-3">
+            <div className="max-h-96 overflow-y-auto px-6 py-4">
+              <div className="space-y-4">
                 {dailyStats.users
-                  .filter((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today > 0)
-                  .map((item, idx) => {
-                    const total = item.sent_today + item.manual_today + item.failed_today + item.pending_today;
-                    const maxTotal = Math.max(1, ...dailyStats.users.map((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today));
-                    const pct = Math.round((total / maxTotal) * 100);
-                    const color = MARKETING_COLORS[idx % MARKETING_COLORS.length];
-                    return (
-                      <div key={item.marketing_id} className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                              {item.marketing_name}
-                            </span>
-                          </div>
-                          <span className="font-satoshi text-lg font-bold tabular-nums text-slate-800 dark:text-slate-100">
-                            {total}
-                          </span>
-                        </div>
-                        <div className="flex gap-1.5 text-[11px] font-medium tabular-nums">
-                          {item.sent_today > 0 && <span className="text-emerald-600">{item.sent_today} terkirim</span>}
-                          {item.manual_today > 0 && <span className="text-blue-600">{item.manual_today} manual</span>}
-                          {item.pending_today > 0 && <span className="text-amber-600">{item.pending_today} pending</span>}
-                          {item.failed_today > 0 && <span className="text-red-600">{item.failed_today} gagal</span>}
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${pct}%`,
-                              background: `linear-gradient(90deg, ${color}cc, ${color})`,
-                            }}
-                          />
-                        </div>
+                  .filter((u) => u.items && u.items.length > 0)
+                  .map((item) => (
+                    <div key={item.marketing_id}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{item.marketing_name}</span>
+                        <span className="font-satoshi text-xs font-bold tabular-nums text-slate-400">{item.sent_today + item.manual_today} kirim</span>
                       </div>
-                    );
-                  })}
-                {dailyStats.users.filter((u) => u.sent_today + u.manual_today + u.failed_today + u.pending_today > 0).length === 0 && (
+                      <div className="space-y-1">
+                        {item.items.map((bc, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-700/30">
+                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{bc.customer_name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${bc.type === 'manual' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
+                                {bc.type === 'manual' ? 'Manual' : 'Broadcast'}
+                              </span>
+                              <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                                {new Date(bc.sent_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                {dailyStats.users.filter((u) => u.items && u.items.length > 0).length === 0 && (
                   <p className="py-6 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>
                 )}
               </div>
             </div>
             <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
-              <div className="flex items-center justify-center gap-4 text-xs text-slate-400 dark:text-slate-500">
-                <span>Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{dailyStats.totals.sent_today + dailyStats.totals.manual_today}</span> terkirim</span>
-                {dailyStats.totals.failed_today > 0 && <span>Gagal: <span className="font-semibold text-red-500">{dailyStats.totals.failed_today}</span></span>}
-                {dailyStats.totals.pending_today > 0 && <span>Pending: <span className="font-semibold text-amber-500">{dailyStats.totals.pending_today}</span></span>}
-              </div>
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{dailyStats.totals.sent_today + dailyStats.totals.manual_today}</span> terkirim
+              </p>
             </div>
           </div>
         </div>

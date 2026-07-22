@@ -412,7 +412,12 @@ class CustomerRepository implements CustomerRepositoryInterface
 
         $totalCustomers = (clone $query)->count();
         $assigned = (clone $query)->where('assignment_status', 'assigned')->count();
-        $unassigned = (clone $query)->where('assignment_status', 'unassigned')->count();
+
+        // Count customers who have never been broadcast (no WA broadcast + no manual send)
+        $notBroadcast = (clone $query)->where(function ($q) {
+            $q->whereNotIn('id', DB::table('broadcast_histories')->select('customer_id'))
+                ->whereNotIn('id', DB::table('customer_sent_marks')->select('customer_id'));
+        })->count();
 
         $byMarketing = (clone $query)->where('assignment_status', 'assigned')
             ->selectRaw('marketing_id, count(*) as total')
@@ -434,7 +439,7 @@ class CustomerRepository implements CustomerRepositoryInterface
         return [
             'total_customers' => $totalCustomers,
             'assigned' => $assigned,
-            'unassigned' => $unassigned,
+            'not_broadcast' => $notBroadcast,
             'by_marketing' => $byMarketingCollection,
         ];
     }

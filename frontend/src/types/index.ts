@@ -104,6 +104,12 @@ export interface BroadcastStats {
   failed_today: number;
 }
 
+export interface DailyBroadcastItem {
+  customer_name: string;
+  sent_at: string;
+  type: 'broadcast' | 'manual';
+}
+
 export interface DailyBroadcastUser {
   marketing_id: number;
   marketing_name: string;
@@ -111,6 +117,7 @@ export interface DailyBroadcastUser {
   failed_today: number;
   pending_today: number;
   manual_today: number;
+  items: DailyBroadcastItem[];
 }
 
 export interface DailyBroadcastStats {
@@ -192,12 +199,13 @@ export interface MarketingSummary {
 export interface DistributionReport {
   total_customers: number;
   assigned: number;
-  unassigned: number;
+  not_broadcast: number;
   by_marketing: {
     marketing_id: number;
     total: number;
     marketing: { id: number; name: string };
     total_broadcasts: number;
+    manual_broadcasts: number;
     sent: number;
     failed: number;
     pending: number;

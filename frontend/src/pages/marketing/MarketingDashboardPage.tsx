@@ -310,44 +310,35 @@ export function MarketingDashboardPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="px-6 py-5">
+            <div className="max-h-96 overflow-y-auto px-6 py-4">
               {(() => {
                 const myStats = dailyStats.users.find((u) => u.marketing_id === user?.id) ?? dailyStats.users[0];
-                if (!myStats || (myStats.sent_today + myStats.manual_today + myStats.failed_today + myStats.pending_today === 0)) {
+                if (!myStats || !myStats.items || myStats.items.length === 0) {
                   return <p className="py-4 text-center text-sm text-slate-400 dark:text-slate-500">Belum ada broadcast hari ini</p>;
                 }
-                const total = myStats.sent_today + myStats.manual_today;
                 return (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100 dark:bg-emerald-950/40 dark:ring-emerald-800/40">
-                        <p className="font-satoshi text-3xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{total}</p>
-                        <p className="mt-1 text-xs font-medium text-emerald-600/60 dark:text-emerald-400/60">Terkirim</p>
+                  <div className="space-y-1.5">
+                    {myStats.items.map((bc, i) => (
+                      <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2.5 dark:bg-slate-700/30">
+                        <div>
+                          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{bc.customer_name}</p>
+                          <p className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                            {new Date(bc.sent_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${bc.type === 'manual' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'}`}>
+                          {bc.type === 'manual' ? 'Manual' : 'Broadcast'}
+                        </span>
                       </div>
-                      <div className="rounded-xl bg-red-50 p-4 text-center ring-1 ring-red-100 dark:bg-red-950/40 dark:ring-red-800/40">
-                        <p className="font-satoshi text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">{myStats.failed_today}</p>
-                        <p className="mt-1 text-xs font-medium text-red-600/60 dark:text-red-400/60">Gagal</p>
-                      </div>
-                      <div className="rounded-xl bg-amber-50 p-4 text-center ring-1 ring-amber-100 dark:bg-amber-950/40 dark:ring-amber-800/40">
-                        <p className="font-satoshi text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">{myStats.pending_today}</p>
-                        <p className="mt-1 text-xs font-medium text-amber-600/60 dark:text-amber-400/60">Pending</p>
-                      </div>
-                      <div className="rounded-xl bg-blue-50 p-4 text-center ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-800/40">
-                        <p className="font-satoshi text-3xl font-bold tabular-nums text-blue-600 dark:text-blue-400">{myStats.manual_today}</p>
-                        <p className="mt-1 text-xs font-medium text-blue-600/60 dark:text-blue-400/60">Manual</p>
-                      </div>
-                    </div>
-                    {myStats.sent_today > 0 && myStats.failed_today > 0 && (
-                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-                          style={{ width: `${Math.round((myStats.sent_today / (myStats.sent_today + myStats.failed_today)) * 100)}%` }}
-                        />
-                      </div>
-                    )}
+                    ))}
                   </div>
                 );
               })()}
+            </div>
+            <div className="border-t border-slate-200 px-6 py-3 dark:border-slate-700">
+              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                Total: <span className="font-semibold text-slate-600 dark:text-slate-300">{(dailyStats.users.find((u) => u.marketing_id === user?.id) ?? dailyStats.users[0])?.items?.length ?? 0}</span> pesan hari ini
+              </p>
             </div>
           </div>
         </div>

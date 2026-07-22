@@ -128,7 +128,28 @@ class BroadcastRepository implements BroadcastRepositoryInterface
 
         $users = User::whereIn('id', $allUserIds)->select('id', 'name')->get()->keyBy('id');
 
-        $result = collect($allUserIds)->map(function ($userId) use ($autoRows, $manualRows, $users) {
+        // Fetch individual items (customer name + time + type) per user
+        $autoItems = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->where('broadcast_histories.created_at', '>=', now()->startOfDay())
+            ->whereIn('broadcast_histories.marketing_id', $allUserIds)
+            ->selectRaw("broadcast_histories.marketing_id, customers.name as customer_name, broadcast_histories.created_at as sent_at, 'broadcast' as type")
+            ->orderByDesc('broadcast_histories.created_at')
+            ->limit(200)
+            ->get();
+
+        $manualItems = CustomerSentMark::query()
+            ->join('customers', 'customer_sent_marks.customer_id', '=', 'customers.id')
+            ->where('customer_sent_marks.sent_at', '>=', now()->startOfDay())
+            ->whereIn('customer_sent_marks.user_id', $allUserIds)
+            ->selectRaw("customer_sent_marks.user_id as marketing_id, customers.name as customer_name, customer_sent_marks.sent_at, 'manual' as type")
+            ->orderByDesc('customer_sent_marks.sent_at')
+            ->limit(200)
+            ->get();
+
+        $allItems = $autoItems->concat($manualItems)->sortByDesc('sent_at')->groupBy('marketing_id');
+
+        $result = collect($allUserIds)->map(function ($userId) use ($autoRows, $manualRows, $users, $allItems) {
             $auto = $autoRows->get($userId);
             $manual = $manualRows->get($userId);
 
@@ -139,6 +160,7 @@ class BroadcastRepository implements BroadcastRepositoryInterface
                 'failed_today' => (int) ($auto->failed_today ?? 0),
                 'pending_today' => (int) ($auto->pending_today ?? 0),
                 'manual_today' => (int) ($manual->manual_today ?? 0),
+                'items' => $allItems->get($userId, collect())->take(50)->values()->toArray(),
             ];
         })->sortByDesc(fn ($r) => $r['sent_today'] + $r['manual_today'])->values()->toArray();
 

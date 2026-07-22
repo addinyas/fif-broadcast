@@ -257,27 +257,16 @@ class BroadcastService
             $query->where('broadcast_histories.marketing_id', $user->id);
         }
 
-        // Pending & processing: all-time (show stuck messages from any day)
+        // Pending & processing: last 24 hours only (prevent stuck items from showing forever)
         // Sent/failed/cancelled: today only
         $stats = $query->selectRaw("
-            SUM(CASE WHEN broadcast_histories.status = 'pending' THEN 1 ELSE 0 END) as pending,
-            SUM(CASE WHEN broadcast_histories.status = 'processing' THEN 1 ELSE 0 END) as processing,
+            SUM(CASE WHEN broadcast_histories.status = 'pending' AND broadcast_histories.created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN broadcast_histories.status = 'processing' AND broadcast_histories.created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) as processing,
             SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed,
             SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled,
             COUNT(*) as total
         ")->first();
-
-        // Count manual broadcast (sent marks) today
-        $manualQuery = CustomerSentMark::query()
-            ->where('sent_at', '>=', now()->startOfDay());
-        if ($user->role === 'marketing') {
-            $manualQuery->where('user_id', $user->id);
-        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
-            $marketingIds = User::where('role', 'marketing')->where('kios_id', $user->kios_id)->pluck('id');
-            $manualQuery->whereIn('user_id', $marketingIds);
-        }
-        $broadcastManual = $manualQuery->count();
 
         return [
             'pending' => (int) ($stats->pending ?? 0),
@@ -286,8 +275,7 @@ class BroadcastService
             'failed' => (int) ($stats->failed ?? 0),
             'cancelled' => (int) ($stats->cancelled ?? 0),
             'total' => (int) ($stats->total ?? 0),
-            'broadcast_manual' => $broadcastManual,
-            'is_active' => ((int) ($stats->pending ?? 0) + (int) ($stats->processing ?? 0) + $broadcastManual) > 0,
+            'is_active' => ((int) ($stats->pending ?? 0) + (int) ($stats->processing ?? 0)) > 0,
         ];
     }
 

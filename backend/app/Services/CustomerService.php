@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Interfaces\CustomerRepositoryInterface;
 use App\Models\BroadcastHistory;
+use App\Models\CustomerSentMark;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -250,13 +251,22 @@ class CustomerService
                 ->get()
                 ->keyBy('marketing_id');
 
-            $byMarketing = $byMarketing->map(function ($item) use ($stats) {
+            // Manual sends per MCE (all-time)
+            $manualStats = CustomerSentMark::whereIn('user_id', $marketingIds)
+                ->selectRaw('user_id, COUNT(*) as manual_broadcasts')
+                ->groupBy('user_id')
+                ->get()
+                ->keyBy('user_id');
+
+            $byMarketing = $byMarketing->map(function ($item) use ($stats, $manualStats) {
                 $s = $stats->get($item['marketing_id']);
+                $m = $manualStats->get($item['marketing_id']);
                 $item['total_broadcasts'] = $s ? (int) $s->total_broadcasts : 0;
                 $item['sent'] = $s ? (int) $s->sent : 0;
                 $item['failed'] = $s ? (int) $s->failed : 0;
                 $item['pending'] = $s ? (int) $s->pending : 0;
                 $item['processing'] = $s ? (int) $s->processing : 0;
+                $item['manual_broadcasts'] = $m ? (int) $m->manual_broadcasts : 0;
 
                 return $item;
             });
