@@ -8,30 +8,30 @@
 
 Legend: `TODO` | `DOING` | `DONE` — update status per step
 
-| # | Pitstop | Scope | Status | PRD Section |
-|---|---------|-------|--------|-------------|
-| 0.1 | PWA (installable, offline) | Web / Next.js | `TODO` | Phase 0 |
-| 0.2 | Mobile-first responsive redesign | Web / Next.js | `TODO` | Phase 0 |
-| 0.3 | Page transitions & animations | Web / Next.js | `TODO` | Phase 0 |
-| 0.4 | Skeleton loading screens | Web / Next.js | `TODO` | Phase 0 |
-| 0.5 | Touch-friendly UI (44x44px) | Web / Next.js | `TODO` | Phase 0 |
-| 0.6 | Bottom navigation (mobile) | Web / Next.js | `TODO` | Phase 0 |
-| 0.7 | Optimistic updates | Web / Next.js | `TODO` | Phase 0 |
-| 1.1 | API versioning `/api/v1/*` | Backend/Laravel | `TODO` | Phase 1 |
-| 1.2 | Rate limiting per endpoint | Backend/Laravel | `TODO` | Phase 1 |
-| 1.3 | WebSocket shared (Socket.IO) | Backend/Laravel | `TODO` | Phase 1 |
-| 2.1 | Expo project setup (`mobile/`) | Mobile/React Native | `TODO` | Phase 2 |
-| 2.2 | Auth flow (shared API) | Mobile/React Native | `TODO` | Phase 2 |
-| 2.3 | Dashboard + Prospect List | Mobile/React Native | `TODO` | Phase 2 |
-| 2.4 | Broadcast Form + History | Mobile/React Native | `TODO` | Phase 2 |
-| 2.5 | WhatsApp Connect (QR Scanner) | Mobile/React Native | `TODO` | Phase 2 |
-| 2.6 | Push notification (Firebase) | Mobile/React Native | `TODO` | Phase 2 |
-| 2.7 | Offline support (cache + sync) | Mobile/React Native | `TODO` | Phase 2 |
-| 2.8 | Private APK distribution | Mobile/React Native | `TODO` | Phase 2 |
-| M | Single Data module (AO→UH→Marketing + Live Sync Excel) | Backend + Web + Mobile | `TODO` (PRD added) | Modul Baru |
-| D | Migrate SQLite → PostgreSQL + Redis | Backend/Laravel | `TODO` | Database Architecture |
-| A | AI failover (OpenRouter free models) | opencode config | `DONE` | Config updated |
-| V | VPS health check script | deploy script | `DONE` | commit a1c4252 |
+| # | Pitstop | Scope | Status | Last Action | Next Step (if resumed) | PRD Section |
+|---|---------|-------|--------|-------------|---------------------------|-------------|
+| 0.1 | PWA (installable, offline) | Web / Next.js | `TODO` | — | Install `vite-plugin-pwa`, configure manifest | Phase 0 |
+| 0.2 | Mobile-first responsive redesign | Web / Next.js | `TODO` | — | Add Tailwind breakpoints (320,375,414,768,1024px) | Phase 0 |
+| 0.3 | Page transitions & animations | Web / Next.js | `TODO` | — | Install `framer-motion`, add page transition wrapper | Phase 0 |
+| 0.4 | Skeleton loading screens | Web / Next.js | `TODO` | — | Create reusable Skeleton component | Phase 0 |
+| 0.5 | Touch-friendly UI (44x44px) | Web / Next.js | `TODO` | — | Update button sizes & spacing in components | Phase 0 |
+| 0.6 | Bottom navigation (mobile) | Web / Next.js | `TODO` | — | Add Next.js bottom tab navigator | Phase 0 |
+| 0.7 | Optimistic updates | Web / Next.js | `TODO` | — | React Query optimistic mutations | Phase 0 |
+| 1.1 | API versioning `/api/v1/*` | Backend/Laravel | `TODO` | — | Create `routes/api/v1/` directory structure | Phase 1 |
+| 1.2 | Rate limiting per endpoint | Backend/Laravel | `TODO` | — | Install `fruitcake/laravel-rate-limiter` | Phase 1 |
+| 1.3 | WebSocket shared (Socket.IO) | Backend/Laravel | `TODO` | — | Deploy Redis + update socket-server for Redis adapter | Phase 1 |
+| 2.1 | Expo project setup (`mobile/`) | Mobile/React Native | `TODO` | — | `npx create-expo-app fif_mobile` | Phase 2 |
+| 2.2 | Auth flow (shared API) | Mobile/React Native | `TODO` | — | SecureStore + token refresh logic | Phase 2 |
+| 2.3 | Dashboard + Prospect List | Mobile/React Native | `TODO` | — | Build Dashboard screen + FlatList | Phase 2 |
+| 2.4 | Broadcast Form + History | Mobile/React Native | `TODO` | — | Form with template preview + history table | Phase 2 |
+| 2.5 | WhatsApp Connect (QR Scanner) | Mobile/React Native | `TODO` | — | `expo-camera` for QR scan + pairing flow | Phase 2 |
+| 2.6 | Push notification (Firebase) | Mobile/React Native | `TODO` | — | `expo-notifications` + Firebase SDK config | Phase 2 |
+| 2.7 | Offline support (cache + sync) | Mobile/React Native | `TODO` | — | AsyncStorage + sync queue + conflict resolution | Phase 2 |
+| 2.8 | Private APK distribution | Mobile/React Native | `TODO` | — | `eas build --platform android` + manual share | Phase 2 |
+| M | Single Data module (AO→UH→Marketing + Live Sync Excel) | Backend + Web + Mobile | `TODO` (PRD added) | PRD section written, not yet started | Backend API endpoints first (SingleDataController + CloudSyncController), then frontend | Modul Baru |
+| D | Migrate SQLite → PostgreSQL + Redis | Backend/Laravel | `TODO` | Migration guide written (13 steps) | Follow deploy/migrate-sqlite-to-postgres.md, start with Step 1 backup | Database Architecture |
+| A | AI failover (OpenRouter free models) | opencode config | `DONE` | Updated opencode.json: 9router→OpenRouter, Ling Flash model | — | ✅ Working |
+| V | VPS health check script | deploy script | `DONE` | Created deploy/vps-health-check.sh | — | ✅ commit a1c4252 |
 
 ---
 
