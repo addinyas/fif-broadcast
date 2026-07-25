@@ -2139,3 +2139,15 @@ Free-tier rate limits per OpenRouter: ~10-50 req/min per model. Use failover scr
 
 ### Next steps when resuming
 Ketik: `lanjut yang tadi`
+
+### 2026-07-26 — Migration guide SQLite → PostgreSQL + Redis
+
+**Sudah di-push ✅** (commit ddfd26e)
+- `deploy/migrate-sqlite-to-postgres.md`: 13-step migration guide, aligned with PRD
+- Setiap step punya checkpoint dan success criteria
+- Rollback plan untuk recover tanpa data loss
+- Termasuk Socket.IO Redis adapter setup
+- Termasuk verification tests (DB connection, API, WebSocket, broadcast)
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
