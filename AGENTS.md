@@ -2115,3 +2115,27 @@ AI **HARUS** memastikan perubahan **konsisten dengan fitur yang sudah ada** dan 
 Aturan ini berlaku untuk SEMUA perubahan: fitur baru, bug fix, refactor, apapun. **Tidak boleh ada perubahan yang memecah fitur lain.**
 
 ## Session History
+
+### 2026-07-25 — opencode failover + VPS health check
+
+**Sudah di-push ✅**
+- `opencode.json` — ganti 9router (mati) → OpenRouter provider dengan 4 model gratis (Ling Flash, Gemma 4 31B, Laguna M.1, Nemotron Ultra 550B)
+- `opencode.json` — model default: `ling-flash` (124B MoE, unlimited free)
+- `deploy/vps-health-check.sh` — script monitoring VPS (services, disk, memory, CPU, ports, opencode status)
+- `C:\Users\addin\.config\opencode\scripts\ai-failover.sh` — failover script: auto-switch model saat rate limit/timeout
+- Semua model yang dipakai GRATIS di OpenRouter (free tier)
+
+### Model Recommendations by Role
+| Role | Model Gratis (OpenRouter) | Model Lokal (Ollama) |
+|------|---------------------------|---------------------|
+| Frontend | `openrouter/laguna-m1` | `qwen2.5:7b` |
+| Backend | `openrouter/laguna-m1` | `qwen2.5:14b` |
+| Deploy/DevOps | `openrouter/ling-flash` | `qwen2.5:7b` |
+| Security | `openrouter/nemotron-ultra` | `qwen2.5:14b` |
+| Testing | `openrouter/gemma-4-31b` | `qwen2.5:7b` |
+| Mobile | `openrouter/laguna-xs-2.1` atau `ling-flash` | `qwen2.5:7b` |
+
+Free-tier rate limits per OpenRouter: ~10-50 req/min per model. Use failover script to auto-switch.
+
+### Next steps when resuming
+Ketik: `lanjut yang tadi`
