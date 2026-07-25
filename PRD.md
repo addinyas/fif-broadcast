@@ -1,4 +1,12 @@
-# Product Requirements Document — FIF Mobile & Web Modernization
+# Product Requirements Document — FIF Modernization
+
+## Keputusan Teknik
+| Keputusan | Alasan |
+|-----------|--------|
+| Mobile: **Flutter (Dart)** | UI paling cantik & modern, team mau belajar, 1 codebase mobile |
+| Web: **React 19 + Vite** (pertahankan, upgrade ke PWA) | Tim sudah mahir, tetap jalan |
+| Backend: **Laravel 12** (tidak berubah) | API sama untuk web & mobile |
+| Distribusi mobile: **Private APK** | Tidak diupload ke Play Store/App Store |
 
 ## Phase 0: Web Modernisasi (Prioritas 1)
 
@@ -16,21 +24,10 @@
 - Optimized font sizes (16px+ base)
 
 ### 0.3 — Animasi & Micro-interaction
-- Page transitions (React Transition Group / Framer Motion)
+- Page transitions
 - Button press feedback
 - Skeleton loading screens
-- Smooth list animations (Reanimated)
-
-### 0.4 — Performance
-- Lazy loading components
-- Image optimization
-- Virtualized lists (large tables)
-- Bundle splitting (Vite sudah ada)
-
-### 0.5 — State Management Upgrade
-- Zustand/React Query untuk server state
-- Context untuk client state
-- Optimistic updates
+- Smooth list animations
 
 ---
 
@@ -50,62 +47,63 @@
 
 ---
 
-## Phase 2 — React Native (Expo) Mobile App
+## Phase 2 — Flutter Mobile App (Private APK)
 
-### 2.1 — Setup Expo Project
-- `npx create-expo-app` di folder terpisah (`mobile/`)
-- TypeScript, Shared API layer dengan web frontend
-- Folder `shared/` untuk API service & types
+### 2.1 — Setup Flutter Project
+- `flutter create fif_mobile` di folder terpisah (`mobile/`)
+- Dart + Flutter SDK
+- Shared API layer (mirip endpoint Laravel)
+- Folder `shared/` untuk API service & types (copy dari web atau shared docs)
 
 ### 2.2 — Auth Flow
-- Sama dengan web (Sanctum token via `react-native-expo-secure-store`)
+- Sama dengan web (Sanctum token via `flutter_secure_storage`)
 - Login / Register / Forgot password
+- Token refresh otomatis
 
 ### 2.3 — Core Screens
 - Dashboard (ringkasan)
-- Prospect List
-- Broadcast Form
-- Broadcast History
-- Connect WhatsApp (QR Scanner / Pairing Code)
-- Settings
+- Prospect List (data customer)
+- Broadcast Form (teks + template variabel)
+- Broadcast History (tabel terkirim/gagal/pending)
+- WhatsApp Connect (QR Scanner native / Pairing Code)
+- Settings (nama panggilan, telepon, dll)
+- Kios Management (superadmin)
 
 ### 2.4 — Mobile-Specific Features
-- Push notification (Expo Notifications)
+- Push notification (Firebase Cloud Messaging)
 - Haptic feedback
 - Camera integration (QR scan native)
 - Clipboard access
-- Share / Deep link
+- Share / Deep link ke screen tertentu
+- Offline support (cache data lokal, sync saat reconnect)
+- Background message queue (kirim saat online kembali)
 
-### 2.5 — Offline Support
-- AsyncStorage untuk cache data
-- Sync data saat reconnect
-- Queue messages offline → kirim saat online
+### 2.5 — UI Quality (Flutter advantage)
+- Material Design 3 (built-in)
+- Custom theme warna FIF (brand colors)
+- Animated transitions antar screen
+- Swipe to dismiss, pull to refresh
+- Bottom navigation bar
+- Dark mode support (optional)
 
-### 2.6 — Private Distribution
-- Build APK via `eas build --platform android`
-- File APK didownload manual (tidak diupload ke Play Store)
-- Distribusi via internal link / file share
-- Tidak ada App Store / Play Store
+### 2.6 — Private Distribution (TIDAK PUBLIC)
+- Build APK via `flutter build apk --release`
+- File APK didownload manual dari VPS/PC
+- Distribusi via internal link / file share ke user terpercaya
+- Tidak diupload ke Play Store / App Store
+- Tidak ada account developer diperlukan
+- Update: kirim APK baru via file share saat versi baru
 
-### 2.7 — Auto-Updates (Opsi)
-- EAS Update untuk push update tanpa rebuild store
-- Opsi: notifikasi "Update available, download new version"
+### 2.7 — Build Pipeline (Manual)
+- Development: `flutter run` di PC + emulator
+- Testing: `flutter test` untuk unit/integration test
+- Release build: `flutter build apk --release` (generate APK di `build/app/outputs/`)
+- Distribusi: copy APK ke file share / internal server
 
----
-
-## Phase 3 — Advanced (Masa Depan)
-
-### 3.1 — Real-time Sync mobile ↔ Web
-- Shared database view
-- User buka web & mobile bersamaan, data sinkron
-
-### 3.2 — Widget Android
-- Widget ringkas di homescreen (pending broadcast count)
-- Quick action: start broadcast, view stats
-
-### 3.3 — React Native Share
-- Shared navigation state antar app
-- Deep link ke screen tertentu
+### 2.8 — Cloud Build (Opsional, Berbayar)
+- Codemagic: $24/bulan (gratis 10 build/bulan)
+- Firebase App Distribution: gratis (kirim APK via link)
+- Bisa skip — build manual sudah cukup untuk private APK
 
 ---
 
@@ -115,16 +113,36 @@
 |-------|--------|--------|
 | 0: Web PWA + Mobile-First | 2-3 minggu | Belum mulai |
 | 1: API Prep | 1 minggu | Belum mulai |
-| 2: React Native Mobile | 3-4 minggu | Belum mulai |
-| 3: Advanced | Flexible | Nanti |
+| 2: Flutter Mobile App | 4-6 minggu | Belum mulai |
+| 3: Advanced (widget Android, deep link, real-time sync) | Flexible | Nanti |
 
 ---
 
-## Tech Stack Decision
+## Cost Summary
 
-| Keputusan | Alasan |
-|-----------|--------|
-| React Native + Expo | Sama ecosystem TypeScript dengan web, tim sudah paham |
-| Flutter/Dart (Ditolak) | Belum ada di stack, extra learning curve, tidak efisien untuk proyek ini |
-| Private APK | Tidak perlu Play Store/app store, distribusi internal |
-| EAS Build | CI/CD otomatis untuk APK build |
+| Komponen | Biaya |
+|----------|-------|
+| Flutter SDK | ✅ Gratis |
+| Flutter build (lokal) | ✅ Gratis |
+| Firebase (push notification) | ✅ Gratis (free tier) |
+| Firebase App Distribution | ✅ Gratis |
+| Codemagic (cloud build) | ✅ Gratis 10 build/bln, lalu $24/bln |
+| Play Store / App Store | ✅ Nggak perlu (private APK) |
+| Total | **$0 (gratis)** |
+
+---
+
+## Tech Stack Final
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | Laravel 12, PHP 8.2, SQLite |
+| API | RESTful JSON |
+| Web Frontend | React 19, TypeScript, Vite 8, TailwindCSS 4 |
+| Mobile Frontend | Flutter (Dart) |
+| Mobile Build | `flutter build apk --release` |
+| Mobile Distribusi | Private APK (manual/share) |
+| WhatsApp Worker | Node.js, Baileys, Socket.IO |
+| AI Assistant | opencode + OpenRouter (free tier) |
+| Database | SQLite |
+| Deploy | VPS Rumahweb (202.10.42.237), PHP-FPM + nginx |
