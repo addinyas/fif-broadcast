@@ -92,3 +92,44 @@
 ## PRD v2 — React + Next.js + React Native
 - Keputusan 25 Jul 2026: web → Next.js (React 19), mobile → React Native (Expo), bukan Svelte/flutter
 - Semua dalam 1 React ecosystem
+
+## Database Architecture Decision
+
+### PostgreSQL + Redis (Final Decision)
+
+| Parameter | Value |
+|-----------|-------|
+| Database | PostgreSQL 16 |
+| Cache + Real-time broker | Redis 7 |
+| Total records (6 kios × 2500 avg) | ~15,000 rows |
+| Concurrent users | 6 kios × marketing + UH + superadmin |
+| Broadcast worker | 1 (Node.js Baileys) |
+| Real-time requirement | <100ms latency |
+
+### Why PostgreSQL + Redis (not SQLite)
+- **Concurrent writes** — 6 kios writing simultaneously (SQLite locks entire DB on write)
+- **LISTEN/NOTIFY** — PostgreSQL triggers events immediately → Socket.IO → instant push to all clients (no 5s polling)
+- **Redis Pub/Sub** — real-time event distribution between Laravel backend, Socket.IO server, and worker
+- **Redis cache** — sub-millisecond reads for hot data (dashboard stats, broadcast progress)
+- **Scalability** — PostgreSQL handles concurrent reads/writes from multiple kios without lock contention
+- **JSONB** — PostgreSQL supports indexed JSON columns (replaces SQLite dynamic_data JSON)
+
+### Architecture
+```
+Laravel (PHP-FPM) ↔ PostgreSQL (read/write main data)
+                      Redis (cache + pub/sub)
+                      Socket.IO (Node.js, port 3001) ↔ Redis Pub/Sub ↔ Laravel events
+Worker (Node.js) ↔ PostgreSQL (read/write, WAL mode) ↔ Redis (queue/status)
+Frontend (Next.js) ↔ Laravel API ↔ PostgreSQL/Redis
+Mobile (Flutter via React Native) ↔ Laravel API ↔ PostgreSQL/Redis
+```
+
+### Migration Plan
+1. Install PostgreSQL + Redis on VPS
+2. Laravel: update `.env` (DB_CONNECTION=pgsql, REDIS_HOST)
+3. Convert SQLite database → PostgreSQL using `sqlite3 -> psql` migration
+4. Update Eloquent models (minor JSONB changes)
+5. Add Redis pub/sub for Socket.IO events
+6. Remove SQLite-specific optimizations (WAL, busy_timeout)
+7. Test all endpoints + WebSocket events
+8. Deploy with PostgreSQL + Redis running as systemd services
