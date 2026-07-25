@@ -8,7 +8,7 @@
 | **Backend** | Laravel 12 (tidak berubah) | API sama untuk web & mobile |
 | **WhatsApp Worker** | Node.js, Baileys, Socket.IO | Tetap |
 | **AI Assistant** | opencode + OpenRouter (free tier) | Tetap |
-| **Database** | SQLite + WAL | Tetap |
+| **Database** | PostgreSQL 16 + Redis 7 (migrasi dari SQLite) | Real-time, 6 kios concurrent |
 | **Deploy** | VPS Rumahweb (202.10.42.237), PHP-FPM + nginx | Tetap |
 
 ---
