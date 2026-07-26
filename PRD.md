@@ -1,4 +1,4 @@
-# Product Requirements Document — FIF Modernization
+# openProduct Requirements Document — FIF Modernization
 ## Status: Active
 ## Date: 2026-07-26
 
@@ -19,7 +19,7 @@ Legend: `TODO` | `DOING` | `DONE` — update status per step
 | 0.7 | Optimistic updates | Web / Next.js | `TODO` | — | React Query optimistic mutations | Phase 0 |
 | 1.1 | API versioning `/api/v1/*` | Backend/Laravel | `TODO` | — | Create `routes/api/v1/` directory structure | Phase 1 |
 | 1.2 | Rate limiting per endpoint | Backend/Laravel | `TODO` | — | Install `fruitcake/laravel-rate-limiter` | Phase 1 |
-| 1.3 | WebSocket shared (Socket.IO) | Backend/Laravel | `TODO` | — | Deploy Redis + update socket-server for Redis adapter | Phase 1 |
+| 1.3 | WebSocket shared (Socket.IO) | Backend/Laravel | `DONE` | Redis adapter installed + configured | — | ✅ Executed 2026-07-26 |
 | 2.1 | Expo project setup (`mobile/`) | Mobile/React Native | `TODO` | — | `npx create-expo-app fif_mobile` | Phase 2 |
 | 2.2 | Auth flow (shared API) | Mobile/React Native | `TODO` | — | SecureStore + token refresh logic | Phase 2 |
 | 2.3 | Dashboard + Prospect List | Mobile/React Native | `TODO` | — | Build Dashboard screen + FlatList | Phase 2 |
@@ -29,7 +29,7 @@ Legend: `TODO` | `DOING` | `DONE` — update status per step
 | 2.7 | Offline support (cache + sync) | Mobile/React Native | `TODO` | — | AsyncStorage + sync queue + conflict resolution | Phase 2 |
 | 2.8 | Private APK distribution | Mobile/React Native | `TODO` | — | `eas build --platform android` + manual share | Phase 2 |
 | M | Single Data module (AO→UH→Marketing + Live Sync Excel) | Backend + Web + Mobile | `TODO` (PRD added) | PRD section written, not yet started | Backend API endpoints first (SingleDataController + CloudSyncController), then frontend | Modul Baru |
-| D | Migrate SQLite → PostgreSQL + Redis | Backend/Laravel | `TODO` | Migration guide written (13 steps) | Follow deploy/migrate-sqlite-to-postgres.md, start with Step 1 backup | Database Architecture |
+| D | Migrate SQLite → PostgreSQL + Redis | Backend/Laravel | `DONE` ✅ | 9,578 rows migrated, PG+Redis live on VPS, Worker migrated to pg, audit complete | — | ✅ Executed 2026-07-26 |
 | A | AI failover (OpenRouter free models) | opencode config | `DONE` | Updated opencode.json: 9router→OpenRouter, Ling Flash model | — | ✅ Working |
 | V | VPS health check script | deploy script | `DONE` | Created deploy/vps-health-check.sh | — | ✅ commit a1c4252 |
 
@@ -154,7 +154,7 @@ Sistem distribusi data berjenjang AO → UH → Marketing dengan eksekusi pesan 
 ---
 
 ## Database Architecture (PostgreSQL 16 + Redis 7)
-**Status: `TODO` (migrasi belum dieksekusi)**
+**Status: `DONE` ✅ (migrasi selesai 2026-07-26, audit selesai, Worker sudah pakai `pg`)**
 
 ### Alasan Migrasi dari SQLite
 - 6 kios × 2000-3000 records = 12.000-18.000 rows concurrent
@@ -204,7 +204,7 @@ Lihat: `deploy/migrate-sqlite-to-postgres.md` (13 steps, rollback plan included)
 | 1.1–1.3 | API Prep | 1 minggu | `TODO` |
 | 2.1–2.8 | React Native Mobile | 5-6 minggu | `TODO` |
 | M | Single Data module | 3-4 minggu | `TODO` |
-| D | DB migration SQLite→PostgreSQL | 1 hari | `TODO` |
+| D | DB migration SQLite→PostgreSQL | 1 hari | `DONE` ✅ 2026-07-26 — audit selesai |
 | V | VPS migration | 1 hari | `TODO` |
 
 ---

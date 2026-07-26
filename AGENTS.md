@@ -41,7 +41,25 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
 - Laravel .env: DB_CONNECTION=pgsql, SESSION_DRIVER=redis, QUEUE_CONNECTION=redis, CACHE_STORE=redis
 - Broadcast histories check constraint: tambah 'cancelled' status
 - Migration fix: `2026_07_13_000003_make_email_nullable_in_users_table.php` dual-driver (SQLite+PG)
-- **⚠️ PERLU AUDIT**: Semua perubahan di VPS perlu di-audit sebelum push ke git (perubahan manual di VPS belum di-commit)
+
+### 2026-07-26 — PostgreSQL compatibility audit + Worker migration selesai
+
+**Sudah di-push ✅ (3 commits: 68a0c87, 527710b, b69bceb)**
+- Restore password hashes: 9 user (double-hashed oleh Eloquent) → re-hash dari SQLite backup
+- Fix ambiguous `created_at` di JOINs: `BroadcastRepository`, `BroadcastService` → qualified `broadcast_histories.created_at`
+- Fix SQLite functions: `date('now')`/`datetime('now')` → PHP `now()->startOfDay()` params
+- Fix `json_extract()`: 3 lokasi → driver-aware (`->>'key'` untuk PG, `json_extract()` untuk SQLite fallback)
+- Fix migrations: `2026_07_13_000003` + `2026_07_12_000003` → `DB::getDriverName()` guard
+- **Worker migration: `better-sqlite3` → `pg` (Node.js PostgreSQL client)**
+  - `db.js`: PG Pool + async helpers (`query`, `getOne`, `getAll`)
+  - `queue-consumer.js`: all SQL async, `$1/$2/$3` params, `NOW()`/`CURRENT_DATE`
+  - `socket-server.js`: async `validateToken`/`getWAStatusFromDB`
+  - `wa-client.js`: async `getUserProxy`/`saveConnectionStatus`, `ON CONFLICT` upsert
+  - `events.js`: async `emitBroadcastGlobalStatus`
+  - `broadcast-config.js`: async `loadSettings`
+  - `index.js`: stale cleanup + stuck reset via pg pool
+- Deploy script: hapus SQLite chmod/chown/ACL references
+- Audit selesai: 0 SQLite references di worker, 0 unguarded SQLite functions di backend
 
 ### 2026-07-25 — opencode failover + VPS health check
 
@@ -126,7 +144,7 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
 
 **Worker** (run from `worker/`):
 - `npm run start` / `npm run dev` — `node src/index.js`
-- `.env` controls: DB_PATH, SOCKET_PORT (3001), POLL_INTERVAL_MS, MIN_DELAY_SEC, MAX_DELAY_SEC
+- `.env` controls: PG_HOST/PG_PORT/PG_DATABASE/PG_USER/PG_PASSWORD, SOCKET_PORT (3001), POLL_INTERVAL_MS, MIN_DELAY_SEC, MAX_DELAY_SEC
 
 ## Architecture notes
 
