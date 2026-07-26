@@ -9,15 +9,16 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 
 /* ── Animated particle ───────────────────────────────── */
-function Particle({ delay }: { delay: number }) {
-  const size = Math.random() * 4 + 2;
-  const left = Math.random() * 100;
-  const dur = Math.random() * 8 + 6;
+function Particle({ index }: { index: number }) {
+  const size = (index % 4) + 2;
+  const left = (index * 17 + 5) % 95;
+  const dur = (index % 5) + 6;
+  const delay = index * 0.35;
   return (
     <motion.div
       className="absolute rounded-full bg-blue-400/30"
       style={{ width: size, height: size, left: `${left}%`, bottom: '-10px' }}
-      animate={{ y: [0, -(Math.random() * 300 + 200)], opacity: [0, 0.7, 0] }}
+      animate={{ y: [0, -280], opacity: [0, 0.7, 0] }}
       transition={{ duration: dur, delay, repeat: Infinity, ease: 'linear' }}
     />
   );
@@ -143,7 +144,7 @@ export default function LoginPage() {
       {/* ── Particles ────────────────────────── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {particles.current.map((i) => (
-          <Particle key={i} delay={i * 0.4} />
+          <Particle key={i} index={i} />
         ))}
       </div>
 

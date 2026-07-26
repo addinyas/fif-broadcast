@@ -26,35 +26,41 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    if (typeof window === 'undefined') return null;
-    try {
-      const saved = sessionStorage.getItem('user');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      sessionStorage.removeItem('user');
-      return null;
-    }
-  });
-  const [token, setToken] = useState<string | null>(() => {
-    if (typeof window === 'undefined') return null;
-    return sessionStorage.getItem('token');
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
 
   useEffect(() => {
     if (initialized.current) return;
-    if (token && !user) {
-      initialized.current = true;
-      authService.me()
-        .then(setUser)
-        .catch(() => { sessionStorage.removeItem('token'); setToken(null); })
-        .finally(() => setLoading(false));
-    } else {
+    initialized.current = true;
+
+    try {
+      const savedToken = sessionStorage.getItem('token');
+      const savedUser = sessionStorage.getItem('user');
+
+      if (savedToken) setToken(savedToken);
+      if (savedUser) setUser(JSON.parse(savedUser));
+
+      if (savedToken && !savedUser) {
+        authService.me()
+          .then(setUser)
+          .catch(() => {
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            setToken(null);
+            setUser(null);
+          })
+          .finally(() => setLoading(false));
+      } else {
+        setLoading(false);
+      }
+    } catch {
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       setLoading(false);
     }
-  }, [token, user]);
+  }, []);
 
   const login = async (npoMceId: string, password: string) => {
     const res = await authService.login(npoMceId, password);
@@ -90,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem('user');
     clearPermissionsCache();
     disconnectSocket();
-    if ('caches' in window) {
+    if (typeof window !== 'undefined' && 'caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
