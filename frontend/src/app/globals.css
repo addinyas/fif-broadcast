@@ -2,13 +2,13 @@
 
 @theme {
   /* ── Fonts ──────────────────────────────────────────── */
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Geist", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-heading: "Geist", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-satoshi: "Satoshi", "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-subheading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, monospace;
-  --font-poppins: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-satoshi: "Outfit", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-subheading: "Space Grotesk", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-poppins: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 
   /* ── FIF Brand Blue ─────────────────────────────────── */
   --color-fif-50:  #eff6ff;

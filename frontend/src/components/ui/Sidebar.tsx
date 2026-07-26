@@ -122,7 +122,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -134,7 +134,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar panel */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex w-64 flex-col
+          fixed inset-y-0 left-0 z-[100] flex w-64 flex-col
           lg:static lg:translate-x-0
           transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -290,7 +290,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </AnimatePresence>
 
         {/* ── Footer ─────────────────────────────── */}
-        <div className="border-t border-white/[0.06] p-4 space-y-2">
+        <div className="border-t border-white/[0.06] p-4 pb-24 lg:pb-4 space-y-2">
           {/* User profile */}
           <div className="flex items-center gap-3 rounded-xl px-3 py-2.5"
             style={{ background: 'rgba(255,255,255,0.04)' }}>

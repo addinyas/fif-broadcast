@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '../ui/Sidebar';
@@ -32,7 +32,7 @@ const pageVariants = {
 };
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { isNative } = usePlatform();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -118,8 +118,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1.5">
             <NotificationBell />
+            <button
+              onClick={logout}
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -128,7 +135,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
         {/* ── Main Content ────────────────────────── */}
         <main
           id="main-scroll"
-          className="flex-1 overflow-auto p-4 pb-20 lg:p-8 lg:pb-8"
+          className="flex-1 overflow-auto p-4 pb-28 lg:p-8 lg:pb-8"
         >
           <AnimatePresence mode="wait">
             <motion.div
