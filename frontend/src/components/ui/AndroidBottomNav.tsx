@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
@@ -37,23 +40,42 @@ export function AndroidBottomNav() {
   }));
 
   return (
-    <nav className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200 bg-white px-1 pb-safe pt-1 dark:border-slate-700 dark:bg-slate-800">
+    <nav
+      className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-1 pb-safe pt-2 transition-all duration-300"
+      style={{
+        background: 'rgba(8, 14, 26, 0.94)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.4)',
+      }}
+    >
       {resolvedTabs.map((tab) => {
         const isActive = pathname === tab.to || pathname.startsWith(tab.to + '/');
         return (
           <Link
             key={tab.to}
             href={tab.to}
-            className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold transition-colors ${
-              isActive
-                ? 'text-fif-600 dark:text-fif-400'
-                : 'text-slate-400 dark:text-slate-500'
+            className={`relative flex flex-1 flex-col items-center gap-1 py-1.5 text-[10px] font-medium transition-all duration-200 ${
+              isActive ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'
             }`}
           >
-            <span className={`transition-colors ${isActive ? 'text-fif-600 dark:text-fif-400' : 'text-slate-400 dark:text-slate-500'}`}>
+            {isActive && (
+              <motion.span
+                layoutId="android-nav-active"
+                className="absolute -top-2 h-1 w-6 rounded-full bg-blue-400"
+                style={{ boxShadow: '0 0 10px rgba(96, 165, 250, 0.8)' }}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+            <motion.span
+              animate={{ scale: isActive ? 1.15 : 1, y: isActive ? -1 : 0 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="shrink-0"
+            >
               {tab.icon}
-            </span>
-            <span>{tab.label}</span>
+            </motion.span>
+            <span className="tracking-tight">{tab.label}</span>
           </Link>
         );
       })}
