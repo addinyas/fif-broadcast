@@ -13,6 +13,7 @@ use App\Services\CustomerService;
 use App\Services\GoogleSheetsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
@@ -83,8 +84,9 @@ class CustomerController extends Controller
 
         if (! $customer) {
             $escaped = '%'.addcslashes($noContract, '%_\\').'%';
+            $noContractCol = DB::getDriverName() === 'pgsql' ? "dynamic_data->>'no_contract'" : "json_extract(dynamic_data, '$.no_contract')";
             $fallbackQuery = Customer::where('dynamic_data', 'like', $escaped)
-                ->whereRaw("json_extract(dynamic_data, '$.no_contract') = ?", [$noContract]);
+                ->whereRaw("$noContractCol = ?", [$noContract]);
             if ($user->role !== 'superadmin' && $user->kios_id) {
                 $fallbackQuery->where('kios_id', $user->kios_id);
             }

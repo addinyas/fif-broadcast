@@ -42,7 +42,7 @@ class BroadcastRepository implements BroadcastRepositoryInterface
             $query->whereDate('broadcast_histories.created_at', $filters['date']);
         }
 
-        return $query->latest()->paginate($filters['per_page'] ?? 50);
+        return $query->latest('broadcast_histories.created_at')->paginate($filters['per_page'] ?? 50);
     }
 
     public function getStats(?int $marketingId = null, ?string $kiosId = null): array
@@ -57,15 +57,17 @@ class BroadcastRepository implements BroadcastRepositoryInterface
             $query->where('broadcast_histories.marketing_id', $marketingId);
         }
 
+        $today = now()->startOfDay()->toDateTimeString();
+
         $stats = $query->selectRaw("
             COUNT(*) as total,
             SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
             SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END) as sent,
             SUM(CASE WHEN status IN ('failed', 'cancelled') THEN 1 ELSE 0 END) as failed,
-            SUM(CASE WHEN status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent_today,
-            SUM(CASE WHEN status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today
-        ")->first();
+            SUM(CASE WHEN status = 'sent' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as sent_today,
+            SUM(CASE WHEN status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as failed_today
+        ", [$today, $today])->first();
 
         // Count manual broadcasts from customer_sent_marks
         $manualQuery = CustomerSentMark::query();

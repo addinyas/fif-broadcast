@@ -133,11 +133,11 @@ class BroadcastService
         $totalBroadcasted = $automatedCount + $manualOnlyCount;
 
         $lastBroadcast = (clone $historyQuery)->with('customer:id,name')
-            ->latest('created_at')
+            ->latest('broadcast_histories.created_at')
             ->first();
 
         $recent = (clone $historyQuery)->with('customer:id,name')
-            ->latest('created_at')
+            ->latest('broadcast_histories.created_at')
             ->limit(5)
             ->get()
             ->toArray();
@@ -259,14 +259,17 @@ class BroadcastService
 
         // Pending & processing: last 24 hours only (prevent stuck items from showing forever)
         // Sent/failed/cancelled: today only
+        $today = now()->startOfDay()->toDateTimeString();
+        $yesterday = now()->subDay()->toDateTimeString();
+
         $stats = $query->selectRaw("
-            SUM(CASE WHEN broadcast_histories.status = 'pending' AND broadcast_histories.created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) as pending,
-            SUM(CASE WHEN broadcast_histories.status = 'processing' AND broadcast_histories.created_at >= datetime('now', '-24 hours') THEN 1 ELSE 0 END) as processing,
-            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent,
-            SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed,
-            SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled,
+            SUM(CASE WHEN broadcast_histories.status = 'pending' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as pending,
+            SUM(CASE WHEN broadcast_histories.status = 'processing' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as processing,
+            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as sent,
+            SUM(CASE WHEN broadcast_histories.status = 'failed' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as failed,
+            SUM(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as cancelled,
             COUNT(*) as total
-        ")->first();
+        ", [$yesterday, $yesterday, $today, $today, $today])->first();
 
         return [
             'pending' => (int) ($stats->pending ?? 0),
@@ -339,6 +342,8 @@ class BroadcastService
             $query->where('customers.kios_id', $user->kios_id);
         }
 
+        $today = now()->startOfDay()->toDateTimeString();
+
         $rows = $query->selectRaw("
             broadcast_histories.marketing_id,
             users.name as marketing_name,
@@ -346,11 +351,11 @@ class BroadcastService
             users.kios_name,
             SUM(CASE WHEN broadcast_histories.status = 'pending' THEN 1 ELSE 0 END) as pending,
             SUM(CASE WHEN broadcast_histories.status = 'processing' THEN 1 ELSE 0 END) as processing,
-            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent_today,
-            SUM(CASE WHEN broadcast_histories.status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed_today,
-            COUNT(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= date('now', 'start of day') THEN 1 END) as cancelled_today,
+            SUM(CASE WHEN broadcast_histories.status = 'sent' AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as sent_today,
+            SUM(CASE WHEN broadcast_histories.status IN ('failed', 'cancelled') AND broadcast_histories.created_at >= ? THEN 1 ELSE 0 END) as failed_today,
+            COUNT(CASE WHEN broadcast_histories.status = 'cancelled' AND broadcast_histories.created_at >= ? THEN 1 END) as cancelled_today,
             MAX(CASE WHEN broadcast_histories.status IN ('sent', 'processing', 'pending') THEN broadcast_histories.updated_at END) as last_activity
-        ")->groupBy('broadcast_histories.marketing_id', 'users.name', 'users.kios_id', 'users.kios_name')
+        ", [$today, $today, $today])->groupBy('broadcast_histories.marketing_id', 'users.name', 'users.kios_id', 'users.kios_name')
             ->orderByDesc('pending')
             ->orderByDesc('processing')
             ->orderByDesc('last_activity')

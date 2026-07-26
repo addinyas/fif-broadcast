@@ -193,7 +193,8 @@ class CustomerRepository implements CustomerRepositoryInterface
         if (! empty($filters['sisa_angsuran'])) {
             $range = explode('-', $filters['sisa_angsuran']);
             if (count($range) === 2) {
-                $query->whereRaw("CAST(JSON_EXTRACT(dynamic_data, '$.sisa_angsuran') AS INTEGER) BETWEEN ? AND ?", [(int) $range[0], (int) $range[1]]);
+                $sisaCol = DB::getDriverName() === 'pgsql' ? "CAST(dynamic_data->>'sisa_angsuran' AS INTEGER)" : "CAST(JSON_EXTRACT(dynamic_data, '$.sisa_angsuran') AS INTEGER)";
+                $query->whereRaw("$sisaCol BETWEEN ? AND ?", [(int) $range[0], (int) $range[1]]);
             }
         }
 
@@ -331,9 +332,10 @@ class CustomerRepository implements CustomerRepositoryInterface
 
     public function deleteAll(?string $kiosId = null, bool $isSuperadmin = false): int
     {
+        $entrySourceCol = DB::getDriverName() === 'pgsql' ? "dynamic_data->>'_entry_source'" : "json_extract(dynamic_data, '$._entry_source')";
         $query = Customer::query()
             ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
-            ->whereRaw("json_extract(dynamic_data, '$._entry_source') IS NULL OR json_extract(dynamic_data, '$._entry_source') != 'manual'");
+            ->whereRaw("$entrySourceCol IS NULL OR $entrySourceCol != 'manual'");
 
         if (! $isSuperadmin) {
             $allowedUploaderIds = User::where('role', '!=', 'superadmin')->pluck('id');

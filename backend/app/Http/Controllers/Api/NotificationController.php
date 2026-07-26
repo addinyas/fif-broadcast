@@ -8,9 +8,19 @@ use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
 {
+    private function jsonExtract(string $column, string $key): string
+    {
+        if (DB::getDriverName() === 'pgsql') {
+            return "$column->>'$key'";
+        }
+
+        return "json_extract($column, '$.$key')";
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -39,8 +49,9 @@ class NotificationController extends Controller
                     ->orWhere(function ($q2) use ($activeGroupSet) {
                         $q2->where('type', 'rolling')
                             ->where(function ($q3) use ($activeGroupSet) {
-                                $q3->whereNull('data->share_group')
-                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
+                                $shareCol = $this->jsonExtract('data', 'share_group');
+                                $q3->whereNull(DB::raw($shareCol))
+                                    ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                             });
                     });
             })
@@ -62,8 +73,9 @@ class NotificationController extends Controller
                             ->orWhere(function ($q2) use ($activeGroupSet) {
                                 $q2->where('type', 'rolling')
                                     ->where(function ($q3) use ($activeGroupSet) {
-                                        $q3->whereNull('data->share_group')
-                                            ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
+                                        $shareCol = $this->jsonExtract('data', 'share_group');
+                                        $q3->whereNull(DB::raw($shareCol))
+                                            ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                                     });
                             });
                     })
@@ -127,8 +139,9 @@ class NotificationController extends Controller
                     ->orWhere(function ($q2) use ($activeGroupSet) {
                         $q2->where('type', 'rolling')
                             ->where(function ($q3) use ($activeGroupSet) {
-                                $q3->whereNull('data->share_group')
-                                    ->orWhereRaw("json_extract(data, '$.share_group') NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
+                                $shareCol = $this->jsonExtract('data', 'share_group');
+                                $q3->whereNull(DB::raw($shareCol))
+                                    ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
                             });
                     });
             })
