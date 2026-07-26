@@ -56,7 +56,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 animate-spin-slow rounded-full bg-gradient-to-r from-fif-500/20 via-purple-500/20 to-fif-500/20 blur-xl" />
             <div className="relative flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-fif-500/20 to-fif-700/20 ring-1 ring-white/10 backdrop-blur-xl">
               <div className="absolute inset-1 rounded-full bg-gradient-to-br from-fif-500/10 to-transparent ring-1 ring-white/5" />
-              <img src="/logofif.png" alt="FIF" className="relative h-16 w-16 object-contain drop-shadow-lg" />
+              <img src="/logobaru.png" alt="FIF" className="relative h-16 w-16 object-contain drop-shadow-lg" />
             </div>
             <div className="absolute -bottom-1 left-1/2 h-px w-20 -translate-x-1/2 bg-gradient-to-r from-transparent via-fif-500/40 to-transparent" />
           </div>

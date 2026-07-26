@@ -109,7 +109,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-slate-900 text-white transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-3 border-b border-slate-800 px-6 py-5">
-          <img src="/logofif.png" alt="FIF" className="h-9 w-9 object-contain" />
+          <img src="/logobaru.png" alt="FIF" className="h-9 w-9 object-contain" />
           <div className="flex items-center gap-2">
             <span className="font-poppins text-lg font-bold tracking-tight">FIF</span>
             <span className={`font-tight rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
