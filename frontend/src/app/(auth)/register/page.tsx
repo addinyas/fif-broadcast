@@ -82,7 +82,7 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md animate-scale-in">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-fif-500 to-fif-700 shadow-lg shadow-fif-500/25 ring-1 ring-white/10">
-            <img src="/logo.png" alt="FIF" className="h-12 w-12 object-contain drop-shadow-lg" />
+            <img src="/logofif.png" alt="FIF" className="h-12 w-12 object-contain drop-shadow-lg" />
           </div>
           <h1 className="font-heading bg-gradient-to-r from-fif-200 via-fif-100 to-white bg-clip-text text-2xl font-bold text-transparent">Buat Akun</h1>
           <p className="mt-1.5 text-sm text-slate-500">Daftar untuk memulai</p>
