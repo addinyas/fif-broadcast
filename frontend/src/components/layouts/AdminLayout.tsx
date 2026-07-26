@@ -57,7 +57,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <img src="/logobaru.png" alt="FIF" className="h-8 w-8 object-contain" />
+          <img src="/logofif.png" alt="FIF" className="h-8 w-8 object-contain" />
           <span className="text-base font-bold tracking-tight text-slate-800 dark:text-slate-200">FIF</span>
           <span className={`rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${roleColorMap[user?.role || ''] || roleColorMap.marketing}`}>
             {roleLabel[user?.role || ''] || user?.role}
