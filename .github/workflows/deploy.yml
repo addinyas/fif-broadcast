@@ -2,23 +2,68 @@ name: Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
+          username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          timeout: 300s
-          command_timeout: 15m
+          script_stop: true
           script: |
-            set -e
-            cd /var/www/fif
-            bash deploy/deploy-vps.sh fif-broadcast.net
+            set -euo pipefail
+            APP_DIR="/var/www/fif"
+            cd "$APP_DIR"
+
+            BEFORE=$(git rev-parse HEAD)
+            git pull --ff-only
+            AFTER=$(git rev-parse HEAD)
+
+            if [ "$BEFORE" = "$AFTER" ]; then
+              echo "=== Already up to date ==="
+              exit 0
+            fi
+
+            CHANGED=$(git diff-tree --no-commit-id -r "$BEFORE" "$AFTER" --name-only)
+            echo "=== Changed files ==="
+            echo "$CHANGED"
+
+            # Backend (only if backend changed)
+            if echo "$CHANGED" | grep -qE "^backend/"; then
+              echo "=== Backend changed, installing... ==="
+              cd "$APP_DIR/backend"
+              composer install --no-dev --optimize-autoloader --no-interaction
+              php artisan migrate --force
+              php artisan optimize:clear
+              php artisan config:cache
+              php artisan route:cache
+            fi
+
+            # Frontend (only if frontend changed)
+            if echo "$CHANGED" | grep -qE "^frontend/"; then
+              echo "=== Frontend changed, building... ==="
+              cd "$APP_DIR/frontend"
+              npm install
+              npm run build
+              chown -R fif:fif .next 2>/dev/null || true
+            fi
+
+            # Worker (only if worker changed)
+            if echo "$CHANGED" | grep -qE "^worker/"; then
+              echo "=== Worker changed, installing... ==="
+              cd "$APP_DIR/worker"
+              npm install
+            fi
+
+            # Restart affected services
+            echo "=== Restarting services ==="
+            systemctl restart fif-frontend fif-queue fif-worker nginx 2>/dev/null || true
+
+            echo "=== Deploy complete ==="
+            systemctl status fif-frontend --no-pager -l
