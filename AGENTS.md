@@ -22,10 +22,26 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
 - `deploy/vps-setup-postgres-redis.sh`: setup PostgreSQL + Redis di VPS
 - `PRD.md`: product requirements document (web Next.js + mobile React Native + DB PostgreSQL + Redis)
 
-**Belum di-push ⏸️**
+**Sudah di-push ✅ (2026-07-26)**
 - `scripts/ai-failover.sh`: failover model AI otomatis (lokal)
-- Migrasi database SQLite → PostgreSQL (belum dieksekusi)
-- Redis setup di VPS (belum dieksekusi)
+- Migrasi database SQLite → PostgreSQL (selesai, 9,578 rows termigrasi)
+- Redis setup di VPS (selesai, php-redis terinstall, Socket.IO pakai redis adapter)
+- PostgreSQL: listen_addresses='*', pg_hba.conf md5 auth, DB=fif, user=fif
+- Socket.IO: @socket.io/redis-adapter + redis client terinstall
+- Migration fix: `2026_07_13_000003_make_email_nullable_in_users_table.php` dual-driver (SQLite+PG)
+- broadcast_histories check constraint: tambah 'cancelled' status
+
+**Sudah di-push ✅ (2026-07-26)**
+- Migrasi database SQLite → PostgreSQL (SELESAI, dieksekusi langsung di VPS)
+  - 12 tabel termigrasi: customers (8224), broadcast_histories (101), customer_sent_marks (591), customer_shares (500), templates (5), users (10), role_permissions (20), kios (8), notifications (7), whatsapp_connections (6), broadcast_settings (13), personal_access_tokens (184)
+  - Total: 9,578 rows
+- Redis adapter Socket.IO: @socket.io/redis-adapter + redis client (pub/sub)
+- PostgreSQL config: listen_addresses='*', pg_hba.conf md5, DB=fif, user=fif
+- PHP extensions: php-pgsql (pdo_pgsql+pgsql), php-pecl-redis5
+- Laravel .env: DB_CONNECTION=pgsql, SESSION_DRIVER=redis, QUEUE_CONNECTION=redis, CACHE_STORE=redis
+- Broadcast histories check constraint: tambah 'cancelled' status
+- Migration fix: `2026_07_13_000003_make_email_nullable_in_users_table.php` dual-driver (SQLite+PG)
+- **⚠️ PERLU AUDIT**: Semua perubahan di VPS perlu di-audit sebelum push ke git (perubahan manual di VPS belum di-commit)
 
 ### 2026-07-25 — opencode failover + VPS health check
 
@@ -88,7 +104,7 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
 
 | Dir | Tech | Entrypoint |
 |-----|------|------------|
-| `backend/` | Laravel 12, PHP 8.2, SQLite | `routes/api.php`, `public/index.php` |
+| `backend/` | Laravel 12, PHP 8.2, PostgreSQL 16 + Redis 7 | `routes/api.php`, `public/index.php` |
 | `frontend/` | React 19, TS, Vite 8, TailwindCSS 4 | `src/main.tsx` → `App.tsx` |
 | `worker/` | Node.js (CommonJS), Baileys WhatsApp | `src/index.js` |
 
@@ -116,8 +132,9 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
 
 - **Auth**: Sanctum token + Google OAuth (Socialite). Roles: `superadmin`, `UH`, `marketing`
 - **Default seed**: `superadmin@crm.test`, `admin@crm.test`, `marketing@crm.test`, `marketing2@crm.test` — all password `password`
-- **DB**: SQLite (`database/database.sqlite`). Worker reads/writes directly via `better-sqlite3` with WAL mode
-- **Queue**: Database-driven, worker polls every 5s
+- **DB**: PostgreSQL 16 (`fif` database via TCP 127.0.0.1:5432). Worker reads/writes directly via `pg` (Node.js)
+- **Cache/Queue/Session**: Redis 7 (localhost:6379)
+- **Queue**: Redis-driven (QUEUE_CONNECTION=redis)
 - **Daily limit**: 150 sent messages per user per day
 - **Retry**: Worker retries failed messages up to 3x (`retry_count` column)
 - **Real-time**: Worker Socket.IO server (port 3001), events `broadcast:status`, `wa:status`, `broadcast:pending_stuck`
