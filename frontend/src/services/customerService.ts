@@ -1,5 +1,5 @@
 import api from './api';
-import type { Customer, PaginatedResponse, DistributionReport } from '../types';
+import type { Customer, PaginatedResponse, DistributionReport } from '@/types';
 
 export const customerService = {
   async getAll(params?: Record<string, string>): Promise<PaginatedResponse<Customer>> {

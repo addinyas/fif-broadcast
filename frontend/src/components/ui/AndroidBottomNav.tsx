@@ -1,4 +1,5 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -7,7 +8,7 @@ import {
   History,
   Settings,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import type { ReactNode } from 'react';
 
 interface TabItem {
@@ -27,7 +28,7 @@ const tabs: TabItem[] = [
 
 export function AndroidBottomNav() {
   const { isAdmin } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
   const prefix = isAdmin ? '/admin' : '/marketing';
 
   const resolvedTabs = tabs.map((tab) => ({
@@ -38,11 +39,11 @@ export function AndroidBottomNav() {
   return (
     <nav className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200 bg-white px-1 pb-safe pt-1 dark:border-slate-700 dark:bg-slate-800">
       {resolvedTabs.map((tab) => {
-        const isActive = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/');
+        const isActive = pathname === tab.to || pathname.startsWith(tab.to + '/');
         return (
-          <NavLink
+          <Link
             key={tab.to}
-            to={tab.to}
+            href={tab.to}
             className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold transition-colors ${
               isActive
                 ? 'text-fif-600 dark:text-fif-400'
@@ -53,7 +54,7 @@ export function AndroidBottomNav() {
               {tab.icon}
             </span>
             <span>{tab.label}</span>
-          </NavLink>
+          </Link>
         );
       })}
     </nav>

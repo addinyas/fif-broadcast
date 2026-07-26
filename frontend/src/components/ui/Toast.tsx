@@ -1,4 +1,7 @@
+'use client';
+
 import { useState, useCallback, createContext, useContext, type ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -48,21 +51,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
       <div className="fixed bottom-4 right-4 left-4 z-[100] flex flex-col gap-2 sm:left-auto sm:max-w-sm">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className={`animate-toast-in flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg dark:shadow-slate-900/50 ${bgStyles[item.type]}`}
-          >
-            <span className="shrink-0">{icons[item.type]}</span>
-            <p className="min-w-0 flex-1 break-words text-sm font-medium text-slate-800 dark:text-slate-200">{item.message}</p>
-            <button
-              onClick={() => remove(item.id)}
-              className="ml-2 shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-200/50 dark:text-slate-500 dark:hover:bg-slate-700/50"
+        <AnimatePresence mode="popLayout">
+          {items.map((item) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 80, scale: 0.95 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg dark:shadow-slate-900/50 ${bgStyles[item.type]}`}
             >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
+              <span className="shrink-0">{icons[item.type]}</span>
+              <p className="min-w-0 flex-1 break-words text-sm font-medium text-slate-800 dark:text-slate-200">{item.message}</p>
+              <button
+                onClick={() => remove(item.id)}
+                className="ml-2 shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-200/50 dark:text-slate-500 dark:hover:bg-slate-700/50"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

@@ -1,5 +1,5 @@
 import api from './api';
-import type { BroadcastHistory, PaginatedResponse, BroadcastStats, BroadcastProgress, MarketingSummary, WorkerStatus, DailyBroadcastStats } from '../types';
+import type { BroadcastHistory, PaginatedResponse, BroadcastStats, BroadcastProgress, MarketingSummary, WorkerStatus, DailyBroadcastStats } from '@/types';
 
 export const broadcastService = {
   async prepare(customerId: number, templateBody: string, formValues: Record<string, string>): Promise<BroadcastHistory> {

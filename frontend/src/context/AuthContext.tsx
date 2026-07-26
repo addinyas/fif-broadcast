@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
-import type { User } from '../types';
-import { authService } from '../services/authService';
-import { clearPermissionsCache } from '../hooks/usePermissions';
-import { disconnectSocket } from '../services/socketService';
+import type { User } from '@/types';
+import { authService } from '@/services/authService';
+import { clearPermissionsCache } from '@/hooks/usePermissions';
+import { disconnectSocket } from '@/services/socketService';
 
 interface AuthContextType {
   user: User | null;
@@ -27,6 +27,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
+    if (typeof window === 'undefined') return null;
     try {
       const saved = sessionStorage.getItem('user');
       return saved ? JSON.parse(saved) : null;
@@ -35,7 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return null;
     }
   });
-  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem('token'));
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    return sessionStorage.getItem('token');
+  });
   const [loading, setLoading] = useState(true);
   const initialized = useRef(false);
 

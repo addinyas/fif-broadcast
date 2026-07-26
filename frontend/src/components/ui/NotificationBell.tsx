@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, CheckCircle2, XCircle, UserPlus, Upload, Trash2, ArrowLeftRight } from 'lucide-react';
-import { getSocket } from '../../services/socketService';
-import { useAuth } from '../../context/AuthContext';
-import { notificationService, type NotificationItem } from '../../services/notificationService';
-import { customerService } from '../../services/customerService';
+import { getSocket } from '@/services/socketService';
+import { useAuth } from '@/context/AuthContext';
+import { notificationService, type NotificationItem } from '@/services/notificationService';
+import { customerService } from '@/services/customerService';
 
 interface NotificationBellProps {
   variant?: 'default' | 'dark';

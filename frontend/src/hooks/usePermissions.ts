@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { permissionService, type PermissionsByRole } from '../services/permissionService';
-import { useAuth } from '../context/AuthContext';
+import { permissionService, type PermissionsByRole } from '@/services/permissionService';
+import { useAuth } from '@/context/AuthContext';
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 

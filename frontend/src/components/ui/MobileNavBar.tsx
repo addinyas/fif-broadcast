@@ -1,11 +1,12 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
   SendHorizontal,
   Calculator,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import type { ReactNode } from 'react';
 
 interface TabItem {
@@ -23,7 +24,7 @@ const tabs: TabItem[] = [
 
 export function MobileNavBar() {
   const { isAdmin } = useAuth();
-  const location = useLocation();
+  const pathname = usePathname();
   const prefix = isAdmin ? '/admin' : '/marketing';
 
   const resolvedTabs = tabs.map((tab) => ({
@@ -34,11 +35,11 @@ export function MobileNavBar() {
   return (
     <nav className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-slate-200/80 bg-white/90 px-2 pb-safe backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-800/90 lg:hidden">
       {resolvedTabs.map((tab) => {
-        const isActive = location.pathname === tab.to || location.pathname.startsWith(tab.to + '/');
+        const isActive = pathname === tab.to || pathname.startsWith(tab.to + '/');
         return (
-          <NavLink
+          <Link
             key={tab.to}
-            to={tab.to}
+            href={tab.to}
             className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-xs font-semibold transition-all duration-200 ${
               isActive
                 ? 'text-fif-600 dark:text-fif-400'
@@ -50,7 +51,7 @@ export function MobileNavBar() {
               {tab.icon}
             </span>
             <span className="text-[11px]">{tab.label}</span>
-          </NavLink>
+          </Link>
         );
       })}
     </nav>

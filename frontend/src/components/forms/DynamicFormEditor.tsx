@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Eye, Send } from 'lucide-react';
-import { FORM_FIELDS } from '../../types';
+import { FORM_FIELDS } from '@/types';
 import { Card, CardHeader, CardTitle } from '../ui/Card';
 import { Button } from '../ui/Button';
 

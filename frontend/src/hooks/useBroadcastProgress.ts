@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { broadcastService } from '../services/broadcastService';
-import { getSocket } from '../services/socketService';
-import type { BroadcastProgress } from '../types';
+import { broadcastService } from '@/services/broadcastService';
+import { getSocket } from '@/services/socketService';
+import type { BroadcastProgress } from '@/types';
 
 export function useBroadcastProgress() {
   const [progress, setProgress] = useState<BroadcastProgress | null>(null);

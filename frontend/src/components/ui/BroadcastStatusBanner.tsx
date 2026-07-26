@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { Radio, MessageSquare, WifiOff } from 'lucide-react';
-import { getSocket } from '../../services/socketService';
-import { useAuth } from '../../context/AuthContext';
+import { getSocket } from '@/services/socketService';
+import { useAuth } from '@/context/AuthContext';
 
 export function BroadcastStatusBanner() {
   const [counts, setCounts] = useState({ sent: 0, failed: 0, processing: 0 });
@@ -52,7 +53,7 @@ export function BroadcastStatusBanner() {
     return (
       <div className="relative z-30 flex items-center gap-2.5 px-4 py-2 text-sm font-medium text-white shadow-sm sm:px-6 bg-red-500">
         <WifiOff className="h-4 w-4" />
-        <span>WhatsApp terputus! {pendingStuck} pesan tertunda. <a href={connectPath} className="underline">Hubungkan ulang</a></span>
+        <span>WhatsApp terputus! {pendingStuck} pesan tertunda. <Link href={connectPath} className="underline">Hubungkan ulang</Link></span>
       </div>
     );
   }

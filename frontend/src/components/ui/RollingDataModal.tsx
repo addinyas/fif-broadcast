@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X, Users, ArrowRight, ArrowLeft } from 'lucide-react';
-import { customerService } from '../../services/customerService';
-import { useAuth } from '../../context/AuthContext';
+import { customerService } from '@/services/customerService';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from './Button';
 import { useToast } from './Toast';
-import type { User, ShareInfo } from '../../types';
+import type { User, ShareInfo } from '@/types';
 
 interface Props {
   open: boolean;

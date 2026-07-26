@@ -76,10 +76,18 @@ server {
     root /var/www/fif/backend/public;
     index index.html;
 
-    # Frontend SPA (serves from frontend/dist)
+    # Next.js Frontend (port 3000)
     location / {
-        root /var/www/fif/frontend/dist;
-        try_files \$uri \$uri/ /index.html;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400s;
     }
 
     # Laravel API
@@ -147,10 +155,18 @@ server {
     root /var/www/fif/backend/public;
     index index.html;
 
-    # Frontend SPA (serves from frontend/dist)
+    # Next.js Frontend (port 3000)
     location / {
-        root /var/www/fif/frontend/dist;
-        try_files \$uri \$uri/ /index.html;
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_read_timeout 86400s;
     }
 
     # Laravel API
@@ -240,6 +256,27 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF
 
+# --- Systemd for Next.js Frontend ---
+cat > /etc/systemd/system/fif-frontend.service <<EOF
+[Unit]
+Description=FIF Next.js Frontend
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/fif/frontend
+ExecStart=/usr/bin/npx next start -p 3000
+Restart=always
+RestartSec=5
+User=fif
+Group=fif
+Environment=NODE_ENV=production
+Environment=HOSTNAME=0.0.0.0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 # Create fif user if not exists
 id -u fif &>/dev/null || useradd -r -s /bin/false fif
 
@@ -249,14 +286,15 @@ chmod -R 775 "$APP_DIR/backend/storage" "$APP_DIR/backend/bootstrap/cache"
 setfacl -R -m u:apache:rwx "$APP_DIR/backend/database" 2>/dev/null || true
 chown -R fif:fif "$APP_DIR/worker/auth_info" 2>/dev/null || true
 chmod 700 "$APP_DIR/worker/auth_info" 2>/dev/null || true
+chown -R fif:fif "$APP_DIR/frontend/.next" 2>/dev/null || true
 # Worker now uses PostgreSQL directly — no SQLite access needed
 setfacl -R -m u:fif:r "$APP_DIR/backend/storage" 2>/dev/null || true
 setfacl -R -m u:fif:rx "$APP_DIR/backend/bootstrap" 2>/dev/null || true
 
 nginx -t
 systemctl daemon-reload
-systemctl enable --now nginx php-fpm fif-queue fif-worker
-systemctl restart nginx fif-queue fif-worker
+systemctl enable --now nginx php-fpm fif-queue fif-worker fif-frontend
+systemctl restart nginx fif-queue fif-worker fif-frontend
 
 # --- Cloudflare WARP proxy (Docker) ---
 if command -v docker &>/dev/null; then

@@ -1,5 +1,5 @@
 import api from './api';
-import type { AuthResponse, User, Kios } from '../types';
+import type { AuthResponse, User, Kios } from '@/types';
 
 export const authService = {
   async login(npoMceId: string, password: string): Promise<AuthResponse> {

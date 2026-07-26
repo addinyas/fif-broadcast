@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import { Sidebar } from '../ui/Sidebar';
 import { BroadcastStatusBanner } from '../ui/BroadcastStatusBanner';
 import { NotificationBell } from '../ui/NotificationBell';
 import { MobileNavBar } from '../ui/MobileNavBar';
 import { AndroidBottomNav } from '../ui/AndroidBottomNav';
-import { useAuth } from '../../context/AuthContext';
-import { usePlatform } from '../../hooks/usePlatform';
-import { registerPushNotifications } from '../../services/pushService';
+import { useAuth } from '@/context/AuthContext';
+import { usePlatform } from '@/hooks/usePlatform';
+import { registerPushNotifications } from '@/services/pushService';
 
 const roleColorMap: Record<string, string> = {
   superadmin: 'bg-red-500/20 text-red-300',
@@ -22,7 +21,7 @@ const roleLabel: Record<string, string> = {
   marketing: 'MCE',
 };
 
-export function MarketingLayout() {
+export function MarketingLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { isNative } = usePlatform();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,7 +37,7 @@ export function MarketingLayout() {
           <BroadcastStatusBanner />
           <main className="flex-1 overflow-auto p-4 pb-24">
             <div className="mx-auto max-w-lg animate-fade-in">
-              <Outlet />
+              {children}
             </div>
           </main>
         </div>
@@ -70,7 +69,7 @@ export function MarketingLayout() {
         <BroadcastStatusBanner />
         <main className="flex-1 overflow-auto p-4 pb-20 lg:p-8 lg:pb-8">
           <div className="mx-auto max-w-7xl animate-fade-in">
-            <Outlet />
+            {children}
           </div>
         </main>
       </div>

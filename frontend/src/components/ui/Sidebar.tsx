@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -19,10 +20,10 @@ import {
   X,
   Activity,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
-import { usePermissions } from '../../hooks/usePermissions';
-import { useBroadcastProgress } from '../../hooks/useBroadcastProgress';
+import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
+import { usePermissions } from '@/hooks/usePermissions';
+import { useBroadcastProgress } from '@/hooks/useBroadcastProgress';
 import { useToast } from './Toast';
 import { NotificationBell } from './NotificationBell';
 import type { ReactNode } from 'react';
@@ -72,6 +73,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const pathname = usePathname();
   const { user, logout, isAdmin } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const { hasFeature } = usePermissions();
@@ -123,29 +125,26 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         <nav className="font-poppins flex-1 space-y-1 overflow-y-auto p-3 min-h-0">
-        {visibleLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 group ${
+        {visibleLinks.map((link) => {
+          const isActive = pathname === link.to || pathname.startsWith(link.to + '/');
+          return (
+            <Link
+              key={link.to}
+              href={link.to}
+              className={`flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 group ${
                 isActive
                   ? 'bg-gradient-to-r from-fif-600/20 to-fif-600/5 text-white shadow-sm'
                   : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
-              }`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className={`transition-colors ${isActive ? 'text-fif-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
-                  {link.icon}
-                </span>
-                <span className="flex-1">{link.label}</span>
-                <ChevronRight className={`h-4 w-4 transition-all ${isActive ? 'translate-x-0 opacity-100 text-fif-400' : '-translate-x-1 opacity-0'}`} />
-              </>
-            )}
-          </NavLink>
-        ))}
+              }`}
+            >
+              <span className={`transition-colors ${isActive ? 'text-fif-400' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                {link.icon}
+              </span>
+              <span className="flex-1">{link.label}</span>
+              <ChevronRight className={`h-4 w-4 transition-all ${isActive ? 'translate-x-0 opacity-100 text-fif-400' : '-translate-x-1 opacity-0'}`} />
+            </Link>
+          );
+        })}
       </nav>
 
       {progress && progress.is_active && (

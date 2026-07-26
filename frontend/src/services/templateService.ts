@@ -1,5 +1,5 @@
 import api from './api';
-import type { Template } from '../types';
+import type { Template } from '@/types';
 
 export const templateService = {
   async getAll(): Promise<Template[]> {

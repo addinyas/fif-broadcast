@@ -1,10 +1,14 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import { motion, type Variants } from 'framer-motion';
+import { type ReactNode } from 'react';
 
 interface StatCardProps {
   title: string;
   value: string | number;
   icon?: ReactNode;
   color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'emerald' | 'amber';
+  index?: number;
 }
 
 const colorConfig: Record<string, { border: string; icon: string; iconBg: string }> = {
@@ -17,13 +21,26 @@ const colorConfig: Record<string, { border: string; icon: string; iconBg: string
   amber:   { border: '#f59e0b', icon: 'text-amber-600 dark:text-amber-400',  iconBg: 'bg-amber-50 dark:bg-amber-900/30' },
 };
 
-export function StatCard({ title, value, icon, color = 'blue' }: StatCardProps) {
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.08, duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+  }),
+};
+
+export function StatCard({ title, value, icon, color = 'blue', index = 0 }: StatCardProps) {
   const cfg = colorConfig[color] || colorConfig.blue;
 
   return (
-    <div
+    <motion.div
       className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700/50 dark:bg-slate-800"
       style={{ borderLeftWidth: '3px', borderLeftColor: cfg.border }}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      custom={index}
     >
       <div className="flex items-start justify-between">
         <div className="space-y-1">
@@ -36,6 +53,6 @@ export function StatCard({ title, value, icon, color = 'blue' }: StatCardProps) 
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
