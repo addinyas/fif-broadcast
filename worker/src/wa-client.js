@@ -1,30 +1,24 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const { pool } = require('./db');
 
 const { emitWAStatus, emitPairingCode, emitGlobalWAStatus } = require('./events');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
-const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 
 const MAX_RECONNECT_ATTEMPTS = 10;
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
 const WA_PROXY_FALLBACK = process.env.WA_PROXY || '';
 
-function getUserProxy(userId) {
-  let db;
+async function getUserProxy(userId) {
   try {
-    db = new Database(DB_PATH, { readonly: true });
-    db.pragma('busy_timeout = 5000');
-    const row = db.prepare('SELECT wa_proxy FROM users WHERE id = ?').get(userId);
-    return row?.wa_proxy || null;
+    const { rows } = await pool.query('SELECT wa_proxy FROM users WHERE id = $1', [userId]);
+    return rows[0]?.wa_proxy || null;
   } catch (err) {
     console.error(`[WA] Failed to read proxy for user ${userId}:`, err.message);
     return null;
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -83,22 +77,19 @@ function cleanupOldLidFiles() {
   }
 }
 
-function saveConnectionStatus(userId, status, qrCode) {
-  let db;
+async function saveConnectionStatus(userId, status, qrCode) {
   try {
-    db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('busy_timeout = 5000');
-    const existing = db.prepare('SELECT id FROM whatsapp_connections WHERE user_id = ?').get(userId);
-    if (existing) {
-      db.prepare('UPDATE whatsapp_connections SET status = ?, qr_code = ?, updated_at = datetime(\'now\') WHERE user_id = ?').run(status, qrCode || null, userId);
-    } else {
-      db.prepare('INSERT INTO whatsapp_connections (user_id, status, qr_code, created_at, updated_at) VALUES (?, ?, ?, datetime(\'now\'), datetime(\'now\'))').run(userId, status, qrCode || null);
-    }
+    await pool.query(
+      `INSERT INTO whatsapp_connections (user_id, status, qr_code, created_at, updated_at)
+       VALUES ($1, $2, $3, NOW(), NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         status = EXCLUDED.status,
+         qr_code = EXCLUDED.qr_code,
+         updated_at = NOW()`,
+      [userId, status, qrCode || null]
+    );
   } catch (err) {
     console.error(`[WA] Failed to save connection status for user ${userId}:`, err.message);
-  } finally {
-    if (db) db.close();
   }
 }
 
@@ -115,7 +106,7 @@ async function createWAClientForUser(userId, onReady) {
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
   // Per-user proxy: DB > env fallback
-  const userProxy = getUserProxy(userId) || WA_PROXY_FALLBACK;
+  const userProxy = await getUserProxy(userId) || WA_PROXY_FALLBACK;
   let userProxyAgent = undefined;
   let userFetchAgent = undefined;
   if (userProxy) {
@@ -357,7 +348,7 @@ async function disconnectWAForUser(userId) {
     }
   }
 
-  saveConnectionStatus(userId, 'logged_out', null);
+  await saveConnectionStatus(userId, 'logged_out', null);
   emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
   emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
 }

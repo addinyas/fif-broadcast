@@ -1,8 +1,3 @@
-const path = require('path');
-const Database = require('better-sqlite3');
-
-const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
-
 const DEFAULTS = {
   messages_per_session: 20,
   min_delay_sec: 6,
@@ -23,17 +18,15 @@ let cache = null;
 let lastFetch = 0;
 const CACHE_TTL_MS = 30_000;
 
-function loadSettings() {
+async function loadSettings() {
   const now = Date.now();
   if (cache && (now - lastFetch) < CACHE_TTL_MS) {
     return cache;
   }
 
-  let db;
   try {
-    db = new Database(DB_PATH, { readonly: true });
-    db.pragma('busy_timeout = 5000');
-    const rows = db.prepare('SELECT setting_key, setting_value FROM broadcast_settings').all();
+    const { getAll } = require('./db');
+    const rows = await getAll('SELECT setting_key, setting_value FROM broadcast_settings');
     const settings = { ...DEFAULTS };
     for (const row of rows) {
       const key = row.setting_key;
@@ -48,8 +41,6 @@ function loadSettings() {
   } catch (err) {
     console.error('[Config] Failed to load broadcast settings:', err.message);
     return cache || DEFAULTS;
-  } finally {
-    if (db) db.close();
   }
 }
 

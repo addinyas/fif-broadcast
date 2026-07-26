@@ -1,26 +1,15 @@
 const path = require('path');
 const crypto = require('crypto');
-const Database = require('better-sqlite3');
+const { getOne } = require('./db');
 const { Server } = require('socket.io');
 const { getOrCreateClient, disconnect, requestPairingCode, softReset } = require('./wa-manager');
 const { isConnectedForUser } = require('./wa-client');
 const { setIO } = require('./events');
 
-const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
-
 const COOLDOWN_MS = 60_000;
 
 let io = null;
 const lastAttempt = new Map();
-
-let readonlyDb = null;
-function getReadonlyDb() {
-  if (!readonlyDb) {
-    readonlyDb = new Database(DB_PATH, { readonly: true });
-    readonlyDb.pragma('busy_timeout = 5000');
-  }
-  return readonlyDb;
-}
 
 function checkCooldown(userId) {
   const last = lastAttempt.get(userId) || 0;
@@ -35,7 +24,7 @@ function recordAttempt(userId) {
   lastAttempt.set(userId, Date.now());
 }
 
-function validateToken(token) {
+async function validateToken(token) {
   if (!token || !token.includes('|')) return null;
 
   const parts = token.split('|');
@@ -47,10 +36,9 @@ function validateToken(token) {
   const hash = crypto.createHash('sha256').update(secret).digest('hex');
 
   try {
-    const db = getReadonlyDb();
-    const row = db.prepare('SELECT tokenable_id FROM personal_access_tokens WHERE id = ? AND token = ?').get(tokenId, hash);
+    const row = await getOne('SELECT tokenable_id FROM personal_access_tokens WHERE id = $1 AND token = $2', [tokenId, hash]);
     if (!row) return null;
-    const userRow = db.prepare('SELECT id, role FROM users WHERE id = ?').get(row.tokenable_id);
+    const userRow = await getOne('SELECT id, role FROM users WHERE id = $1', [row.tokenable_id]);
     return userRow ? { userId: userRow.id, role: userRow.role } : null;
   } catch (err) {
     console.error('[Socket] Token validation error:', err.message);
@@ -58,11 +46,9 @@ function validateToken(token) {
   }
 }
 
-function getWAStatusFromDB(userId) {
+async function getWAStatusFromDB(userId) {
   try {
-    const db = getReadonlyDb();
-    const row = db.prepare('SELECT status, qr_code FROM whatsapp_connections WHERE user_id = ?').get(userId);
-    return row || null;
+    return await getOne('SELECT status, qr_code FROM whatsapp_connections WHERE user_id = $1', [userId]);
   } catch (err) {
     return null;
   }
@@ -80,14 +66,16 @@ function createSocketServer(httpServer) {
 
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
-    const result = validateToken(token);
-    if (!result) {
-      return next(new Error('Invalid token'));
-    }
-
-    socket.data.userId = result.userId;
-    socket.data.role = result.role;
-    next();
+    validateToken(token).then((result) => {
+      if (!result) {
+        return next(new Error('Invalid token'));
+      }
+      socket.data.userId = result.userId;
+      socket.data.role = result.role;
+      next();
+    }).catch(() => {
+      next(new Error('Invalid token'));
+    });
   });
 
   io.on('connection', (socket) => {
@@ -107,18 +95,21 @@ function createSocketServer(httpServer) {
 
     console.log(`[Socket] User ${userId} connected (socket ${socket.id})`);
 
-    if (isConnectedForUser(userId)) {
-      socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
-    } else {
-      const dbStatus = getWAStatusFromDB(userId);
-      if (dbStatus && dbStatus.status === 'connected') {
+    async function emitInitialStatus() {
+      if (isConnectedForUser(userId)) {
         socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
-      } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
-        socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
       } else {
-        socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+        const dbStatus = await getWAStatusFromDB(userId);
+        if (dbStatus && dbStatus.status === 'connected') {
+          socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
+        } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
+          socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
+        } else {
+          socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
+        }
       }
     }
+    emitInitialStatus();
 
     socket.on('disconnect', () => {
       console.log(`[Socket] User ${userId} disconnected (socket ${socket.id})`);
@@ -138,7 +129,7 @@ function createSocketServer(httpServer) {
       }
       recordAttempt(userId);
       try {
-        const dbStatus = getWAStatusFromDB(userId);
+        const dbStatus = await getWAStatusFromDB(userId);
         const isRetry = dbStatus && (dbStatus.status === 'awaiting_scan' || dbStatus.status === 'connected');
         if (isRetry) {
           console.log(`[Socket] Retrying connection for user ${userId} (keeping auth)`);
@@ -158,11 +149,11 @@ function createSocketServer(httpServer) {
       }
     });
 
-    socket.on('wa:request_status', () => {
+    socket.on('wa:request_status', async () => {
       if (isConnectedForUser(userId)) {
         socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
       } else {
-        const dbStatus = getWAStatusFromDB(userId);
+        const dbStatus = await getWAStatusFromDB(userId);
         if (dbStatus && dbStatus.status === 'connected') {
           socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
         } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
@@ -205,11 +196,4 @@ function getIO() {
   return io;
 }
 
-function closeReadonlyDb() {
-  if (readonlyDb) {
-    try { readonlyDb.close(); } catch {}
-    readonlyDb = null;
-  }
-}
-
-module.exports = { createSocketServer, getIO, closeReadonlyDb };
+module.exports = { createSocketServer, getIO };

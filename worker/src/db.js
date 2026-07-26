@@ -1,25 +1,37 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
 
-const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
+const pool = new Pool({
+  host: process.env.PG_HOST || '127.0.0.1',
+  port: parseInt(process.env.PG_PORT || '5432', 10),
+  database: process.env.PG_DATABASE || 'fif',
+  user: process.env.PG_USER || 'fif',
+  password: process.env.PG_PASSWORD || 'fif_secure_pass_2026',
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
 
-let _db = null;
+pool.on('error', (err) => {
+  console.error('[DB] Unexpected PG pool error:', err.message);
+});
 
-function getWritableDb() {
-  if (!_db) {
-    _db = new Database(DB_PATH);
-    _db.pragma('journal_mode = WAL');
-    _db.pragma('busy_timeout = 5000');
-    _db.pragma('wal_autocheckpoint = 1000');
-  }
-  return _db;
+async function query(sql, params = []) {
+  const result = await pool.query(sql, params);
+  return result;
 }
 
-function closeDb() {
-  if (_db) {
-    _db.close();
-    _db = null;
-  }
+async function getOne(sql, params = []) {
+  const { rows } = await pool.query(sql, params);
+  return rows[0] || null;
 }
 
-module.exports = { getWritableDb, closeDb };
+async function getAll(sql, params = []) {
+  const { rows } = await pool.query(sql, params);
+  return rows;
+}
+
+function closePool() {
+  return pool.end();
+}
+
+module.exports = { pool, query, getOne, getAll, closePool };

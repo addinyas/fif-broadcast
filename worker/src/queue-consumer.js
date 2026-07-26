@@ -1,4 +1,4 @@
-const { getWritableDb } = require('./db');
+const { pool, query, getOne, getAll } = require('./db');
 const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
 const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew, emitBroadcastProgress, emitBroadcastGlobalStatus } = require('./events');
@@ -30,8 +30,7 @@ function sleep(ms) {
 async function sendPushNotification(userId, title, body) {
   if (!FCM_SERVER_KEY) return;
   try {
-    const db = getWritableDb();
-    const user = db.prepare('SELECT fcm_token FROM users WHERE id = ?').get(userId);
+    const user = await getOne('SELECT fcm_token FROM users WHERE id = $1', [userId]);
     if (!user?.fcm_token) return;
     await fetch('https://fcm.googleapis.com/fcm/send', {
       method: 'POST',
@@ -50,24 +49,24 @@ async function sendPushNotification(userId, title, body) {
   }
 }
 
-function emitUserProgress(db, userId) {
-  const progress = db.prepare(`
+async function emitUserProgress(userId) {
+  const progress = await getOne(`
     SELECT
       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
       SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
-      SUM(CASE WHEN status = 'sent' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as sent,
-      SUM(CASE WHEN status = 'failed' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as failed,
-      SUM(CASE WHEN status = 'cancelled' AND created_at >= date('now', 'start of day') THEN 1 ELSE 0 END) as cancelled,
+      SUM(CASE WHEN status = 'sent' AND created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as sent,
+      SUM(CASE WHEN status = 'failed' AND created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as failed,
+      SUM(CASE WHEN status = 'cancelled' AND created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as cancelled,
       COUNT(*) as total
     FROM broadcast_histories
-    WHERE marketing_id = ?
-  `).get(userId);
+    WHERE marketing_id = $1
+  `, [userId]);
 
-  const manualCount = db.prepare(`
+  const manualCount = await getOne(`
     SELECT COUNT(*) as cnt
     FROM customer_sent_marks
-    WHERE user_id = ? AND sent_at >= date('now', 'start of day')
-  `).get(userId);
+    WHERE user_id = $1 AND sent_at >= CURRENT_DATE
+  `, [userId]);
 
   emitBroadcastProgress(userId, {
     pending: progress?.pending || 0,
@@ -82,7 +81,7 @@ function emitUserProgress(db, userId) {
 }
 
 async function processUserQueue(userId) {
-  const settings = loadSettings();
+  const settings = await loadSettings();
   const sessionsTotal = 3;
   let totalSent = 0;
   let totalFailed = 0;
@@ -111,29 +110,28 @@ async function processUserQueue(userId) {
         return { sent: totalSent, failed: totalFailed };
       }
 
-      const db = getWritableDb();
-      const row = db.prepare(`
+      const row = await getOne(`
         SELECT bh.id, bh.customer_id, bh.exact_message, bh.retry_count, c.phone_number
         FROM broadcast_histories bh
         JOIN customers c ON c.id = bh.customer_id
-        WHERE bh.status = 'pending' AND bh.marketing_id = ?
+        WHERE bh.status = 'pending' AND bh.marketing_id = $1
         ORDER BY bh.id ASC
         LIMIT 1
-      `).get(userId);
+      `, [userId]);
 
       if (!row) {
         console.log(`[Queue:${userId}] No more pending messages`);
         return { sent: totalSent, failed: totalFailed };
       }
 
-      const cancelled = db.prepare('SELECT status FROM broadcast_histories WHERE id = ?').get(row.id);
+      const cancelled = await getOne('SELECT status FROM broadcast_histories WHERE id = $1', [row.id]);
       if (cancelled && cancelled.status === 'cancelled') {
         console.log(`[Queue:${userId}] Skipping cancelled #${row.id}`);
         continue;
       }
 
-      const procResult = db.prepare("UPDATE broadcast_histories SET status = 'processing', updated_at = datetime('now') WHERE id = ? AND status = 'pending'").run(row.id);
-      if (procResult.changes === 0) {
+      const procResult = await query("UPDATE broadcast_histories SET status = 'processing', updated_at = NOW() WHERE id = $1 AND status = 'pending'", [row.id]);
+      if (procResult.rowCount === 0) {
         console.log(`[Queue:${userId}] Skipping #${row.id} (status changed)`);
         continue;
       }
@@ -156,8 +154,8 @@ async function processUserQueue(userId) {
         totalSent++;
         sentThisSession++;
         restCounter++;
-        const result = db.prepare("UPDATE broadcast_histories SET status = 'sent', sent_at = datetime('now'), updated_at = datetime('now') WHERE id = ? AND status = 'processing'").run(row.id);
-        if (result.changes > 0) {
+        const result = await query("UPDATE broadcast_histories SET status = 'sent', sent_at = NOW(), updated_at = NOW() WHERE id = $1 AND status = 'processing'", [row.id]);
+        if (result.rowCount > 0) {
           emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'sent' });
         }
         console.log(`[Queue:${userId}] Sent #${row.id} to ${row.phone_number} (session ${session + 1}: ${sentThisSession}/${settings.messages_per_session})`);
@@ -166,21 +164,21 @@ async function processUserQueue(userId) {
         const currentRetry = row.retry_count || 0;
 
         if (currentRetry < settings.max_retry) {
-          db.prepare("UPDATE broadcast_histories SET status = 'pending', retry_count = ?, error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
-            .run(currentRetry + 1, errMsg, row.id);
+          await query("UPDATE broadcast_histories SET status = 'pending', retry_count = $1, error_log = $2, updated_at = NOW() WHERE id = $3 AND status = 'processing'",
+            [currentRetry + 1, errMsg, row.id]);
           console.warn(`[Queue:${userId}] Failed #${row.id} (retry ${currentRetry + 1}/${settings.max_retry}): ${errMsg}`);
         } else {
           totalFailed++;
-          const failResult = db.prepare("UPDATE broadcast_histories SET status = 'failed', error_log = ?, updated_at = datetime('now') WHERE id = ? AND status = 'processing'")
-            .run(errMsg, row.id);
-          if (failResult.changes > 0) {
+          const failResult = await query("UPDATE broadcast_histories SET status = 'failed', error_log = $1, updated_at = NOW() WHERE id = $2 AND status = 'processing'",
+            [errMsg, row.id]);
+          if (failResult.rowCount > 0) {
             emitBroadcastStatus(userId, { customer_id: row.customer_id, status: 'failed', error: errMsg });
           }
           console.error(`[Queue:${userId}] Failed #${row.id} (max retries): ${errMsg}`);
         }
       }
 
-      emitUserProgress(getWritableDb(), userId);
+      await emitUserProgress(userId);
       emitBroadcastGlobalStatus();
 
       if (restCounter >= settings.rest_every_x_messages && sentThisSession < settings.messages_per_session) {
@@ -212,14 +210,11 @@ async function processUserQueue(userId) {
 async function pollAndDispatch() {
   if (activeProcessors.size > 0) return;
 
-  const settings = loadSettings();
+  const settings = await loadSettings();
   if (!settings.queue_enabled) return;
   if (!isWithinBusinessHours()) return;
 
-  const db = getWritableDb();
-  const usersWithPending = db.prepare(`
-    SELECT DISTINCT marketing_id FROM broadcast_histories WHERE status = 'pending'
-  `).all();
+  const usersWithPending = await getAll('SELECT DISTINCT marketing_id FROM broadcast_histories WHERE status = \'pending\'');
 
   if (usersWithPending.length === 0) return;
 
@@ -235,11 +230,11 @@ async function pollAndDispatch() {
     dispatched++;
 
     processUserQueue(marketing_id)
-      .then((result) => {
+      .then(async (result) => {
         if (result.sent > 0 || result.failed > 0) {
           sendPushNotification(marketing_id, 'Broadcast Selesai', `${result.sent} terkirim, ${result.failed} gagal`);
         }
-        emitUserProgress(getWritableDb(), marketing_id);
+        await emitUserProgress(marketing_id);
         emitBroadcastGlobalStatus();
       })
       .catch((err) => {
@@ -254,19 +249,19 @@ async function pollAndDispatch() {
 function startQueue() {
   if (running) return;
   running = true;
-  const settings = loadSettings();
-  console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, queue_enabled=${settings.queue_enabled}, concurrency=${settings.concurrency})`);
+  loadSettings().then((settings) => {
+    console.log(`[Queue] Started (poll every ${POLL_INTERVAL}ms, queue_enabled=${settings.queue_enabled}, concurrency=${settings.concurrency})`);
+  });
   pollIntervalId = setInterval(pollAndDispatch, POLL_INTERVAL);
 
-  notifIntervalId = setInterval(() => {
+  notifIntervalId = setInterval(async () => {
     try {
-      const db = getWritableDb();
-      const rows = db.prepare(`
+      const rows = await getAll(`
         SELECT user_id, MAX(id) as max_id
         FROM notifications
         WHERE read_at IS NULL
         GROUP BY user_id
-      `).all();
+      `);
 
       for (const row of rows) {
         const prevMax = lastNotifId.get(row.user_id) || 0;

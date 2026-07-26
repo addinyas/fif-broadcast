@@ -1,16 +1,15 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const Database = require('better-sqlite3');
+const { pool } = require('./db');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 
-const { createSocketServer, getIO, closeReadonlyDb } = require('./socket-server');
+const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
 const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
-const { closeDb } = require('./db');
+const { closePool } = require('./db');
 
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
-const DB_PATH = path.resolve(process.env.DB_PATH || path.resolve(__dirname, '..', '..', 'backend', 'database', 'database.sqlite'));
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 
@@ -20,20 +19,16 @@ async function main() {
   console.log('[Worker] Starting FIF Broadcast Worker...');
 
   try {
-    const db = new Database(DB_PATH, { readonly: false });
-    db.pragma('journal_mode = WAL');
-    db.pragma('busy_timeout = 5000');
     const staleCutoff = new Date(Date.now() - MAX_CONNECTION_MS).toISOString();
-    const stale = db.prepare("SELECT user_id FROM whatsapp_connections WHERE status = 'connected' AND updated_at < ?").all(staleCutoff);
-    for (const row of stale) {
+    const stale = await pool.query("SELECT user_id FROM whatsapp_connections WHERE status = 'connected' AND updated_at < $1", [staleCutoff]);
+    for (const row of stale.rows) {
       console.log(`[Worker] Cleaning stale connection for user ${row.user_id} (exceeded ${MAX_CONNECTION_MS / 3600000}h)`);
-      db.prepare("UPDATE whatsapp_connections SET status = 'logged_out', qr_code = NULL, updated_at = datetime('now') WHERE user_id = ?").run(row.user_id);
+      await pool.query("UPDATE whatsapp_connections SET status = 'logged_out', qr_code = NULL, updated_at = NOW() WHERE user_id = $1", [row.user_id]);
       const authDir = path.join(AUTH_BASE, `user_${row.user_id}`);
       if (fs.existsSync(authDir)) {
         fs.rmSync(authDir, { recursive: true, force: true });
       }
     }
-    db.close();
   } catch (err) {
     console.error('[Worker] Failed to clean stale connections:', err.message);
   }
@@ -45,13 +40,10 @@ async function main() {
   }
 
   try {
-    const db = new Database(DB_PATH);
-    db.pragma('busy_timeout = 5000');
-    const stuck = db.prepare("UPDATE broadcast_histories SET status = 'pending', updated_at = datetime('now') WHERE status = 'processing'").run();
-    if (stuck.changes > 0) {
-      console.log(`[Worker] Reset ${stuck.changes} stuck 'processing' messages to 'pending'`);
+    const stuck = await pool.query("UPDATE broadcast_histories SET status = 'pending', updated_at = NOW() WHERE status = 'processing'");
+    if (stuck.rowCount > 0) {
+      console.log(`[Worker] Reset ${stuck.rowCount} stuck 'processing' messages to 'pending'`);
     }
-    db.close();
   } catch (err) {
     console.error('[Worker] Failed to reset stuck messages:', err.message);
   }
@@ -83,8 +75,7 @@ function gracefulShutdown(signal) {
   console.log(`[Worker] Received ${signal}, shutting down gracefully...`);
   stopQueue();
   disconnectAllConnections();
-  closeDb();
-  closeReadonlyDb();
+  closePool();
   const io = getIO();
   if (io) { io.close(); }
   if (httpServer) {
