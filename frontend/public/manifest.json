@@ -1,6 +1,6 @@
 {
-  "name": "FIF BRDCSTR",
-  "short_name": "FIF BRDCSTR",
+  "name": "BC FIF",
+  "short_name": "BC FIF",
   "description": "Finance Installment Follow-up Broadcast System",
   "start_url": "/",
   "display": "standalone",
