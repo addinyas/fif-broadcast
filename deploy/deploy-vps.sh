@@ -77,10 +77,8 @@ rm -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/ssl.conf
 rm -f /etc/nginx/sites-enabled/default
 
 # --- Detect PHP-FPM socket (Ubuntu vs RHEL) ---
-FPM_SOCK="/run/php-fpm/www.sock"
-if ls /run/php/php*-fpm.sock >/dev/null 2>&1; then
-    FPM_SOCK=$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1)
-fi
+FPM_SOCK="$(ls /run/php/php*-fpm.sock 2>/dev/null | head -1 || true)"
+FPM_SOCK="${FPM_SOCK:-/run/php-fpm/www.sock}"
 
 if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
     # SSL cert exists — write config with HTTPS + redirect
@@ -320,8 +318,9 @@ systemctl daemon-reload
 
 # --- Detect PHP-FPM service name (Ubuntu: php8.3-fpm, RHEL: php-fpm) ---
 FPM_SERVICE="php-fpm"
-if systemctl list-unit-files 2>/dev/null | grep -qE '^php[0-9.]+-fpm\.service'; then
-    FPM_SERVICE=$(systemctl list-unit-files 2>/dev/null | grep -oE '^php[0-9.]+-fpm\.service' | head -1 | sed 's/\.service$//')
+FPM_UNITS="$(systemctl list-unit-files 2>/dev/null || true)"
+if printf '%s\n' "$FPM_UNITS" | grep -qE '^php[0-9.]+-fpm\.service'; then
+    FPM_SERVICE="$(printf '%s\n' "$FPM_UNITS" | grep -oE '^php[0-9.]+-fpm\.service' | head -1 | sed 's/\.service$//')"
 fi
 
 systemctl enable --now nginx "$FPM_SERVICE" fif-queue fif-worker fif-frontend
