@@ -1,6 +1,6 @@
 #!/bin/bash
 # FIF VPS Health Check Script
-# Jalankan: ssh root@202.10.42.237 "bash /var/www/fif/deploy/vps-health-check.sh"
+# Jalankan: ssh root@<VPS_IP> "bash /var/www/fif/deploy/vps-health-check.sh"
 set -euo pipefail
 echo "========================================="
 echo "  FIF VPS Health Check"

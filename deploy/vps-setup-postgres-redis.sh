@@ -1,6 +1,7 @@
 #!/bin/bash
 # PostgreSQL + Redis Setup Script for FIF VPS
-# Run: ssh root@202.10.42.237 "bash /var/www/fif/deploy/vps-setup-postgres-redis.sh"
+# Run: ssh root@<VPS_IP> "bash /var/www/fif/deploy/vps-setup-postgres-redis.sh"
+# NOTE: Script ini untuk RHEL/Rumahweb lama. Untuk Ubuntu 24.04 pakai: bash deploy/setup-ubuntu.sh
 set -euo pipefail
 
 echo "========================================="
@@ -31,7 +32,7 @@ export PGHOST=/var/run/postgresql
 export PGUSER=postgres
 
 # Create database user
-sudo -u postgres psql -c "CREATE USER fif WITH PASSWORD '\$2y\$10\$FIFbroadcast2026!fifdb#';" 2>/dev/null || true
+sudo -u postgres psql -c "CREATE USER fif WITH PASSWORD 'GANTI_DENGAN_PASSWORD_AMAN';" 2>/dev/null || true
 sudo -u postgres psql -c "CREATE DATABASE fif OWNER fif;" 2>/dev/null || true
 sudo -u postgres psql -c "ALTER USER fif CREATEDB;" 2>/dev/null || true
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE fif TO fif;" 2>/dev/null || true
@@ -80,7 +81,7 @@ systemctl restart redis 2>/dev/null || true
 # --- 6. Test connections ---
 echo ""
 echo "=== Connection Tests ==="
-PGPASSWORD='fifbroadcast2026' psql -h localhost -U fif -d fif -c "SELECT 1;" 2>/dev/null && echo "PostgreSQL: ✅ Connected" || echo "PostgreSQL: ❌ Failed"
+PGPASSWORD='GANTI_DENGAN_PASSWORD_AMAN' psql -h localhost -U fif -d fif -c "SELECT 1;" 2>/dev/null && echo "PostgreSQL: ✅ Connected" || echo "PostgreSQL: ❌ Failed"
 redis-cli ping 2>/dev/null && echo "Redis: ✅ Connected" || echo "Redis: ❌ Failed"
 
 echo ""

@@ -42,7 +42,7 @@ if pgrep -f "ssh -R ${tunnelPort}" > /dev/null; then
   exit 0
 fi
 echo "[FIF] Menjalankan tunnel..."
-autossh -M 0 -R ${tunnelPort}:localhost:8022 root@202.10.42.237 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" &
+autossh -M 0 -R ${tunnelPort}:localhost:8022 root@${process.env.NEXT_PUBLIC_TUNNEL_HOST || 'fif-broadcast.net'} -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" &
 sleep 2
 if kill -0 $! 2>/dev/null; then
   echo "[FIF] Tunnel aktif! Buka FIF > WhatsApp > Connect"

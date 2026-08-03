@@ -61,7 +61,7 @@ PORT=$(grep -o 'socks5://127.0.0.1:\([0-9]*\)' ~/.termux/boot/fif-tunnel.sh 2>/d
 cat > ~/.termux/boot/fif-tunnel.sh << EOF
 #!/bin/bash
 nohup sshd > /dev/null 2>&1
-nohup autossh -M 0 -R ${PORT}:localhost:8022 root@202.10.42.237 -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" > /dev/null 2>&1 &
+nohup autossh -M 0 -R ${PORT}:localhost:8022 root@fif-broadcast.net -N -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" > /dev/null 2>&1 &
 EOF
 chmod +x ~/.termux/boot/fif-tunnel.sh
 ```
