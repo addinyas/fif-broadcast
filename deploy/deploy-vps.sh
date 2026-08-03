@@ -17,6 +17,9 @@ fi
 
 cd "$APP_DIR"
 
+# --- Git safe.directory (repo di-chown ke fif, tapi deploy dijalankan root via sudo) ---
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
+
 # --- Git pull & detect changes ---
 BEFORE=$(git rev-parse HEAD)
 git pull --ff-only
