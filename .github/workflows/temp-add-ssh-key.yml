@@ -16,9 +16,11 @@ jobs:
           port: 22
           script: |
             set -euo pipefail
-            mkdir -p ~/.ssh && chmod 700 ~/.ssh
-            touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
-            grep -qF 'addinyas@gmail.com' ~/.ssh/authorized_keys || \
-              echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSmhd9p+TrNx8g+qRIzfXR8PnDvKbzPHk8FUdUdE8p3 addinyas@gmail.com' >> ~/.ssh/authorized_keys
-            echo '=== authorized_keys ==='
-            cat ~/.ssh/authorized_keys
+            whoami
+            sudo mkdir -p /home/fif/.ssh && sudo chmod 700 /home/fif/.ssh
+            sudo touch /home/fif/.ssh/authorized_keys && sudo chmod 600 /home/fif/.ssh/authorized_keys
+            sudo grep -qF 'addinyas@gmail.com' /home/fif/.ssh/authorized_keys || \
+              echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSmhd9p+TrNx8g+qRIzfXR8PnDvKbzPHk8FUdUdE8p3 addinyas@gmail.com' | sudo tee -a /home/fif/.ssh/authorized_keys >/dev/null
+            sudo chown -R fif:fif /home/fif/.ssh
+            echo '=== fif authorized_keys ==='
+            sudo cat /home/fif/.ssh/authorized_keys
