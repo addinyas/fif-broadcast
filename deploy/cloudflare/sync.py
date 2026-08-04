@@ -149,6 +149,22 @@ def main():
         else:
             print("  GAGAL ambil ssl mode saat ini")
 
+    print("=== Audit: record yang bisa membocorkan IP origin ===")
+    resp, err = req("GET", "/zones/%s/dns_records?per_page=100" % zone_id)
+    if not resp.get("success"):
+        print("  GAGAL list record: %s %s" % (err, resp))
+    else:
+        records = resp.get("result") or []
+        leaks = [r for r in records
+                 if r.get("type") in ("A", "AAAA") and r.get("proxied") is False]
+        print("  Total record DNS: %d" % len(records))
+        if not leaks:
+            print("  OK — tidak ada A/AAAA record yang 'DNS only' (semua ter-proxy) ✅")
+        else:
+            for r in leaks:
+                print("  !! LEAK: %s %s -> %s (DNS only, IP origin terekspos)" % (
+                    r.get("name"), r.get("type"), r.get("content")))
+
     print("=== Selesai ===")
 
 
