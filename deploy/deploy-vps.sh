@@ -293,7 +293,7 @@ RestartSec=5
 User=fif
 Group=fif
 Environment=NODE_ENV=production
-Environment=HOSTNAME=0.0.0.0
+Environment=HOSTNAME=127.0.0.1
 
 [Install]
 WantedBy=multi-user.target

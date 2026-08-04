@@ -1,8 +1,8 @@
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { pool } = require('./db');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+const { pool } = require('./db');
 
 const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
@@ -50,6 +50,7 @@ async function main() {
 
   httpServer = http.createServer();
   createSocketServer(httpServer);
+  const SOCKET_HOST = process.env.SOCKET_HOST || '127.0.0.1';
 
   httpServer.on('error', (err) => {
     console.error('[Worker] HTTP server error:', err.message);
@@ -57,13 +58,13 @@ async function main() {
       console.error(`[Worker] Port ${SOCKET_PORT} already in use. Retrying in 5s...`);
       setTimeout(() => {
         httpServer.close();
-        httpServer.listen(SOCKET_PORT);
+        httpServer.listen(SOCKET_PORT, SOCKET_HOST);
       }, 5000);
     }
   });
 
-  httpServer.listen(SOCKET_PORT, () => {
-    console.log(`[Worker] Socket.io server running on port ${SOCKET_PORT}`);
+  httpServer.listen(SOCKET_PORT, SOCKET_HOST, () => {
+    console.log(`[Worker] Socket.io server running on ${SOCKET_HOST}:${SOCKET_PORT}`);
   });
 
   startQueue();
