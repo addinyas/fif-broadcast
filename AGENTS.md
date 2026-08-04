@@ -35,12 +35,23 @@ Format: `YYYY-MM-DD — Judul Singkat` → `* aksi-aksi` → status diakhir
   - `frontend/.env.production` — hapus `NEXT_PUBLIC_TUNNEL_HOST` (file di-ignore git)
   - `docs/termux-setup.md` — dihapus
 - **Push semua fitur 27–31 Juli** (yang tadinya ditahan menunggu konfirmasi): AO roles, Excel import, cabang wilayah/kabupaten, uh_id, redesign UI — semua kini di main + ter-deploy ke VPS baru
-- Verifikasi: `node --check wa-client.js` OK, `npm run build` sukses, `php artisan test` PASS, `pint` passed, `bash -n` pada script deploy OK, grep nol referensi IP lama (kecuali judul histori di PRD.md)
+- **Fix deploy script** (3 kendala berurutan):
+  - `sw.js` berubah lokal di VPS menahan `git pull --ff-only` → `deploy-vps.sh` ganti `git fetch origin main; git reset --hard origin/main`
+  - reset di workflow (sebelum panggil script) bikin `BEFORE==AFTER` → script `exit 0` **tanpa jalankan migrate** → workflow dikembalikan ke pemanggilan script polos
+  - dubious ownership saat git jalan non-root → safe.directory di-handle di dalam script
+- **Verifikasi pasca-deploy (via workflow temp + SSH)**:
+  - git HEAD = `61368c7`, semua migration `Ran` (batch 3: fitur 27–31 Juli + drop `wa_proxy`)
+  - kolom `users.wa_proxy` = `COLUMN_GONE` ✅
+  - `wa-client.js` = 0 referensi proxy ✅
+  - `worker/.env` di VPS masih `WA_PROXY=socks5://127.0.0.1:1080` (file di-ignore git, tidak ikut deploy) → dihapus manual via sed → sekarang **0 (bersih)** ✅
+  - `auth_info` masih kosong (menunggu re-scan QR)
+  - Semua service active; site 200, API 422/401 (hidup), Socket.IO handshake OK
+- **Akses SSH**: public key laptop (`addinyas@gmail.com`) didaftarkan ke `/home/fif/.ssh/authorized_keys` via workflow temp (fif tidak punya sudo NOPASSWD, jadi operasi root via GitHub Actions) — workflow temp sudah dihapus setelah selesai
+- Verifikasi lokal: `node --check wa-client.js` OK, `npm run build` sukses, `php artisan test` PASS, `pint` passed, `bash -n` pada script deploy OK
 
 **Sisa (manual):**
-1. Re-scan WA QR di VPS baru (auth_info masih kosong)
-2. Verifikasi pasca-deploy: `WA_PROXY` nol di worker/.env VPS, migration drop sukses
-3. Dekomision VPS lama (202.10.42.237) — berhenti bayar setelah data/QR confirm
+1. Re-scan WA QR di VPS baru (auth_info masih kosong) — buka `/admin/connect` atau `/marketing/connect` di browser
+2. Dekomision VPS lama (202.10.42.237) — berhenti bayar setelah WA sudah jalan di VPS baru
 
 ---
 
