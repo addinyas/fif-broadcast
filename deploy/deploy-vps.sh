@@ -9,7 +9,7 @@ if [ "${1:-}" = "--force" ] || [ "${1:-}" = "-f" ]; then
 fi
 DOMAIN="${1:-fif-broadcast.net}"
 
-# --- Detect web user (Ubuntu: www-data, RHEL/Rumahweb: apache) ---
+# --- Detect web user (Ubuntu: www-data, RHEL: apache) ---
 WEB_USER="www-data"
 if ! id -u www-data &>/dev/null 2>&1; then
     WEB_USER="apache"

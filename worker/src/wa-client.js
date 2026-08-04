@@ -10,31 +10,6 @@ const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const MAX_RECONNECT_ATTEMPTS = 10;
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
-const WA_PROXY_FALLBACK = process.env.WA_PROXY || '';
-
-async function getUserProxy(userId) {
-  try {
-    const { rows } = await pool.query('SELECT wa_proxy FROM users WHERE id = $1', [userId]);
-    return rows[0]?.wa_proxy || null;
-  } catch (err) {
-    console.error(`[WA] Failed to read proxy for user ${userId}:`, err.message);
-    return null;
-  }
-}
-
-function resolveProxyAgent(proxyUrl) {
-  if (!proxyUrl) return { proxyAgent: undefined, fetchAgent: undefined };
-  if (proxyUrl.startsWith('socks')) {
-    const { SocksProxyAgent } = require('socks-proxy-agent');
-    const agent = new SocksProxyAgent(proxyUrl);
-    return { proxyAgent: agent, fetchAgent: agent };
-  } else {
-    const { HttpsProxyAgent } = require('https-proxy-agent');
-    const agent = new HttpsProxyAgent(proxyUrl);
-    return { proxyAgent: agent, fetchAgent: agent };
-  }
-}
-
 const connections = new Map();
 const reconnectState = new Map();
 const lastConnectedAt = new Map();
@@ -105,17 +80,6 @@ async function createWAClientForUser(userId, onReady) {
 
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
-  // Per-user proxy: DB > env fallback
-  const userProxy = await getUserProxy(userId) || WA_PROXY_FALLBACK;
-  let userProxyAgent = undefined;
-  let userFetchAgent = undefined;
-  if (userProxy) {
-    const resolved = resolveProxyAgent(userProxy);
-    userProxyAgent = resolved.proxyAgent;
-    userFetchAgent = resolved.fetchAgent;
-    console.log(`[WA] User ${userId} using proxy: ${userProxy}`);
-  }
-
   sock = makeWASocket({
     auth: state,
     printQRInTerminal: false,
@@ -126,7 +90,6 @@ async function createWAClientForUser(userId, onReady) {
     markOnlineOnConnect: false,
     connectTimeoutMs: 60_000,
     keepAliveIntervalMs: 180_000 + Math.floor(Math.random() * 120_000),
-    ...(userProxyAgent ? { agent: userProxyAgent, fetchAgent: userFetchAgent } : {}),
   });
 
   const wsReadyPromise = new Promise((resolve) => {

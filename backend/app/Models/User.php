@@ -28,7 +28,6 @@ class User extends Authenticatable
         'kios_name',
         'kios_id',
         'fcm_token',
-        'wa_proxy',
     ];
 
     protected $appends = [
