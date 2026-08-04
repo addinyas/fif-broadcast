@@ -93,8 +93,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             background: scrolled
               ? 'rgba(8, 14, 26, 0.92)'
               : 'rgba(8, 14, 26, 0.80)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            backdropFilter: 'blur(10px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(10px) saturate(160%)',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
         >

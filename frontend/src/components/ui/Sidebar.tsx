@@ -148,12 +148,12 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         }}
       >
         {/* Ambient glow top */}
-        <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-48 -translate-x-1/2 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -top-20 left-1/2 h-40 w-48 -translate-x-1/2 rounded-full bg-blue-500/10 blur-2xl" />
 
         {/* ── Header ─────────────────────────────── */}
         <div className="relative flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
           <div className="relative">
-            <div className="absolute inset-0 rounded-xl bg-blue-500/20 blur-md animate-pulse-soft" />
+            <div className="absolute inset-0 rounded-xl bg-blue-500/20 blur-sm animate-pulse-soft" />
             <img src="/logofif.png" alt="FIF" className="relative h-9 w-9 object-contain drop-shadow-lg" />
           </div>
           <div>

@@ -156,17 +156,17 @@ export default function LoginPage() {
       {/* ── Ambient orbs ─────────────────────── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
-          className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-600/10 blur-3xl"
+          className="absolute -left-40 -top-40 h-96 w-96 rounded-full bg-blue-600/10 blur-2xl"
           animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-violet-600/10 blur-3xl"
+          className="absolute -bottom-40 -right-40 h-[28rem] w-[28rem] rounded-full bg-violet-600/10 blur-2xl"
           animate={{ scale: [1, 1.2, 1], opacity: [0.4, 0.7, 0.4] }}
           transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
         />
         <motion.div
-          className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/5 blur-3xl"
+          className="absolute left-1/2 top-1/2 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/5 blur-2xl"
           animate={{ scale: [1, 1.3, 1] }}
           transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
         />
@@ -203,7 +203,7 @@ export default function LoginPage() {
                   className="absolute inset-0 rounded-full"
                   style={{
                     background: 'conic-gradient(from 0deg, rgba(59,130,246,0.6), rgba(139,92,246,0.6), rgba(59,130,246,0.6))',
-                    filter: 'blur(6px)',
+                    filter: 'blur(3px)',
                     padding: '2px',
                   }}
                   animate={{ rotate: 360 }}
@@ -211,7 +211,7 @@ export default function LoginPage() {
                 />
                 <div
                   className="relative flex h-28 w-28 items-center justify-center rounded-full ring-1 ring-white/10"
-                  style={{ background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(8px)' }}
+                  style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)' }}
                 >
                   <div className="absolute inset-2 rounded-full"
                     style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)' }} />
@@ -267,7 +267,7 @@ export default function LoginPage() {
               className="absolute inset-0 rounded-full"
               style={{
                 background: 'conic-gradient(from 0deg, rgba(59,130,246,0.5), rgba(139,92,246,0.5), rgba(59,130,246,0.5))',
-                filter: 'blur(6px)',
+                filter: 'blur(3px)',
                 borderRadius: '50%',
                 padding: '2px',
               }}
@@ -277,7 +277,7 @@ export default function LoginPage() {
             {/* Logo container */}
             <div
               className="relative flex h-28 w-28 items-center justify-center rounded-full ring-1 ring-white/10"
-              style={{ background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(8px)' }}
+              style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)' }}
             >
               <div className="absolute inset-2 rounded-full"
                 style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)' }} />
@@ -312,9 +312,9 @@ export default function LoginPage() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="rounded-2xl p-6"
           style={{
-            background: 'rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(12px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(12px) saturate(150%)',
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}

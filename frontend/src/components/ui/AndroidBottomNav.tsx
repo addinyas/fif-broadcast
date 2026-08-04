@@ -44,8 +44,8 @@ export function AndroidBottomNav() {
       className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-1 pb-safe pt-2 transition-all duration-300"
       style={{
         background: 'rgba(8, 14, 26, 0.94)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        backdropFilter: 'blur(10px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(10px) saturate(160%)',
         borderTop: '1px solid rgba(255, 255, 255, 0.08)',
         boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.4)',
       }}

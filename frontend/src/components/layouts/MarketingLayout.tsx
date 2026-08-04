@@ -84,8 +84,8 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
           className="relative z-30 flex items-center gap-3 px-4 py-3 lg:hidden transition-all duration-300"
           style={{
             background: scrolled ? 'rgba(8,14,26,0.92)' : 'rgba(8,14,26,0.80)',
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            backdropFilter: 'blur(10px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(10px) saturate(160%)',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}
         >

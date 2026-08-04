@@ -76,12 +76,12 @@ function Greeting({ onRefresh, loading }: { onRefresh?: () => void; loading?: bo
         />
         {/* Orbs */}
         <motion.div
-          className="absolute -right-16 -top-16 h-60 w-60 rounded-full bg-blue-400/15 blur-3xl"
+          className="absolute -right-16 -top-16 h-60 w-60 rounded-full bg-blue-400/15 blur-2xl"
           animate={{ scale: [1, 1.15, 1] }}
           transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl"
+          className="absolute -bottom-12 -left-12 h-40 w-40 rounded-full bg-indigo-500/15 blur-2xl"
           animate={{ scale: [1, 1.2, 1] }}
           transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
         />

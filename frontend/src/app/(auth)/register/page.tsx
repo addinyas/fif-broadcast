@@ -72,9 +72,9 @@ export default function RegisterPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-fif-950 to-slate-950 p-4">
-      <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 animate-float rounded-full bg-fif-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 animate-float rounded-full bg-purple-500/10 blur-3xl" style={{ animationDelay: '-3s' }} />
-      <div className="pointer-events-none absolute left-1/3 top-1/3 h-48 w-48 animate-float rounded-full bg-emerald-500/5 blur-3xl" style={{ animationDelay: '-1.5s' }} />
+      <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 animate-float rounded-full bg-fif-500/10 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 h-96 w-96 animate-float rounded-full bg-purple-500/10 blur-2xl" style={{ animationDelay: '-3s' }} />
+      <div className="pointer-events-none absolute left-1/3 top-1/3 h-48 w-48 animate-float rounded-full bg-emerald-500/5 blur-2xl" style={{ animationDelay: '-1.5s' }} />
 
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-fif-500/15 via-transparent to-transparent" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-purple-500/15 via-transparent to-transparent" />
@@ -90,7 +90,7 @@ export default function RegisterPage() {
 
         <div className="group relative">
           <div className="absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-fif-500/30 via-purple-500/30 to-fif-500/30 opacity-0 blur transition-all duration-500 group-hover:opacity-100" />
-          <div className="relative rounded-2xl border border-white/10 bg-white/[0.06] p-7 backdrop-blur-2xl dark:bg-slate-900/70">
+          <div className="relative rounded-2xl border border-white/10 bg-white/[0.07] p-7 backdrop-blur-xl dark:bg-slate-900/75">
             {error && (
               <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300 backdrop-blur-sm">
                 {error}
