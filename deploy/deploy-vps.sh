@@ -72,6 +72,13 @@ if [ "$FORCE" = "1" ] || echo "$CHANGED" | grep -q "^frontend/"; then
     echo "=> frontend changed, rebuilding..."
     cd "$APP_DIR/frontend"
     npm install
+    # .env.production di-ignore git; tulis di sini agar NEXT_PUBLIC_* ter-bake saat build.
+    # Berisi URL publik (bukan secret) — APK Capacitor butuh absolute URL agar tidak
+    # memanggil https://localhost/api (webview origin) saat login.
+    cat > "$APP_DIR/frontend/.env.production" <<EOF
+NEXT_PUBLIC_API_URL=https://$DOMAIN
+NEXT_PUBLIC_SOCKET_URL=https://$DOMAIN
+EOF
     npm run build
 else
     echo "=> no frontend changes, skipping build"
