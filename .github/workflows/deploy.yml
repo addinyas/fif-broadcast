@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force rebuild (frontend + all services)'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: fif-deploy
@@ -26,4 +32,8 @@ jobs:
           port: 22
           script: |
             set -euo pipefail
-            sudo bash /var/www/fif/deploy/deploy-vps.sh
+            ARGS=""
+            if [ "${{ inputs.force == true }}" = "true" ]; then
+              ARGS="--force"
+            fi
+            sudo bash /var/www/fif/deploy/deploy-vps.sh $ARGS
