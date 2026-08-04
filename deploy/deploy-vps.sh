@@ -21,8 +21,11 @@ cd "$APP_DIR"
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 # --- Git pull & detect changes ---
+# reset --hard: pastikan working tree selalu sama persis dengan remote (file generated
+# seperti frontend/public/sw.js bisa berubah lokal di VPS dan menahan merge)
 BEFORE=$(git rev-parse HEAD)
-git pull --ff-only
+git fetch origin main
+git reset --hard origin/main
 AFTER=$(git rev-parse HEAD)
 
 # --- Re-exec bila deploy-vps.sh sendiri berubah (bash baca inode lama saat git pull menimpa file) ---
