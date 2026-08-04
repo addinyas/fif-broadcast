@@ -181,6 +181,67 @@ export default function LoginPage() {
         }}
       />
 
+      {/* ── Loading screen (overlay full-screen, sebelum form tampil) ── */}
+      <AnimatePresence>
+        {!booted && (
+          <motion.div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center"
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.4, ease: 'easeInOut' }}
+          >
+            {/* Logo + loading ring */}
+            <div className="relative mb-8 flex h-28 w-28 items-center justify-center">
+              {/* Rotating conic ring */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'conic-gradient(from 0deg, rgba(59,130,246,0.6), rgba(139,92,246,0.6), rgba(59,130,246,0.6))',
+                  filter: 'blur(3px)',
+                  padding: '2px',
+                }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+              />
+              <div
+                className="relative flex h-28 w-28 items-center justify-center rounded-full ring-1 ring-white/10"
+                style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)' }}
+              >
+                <div className="absolute inset-2 rounded-full"
+                  style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)' }} />
+                <img
+                  src="/logofif.png"
+                  alt="FIF"
+                  className="relative h-16 w-16 object-contain drop-shadow-2xl"
+                />
+              </div>
+            </div>
+
+            {/* Teks loading */}
+            <motion.div
+              className="flex flex-col items-center"
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <p className="font-heading text-lg font-semibold tracking-tight text-white">
+                Memuat aplikasi
+              </p>
+              <p className="mt-1.5 text-sm text-slate-500">Federal International Finance</p>
+            </motion.div>
+
+            {/* Loading bar */}
+            <div className="mt-6 h-1 w-40 overflow-hidden rounded-full bg-white/10">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }}
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Card container ───────────────────── */}
       <motion.div
         className="relative z-10 w-full max-w-sm"
@@ -188,66 +249,6 @@ export default function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* ── Loading screen (sebelum form tampil) ── */}
-        <AnimatePresence>
-          {!booted && (
-            <motion.div
-              className="flex flex-col items-center"
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.4, ease: 'easeInOut' }}
-            >
-              {/* Logo + loading ring */}
-              <div className="relative mb-8 flex h-28 w-28 items-center justify-center">
-                {/* Rotating conic ring */}
-                <motion.div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: 'conic-gradient(from 0deg, rgba(59,130,246,0.6), rgba(139,92,246,0.6), rgba(59,130,246,0.6))',
-                    filter: 'blur(3px)',
-                    padding: '2px',
-                  }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-                />
-                <div
-                  className="relative flex h-28 w-28 items-center justify-center rounded-full ring-1 ring-white/10"
-                  style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)' }}
-                >
-                  <div className="absolute inset-2 rounded-full"
-                    style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.12), transparent 70%)' }} />
-                  <img
-                    src="/logofif.png"
-                    alt="FIF"
-                    className="relative h-16 w-16 object-contain drop-shadow-2xl"
-                  />
-                </div>
-              </div>
-
-              {/* Teks loading */}
-              <motion.div
-                className="flex flex-col items-center"
-                animate={{ opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <p className="font-heading text-lg font-semibold tracking-tight text-white">
-                  Memuat aplikasi
-                </p>
-                <p className="mt-1.5 text-sm text-slate-500">Federal International Finance</p>
-              </motion.div>
-
-              {/* Loading bar */}
-              <div className="mt-6 h-1 w-40 overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)' }}
-                  initial={{ x: '-100%' }}
-                  animate={{ x: '100%' }}
-                  transition={{ duration: 0.9, repeat: Infinity, ease: 'easeInOut' }}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Logo section ─────────────────── */}
         <motion.div
