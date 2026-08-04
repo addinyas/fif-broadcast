@@ -25,6 +25,17 @@ BEFORE=$(git rev-parse HEAD)
 git pull --ff-only
 AFTER=$(git rev-parse HEAD)
 
+# --- Re-exec bila deploy-vps.sh sendiri berubah (bash baca inode lama saat git pull menimpa file) ---
+if [ -z "${FIF_DEPLOY_REEXEC:-}" ] && [ -f "$APP_DIR/deploy/deploy-vps.sh" ]; then
+    RUNNING_HASH=$(sha256sum "${BASH_SOURCE[0]}" 2>/dev/null | awk '{print $1}')
+    DISK_HASH=$(sha256sum "$APP_DIR/deploy/deploy-vps.sh" 2>/dev/null | awk '{print $1}')
+    if [ -n "$RUNNING_HASH" ] && [ "$RUNNING_HASH" != "$DISK_HASH" ]; then
+        echo "deploy-vps.sh berubah saat berjalan — re-exec dengan versi baru..."
+        export FIF_DEPLOY_REEXEC=1
+        exec bash "$APP_DIR/deploy/deploy-vps.sh" "$@"
+    fi
+fi
+
 CHANGED=""
 if [ "$BEFORE" != "$AFTER" ]; then
     echo "=== Changes detected ($BEFORE -> $AFTER) ==="
@@ -287,13 +298,12 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/var/www/fif/frontend
-ExecStart=/usr/bin/npx next start -p 3000
+ExecStart=/usr/bin/npx next start -p 3000 -H 127.0.0.1
 Restart=always
 RestartSec=5
 User=fif
 Group=fif
 Environment=NODE_ENV=production
-Environment=HOSTNAME=127.0.0.1
 
 [Install]
 WantedBy=multi-user.target
