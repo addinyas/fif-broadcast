@@ -26,4 +26,7 @@ jobs:
           port: 22
           script: |
             set -euo pipefail
-            sudo bash /var/www/fif/deploy/deploy-vps.sh
+            cd /var/www/fif
+            git fetch origin main
+            git reset --hard origin/main
+            sudo bash deploy/deploy-vps.sh
