@@ -1,0 +1,11 @@
+zone: fif-broadcast.net
+ssl_mode: flexible
+records:
+  - name: fif-broadcast.net
+    type: A
+    content: 43.129.41.36
+    proxied: true
+  - name: www.fif-broadcast.net
+    type: A
+    content: 43.129.41.36
+    proxied: true
