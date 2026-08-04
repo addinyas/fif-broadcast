@@ -211,17 +211,17 @@
 @layer utilities {
   /* Light glassmorphism */
   .glass {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(8px) saturate(160%);
+    -webkit-backdrop-filter: blur(8px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.55);
   }
 
   /* Dark glassmorphism */
   .glass-dark {
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(8px) saturate(160%);
+    -webkit-backdrop-filter: blur(8px) saturate(160%);
     border: 1px solid rgba(255, 255, 255, 0.07);
   }
 
