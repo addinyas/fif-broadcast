@@ -250,7 +250,7 @@ class BroadcastService
         $query = BroadcastHistory::query()
             ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id');
 
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->where('customers.kios_id', $user->kios_id);
         }
         if ($user->role === 'marketing') {
@@ -288,13 +288,9 @@ class BroadcastService
 
         if ($user->role === 'marketing') {
             $query->where('marketing_id', $user->id);
-        } elseif ($user->role === 'UH') {
-            if ($user->kios_id) {
-                $query->whereHas('customer', function ($q) use ($user) {
-                    $q->where('kios_id', $user->kios_id);
-                });
-            }
-        } elseif ($user->kios_id) {
+        } elseif (in_array($user->role, ['superadmin', 'AO'])) {
+            // AO & superadmin: cancel ALL pending messages across all kios
+        } elseif ($user->role === 'UH' && $user->kios_id) {
             $query->whereHas('customer', function ($q) use ($user) {
                 $q->where('kios_id', $user->kios_id);
             });

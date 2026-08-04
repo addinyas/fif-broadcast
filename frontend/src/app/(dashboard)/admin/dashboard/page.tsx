@@ -53,7 +53,7 @@ function Greeting({ onRefresh, loading }: { onRefresh?: () => void; loading?: bo
   else if (hour >= 11 && hour < 15) { greeting = 'Selamat Siang'; greetEmoji = '⛅'; }
   else if (hour >= 15 && hour < 18) { greeting = 'Selamat Sore';  greetEmoji = '🌅'; }
 
-  const roleLabel: Record<string, string> = { superadmin: 'Superadmin', UH: 'Unit Head', marketing: 'MCE' };
+  const roleLabel: Record<string, string> = { superadmin: 'Superadmin', UH: 'Unit Head', AO: 'Area Officer', marketing: 'MCE' };
 
   return (
     <motion.div
@@ -277,7 +277,7 @@ export default function DashboardPage() {
   const completionPct  = dist && dist.total_customers > 0
     ? Math.round((dist.assigned / dist.total_customers) * 100) : 0;
 
-  const canSeeDetail = user?.role === 'superadmin' || user?.role === 'UH';
+  const canSeeDetail = user?.role === 'superadmin' || user?.role === 'UH' || user?.role === 'AO';
 
   return (
     <div className="font-poppins space-y-6">

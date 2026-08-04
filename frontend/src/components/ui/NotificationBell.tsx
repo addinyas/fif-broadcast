@@ -67,7 +67,7 @@ export function NotificationBell({ variant = 'default', placement = 'right' }: N
   const [rollingAction, setRollingAction] = useState<NotificationItem | null>(null);
   const [rollingLoading, setRollingLoading] = useState(false);
 
-  const canApprove = user?.role === 'UH' || user?.role === 'superadmin';
+  const canApprove = user?.role === 'UH' || user?.role === 'AO' || user?.role === 'superadmin';
 
   const fetchNotifications = useCallback(async () => {
     try {

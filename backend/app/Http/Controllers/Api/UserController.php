@@ -27,9 +27,10 @@ class UserController extends Controller
 
         $users = User::select('id', 'name', 'email', 'role', 'kios_id', 'kios_name', 'npo_mce_id', 'created_at')
             ->when(
-                $request->user()->role !== 'superadmin',
+                in_array($request->user()->role, ['UH', 'marketing']),
                 function ($q) use ($request) {
                     $q->where('role', '!=', 'superadmin')
+                        ->where('role', '!=', 'AO')
                         ->where('kios_id', $request->user()->kios_id);
                 }
             )
@@ -129,7 +130,7 @@ class UserController extends Controller
     public function updateRole(Request $request, int $id): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'role' => 'required|in:UH,marketing',
+            'role' => 'required|in:UH,AO,marketing',
         ]);
 
         if ($validator->fails()) {

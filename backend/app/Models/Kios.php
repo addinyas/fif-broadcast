@@ -9,5 +9,6 @@ class Kios extends Model
     protected $fillable = [
         'kios_id',
         'kios_name',
+        'cabang_id',
     ];
 }

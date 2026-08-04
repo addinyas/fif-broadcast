@@ -33,54 +33,62 @@ class NotificationController extends Controller
         $activeGroupSet = array_flip($activeShareGroups);
 
         // Auto-trim: delete read notifications older than the latest 50, skip active rolling + recent (<1 week)
-        $cutoffId = Notification::where('user_id', $user->id)
-            ->whereNotNull('read_at')
-            ->latest()->skip(50)->value('id') ?? PHP_INT_MAX;
+        try {
+            $cutoffId = Notification::where('user_id', $user->id)
+                ->whereNotNull('read_at')
+                ->latest()->skip(50)->value('id') ?? PHP_INT_MAX;
 
-        Notification::where('user_id', $user->id)
-            ->whereNotNull('read_at')
-            ->where('id', '<', $cutoffId)
-            ->where('created_at', '<', Carbon::now()->subWeek())
-            ->where(function ($q) use ($activeGroupSet) {
-                if (empty($activeGroupSet)) {
-                    return;
-                }
-                $q->where('type', '!=', 'rolling')
-                    ->orWhere(function ($q2) use ($activeGroupSet) {
-                        $q2->where('type', 'rolling')
-                            ->where(function ($q3) use ($activeGroupSet) {
-                                $shareCol = $this->jsonExtract('data', 'share_group');
-                                $q3->whereNull(DB::raw($shareCol))
-                                    ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
-                            });
-                    });
-            })
-            ->delete();
+            Notification::where('user_id', $user->id)
+                ->whereNotNull('read_at')
+                ->where('id', '<', $cutoffId)
+                ->where('created_at', '<', Carbon::now()->subWeek())
+                ->where(function ($q) use ($activeGroupSet) {
+                    if (empty($activeGroupSet)) {
+                        return;
+                    }
+                    $q->where('type', '!=', 'rolling')
+                        ->orWhere(function ($q2) use ($activeGroupSet) {
+                            $q2->where('type', 'rolling')
+                                ->where(function ($q3) use ($activeGroupSet) {
+                                    $shareCol = $this->jsonExtract('data', 'share_group');
+                                    $q3->whereNull(DB::raw($shareCol))
+                                        ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
+                                });
+                        });
+                })
+                ->delete();
+        } catch (\Exception $e) {
+            // Ignore cleanup errors (e.g. missing tables in SQLite)
+        }
 
         // Cap total notifications at 100 — delete oldest if exceeded, skip active rolling + recent (<1 week)
-        $totalCount = Notification::where('user_id', $user->id)->count();
-        if ($totalCount > 100) {
-            $oldestToKeep = Notification::where('user_id', $user->id)->latest()->skip(100)->value('id');
-            if ($oldestToKeep) {
-                Notification::where('user_id', $user->id)
-                    ->where('id', '<', $oldestToKeep)
-                    ->where('created_at', '<', Carbon::now()->subWeek())
-                    ->where(function ($q) use ($activeGroupSet) {
-                        if (empty($activeGroupSet)) {
-                            return;
-                        }
-                        $q->where('type', '!=', 'rolling')
-                            ->orWhere(function ($q2) use ($activeGroupSet) {
-                                $q2->where('type', 'rolling')
-                                    ->where(function ($q3) use ($activeGroupSet) {
-                                        $shareCol = $this->jsonExtract('data', 'share_group');
-                                        $q3->whereNull(DB::raw($shareCol))
-                                            ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
-                                    });
-                            });
-                    })
-                    ->delete();
+        try {
+            $totalCount = Notification::where('user_id', $user->id)->count();
+            if ($totalCount > 100) {
+                $oldestToKeep = Notification::where('user_id', $user->id)->latest()->skip(100)->value('id');
+                if ($oldestToKeep) {
+                    Notification::where('user_id', $user->id)
+                        ->where('id', '<', $oldestToKeep)
+                        ->where('created_at', '<', Carbon::now()->subWeek())
+                        ->where(function ($q) use ($activeGroupSet) {
+                            if (empty($activeGroupSet)) {
+                                return;
+                            }
+                            $q->where('type', '!=', 'rolling')
+                                ->orWhere(function ($q2) use ($activeGroupSet) {
+                                    $q2->where('type', 'rolling')
+                                        ->where(function ($q3) use ($activeGroupSet) {
+                                            $shareCol = $this->jsonExtract('data', 'share_group');
+                                            $q3->whereNull(DB::raw($shareCol))
+                                                ->orWhereRaw("$shareCol NOT IN ('".implode("','", array_keys($activeGroupSet))."')");
+                                        });
+                                });
+                        })
+                        ->delete();
+                }
             }
+        } catch (\Exception $e) {
+            // Ignore cleanup errors (e.g. missing tables in SQLite)
         }
 
         $notifications = Notification::where('user_id', $user->id)

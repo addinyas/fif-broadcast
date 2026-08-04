@@ -22,6 +22,7 @@ import {
   X,
   Activity,
   ChevronRight,
+  Map,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -51,6 +52,7 @@ const adminLinks: LinkItem[] = [
   { to: '/admin/worker-monitor',   label: 'Worker Monitor',   icon: <Activity className="h-4.5 w-4.5" />,        feature: 'broadcast',        section: 'tools' },
   { to: '/admin/users',            label: 'Users',            icon: <Shield className="h-4.5 w-4.5" />,          feature: 'user_management',  section: 'admin' },
   { to: '/admin/settings',         label: 'Settings',         icon: <Settings className="h-4.5 w-4.5" />,                                     section: 'admin' },
+  { to: '/admin/kios-wilayah',     label: 'Wilayah Cabang',   icon: <Map className="h-4.5 w-4.5" />,                                            section: 'admin' },
 ];
 
 const superadminOnlyLinks: LinkItem[] = [
@@ -86,9 +88,10 @@ interface SidebarProps {
 const roleColorMap: Record<string, { pill: string; glow: string }> = {
   superadmin: { pill: 'bg-red-500/15 text-red-300 border border-red-500/20',      glow: 'shadow-red-500/20' },
   UH:         { pill: 'bg-blue-500/15 text-blue-300 border border-blue-500/20',   glow: 'shadow-blue-500/20' },
+  AO:         { pill: 'bg-amber-500/15 text-amber-300 border border-amber-500/20', glow: 'shadow-amber-500/20' },
   marketing:  { pill: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20', glow: 'shadow-emerald-500/20' },
 };
-const roleLabel: Record<string, string> = { superadmin: 'Superadmin', UH: 'UH', marketing: 'MCE' };
+const roleLabel: Record<string, string> = { superadmin: 'Superadmin', UH: 'UH', AO: 'AO', marketing: 'MCE' };
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();

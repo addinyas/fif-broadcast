@@ -47,12 +47,8 @@ return new class extends Migration
 
             Schema::dropIfExists('users_backup');
             DB::statement('PRAGMA foreign_keys = ON');
-        } else {
-            // PostgreSQL supports ALTER COLUMN directly
-            Schema::table('users', function (Blueprint $table) {
-                $table->string('email')->nullable()->unique()->change();
-            });
         }
+        // PostgreSQL: already handled by 2026_07_12_000003
     }
 
     public function down(): void
@@ -92,10 +88,7 @@ return new class extends Migration
 
             Schema::dropIfExists('users_backup');
             DB::statement('PRAGMA foreign_keys = ON');
-        } else {
-            Schema::table('users', function (Blueprint $table) {
-                $table->string('email')->unique()->change();
-            });
         }
+        // PostgreSQL: already handled by 2026_07_12_000003
     }
 };

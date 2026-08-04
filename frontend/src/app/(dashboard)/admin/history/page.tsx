@@ -17,7 +17,8 @@ export default function BroadcastHistoryPage() {
   const { user, token } = useAuth();
   const isSuperadmin = user?.role === 'superadmin';
   const isUH = user?.role === 'UH';
-  const isAdmin = isSuperadmin || isUH;
+  const isAO = user?.role === 'AO';
+  const isAdmin = isSuperadmin || isUH || isAO;
 
   const today = new Date().toISOString().split('T')[0];
   const [history, setHistory] = useState<BroadcastHistory[]>([]);
@@ -159,7 +160,7 @@ export default function BroadcastHistoryPage() {
           />
         </div>
 
-        {(isUH || isSuperadmin) && (
+        {(isUH || isSuperadmin || isAO) && (
           <>
             <Filter className="h-4 w-4 text-slate-400" />
             {isUH && (

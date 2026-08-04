@@ -133,6 +133,7 @@ export default function WorkerMonitorPage() {
             </h1>
             <p className="mt-2 max-w-xl text-sm text-fif-200/70">
               {user?.role === 'superadmin' && 'Pantau status antrian broadcast semua user. Filter berdasarkan kios.'}
+              {user?.role === 'AO' && 'Pantau status antrian broadcast semua user. Filter berdasarkan kios.'}
               {user?.role === 'UH' && 'Pantau status antrian broadcast di kios Anda. Filter berdasarkan marketing.'}
               {user?.role === 'marketing' && 'Pantau status antrian broadcast akun Anda.'}
             </p>
@@ -191,14 +192,14 @@ export default function WorkerMonitorPage() {
       </div>
 
       {/* Filters */}
-      {(user?.role === 'superadmin' || user?.role === 'UH') && (
+      {(user?.role === 'superadmin' || user?.role === 'AO' || user?.role === 'UH') && (
         <Card className="!p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-slate-500">
               <Filter className="h-4 w-4" />
               <span className="font-medium">Filter:</span>
             </div>
-            {user?.role === 'superadmin' && (
+            {(user?.role === 'superadmin' || user?.role === 'AO') && (
               <select
                 value={kiosFilter}
                 onChange={(e) => { setKiosFilter(e.target.value); setMarketingFilter('all'); }}

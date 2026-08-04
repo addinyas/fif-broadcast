@@ -36,6 +36,7 @@ class CustomerController extends Controller
         if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
             $filters['kios_id'] = $user->kios_id;
         }
+        // AO sees ALL kios (above UH), superadmin sees ALL kios
 
         // Marketing: only see own assigned + shared (borrowed) customers
         if ($user->role === 'marketing') {
@@ -50,7 +51,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
@@ -64,10 +65,10 @@ class CustomerController extends Controller
     {
         $user = $request->user();
         $query = Customer::where('no_contract', $noContract);
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
-        if ($user->role !== 'superadmin') {
+        if (! in_array($user->role, ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $query->where(function ($q) use ($existingUserIds, $user) {
                 $q->whereIn('uploaded_by', $existingUserIds);
@@ -87,10 +88,10 @@ class CustomerController extends Controller
             $noContractCol = DB::getDriverName() === 'pgsql' ? "dynamic_data->>'no_contract'" : "json_extract(dynamic_data, '$.no_contract')";
             $fallbackQuery = Customer::where('dynamic_data', 'like', $escaped)
                 ->whereRaw("$noContractCol = ?", [$noContract]);
-            if ($user->role !== 'superadmin' && $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
                 $fallbackQuery->where('kios_id', $user->kios_id);
             }
-            if ($user->role !== 'superadmin') {
+            if (! in_array($user->role, ['superadmin', 'AO'])) {
                 $existingUserIds = User::pluck('id');
                 $fallbackQuery->where(function ($q) use ($existingUserIds, $user) {
                     $q->whereIn('uploaded_by', $existingUserIds);
@@ -174,7 +175,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
@@ -192,7 +193,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
@@ -409,10 +410,10 @@ class CustomerController extends Controller
     {
         $user = $request->user();
         $query = Customer::query();
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
-        if ($user->role !== 'superadmin') {
+        if (! in_array($user->role, ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $query->where(function ($q) use ($existingUserIds, $user) {
                 $q->whereIn('uploaded_by', $existingUserIds);
@@ -443,7 +444,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
             $dynamicData = $customer->dynamic_data ?? [];
@@ -472,7 +473,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
             $dynamicData = $customer->dynamic_data ?? [];
@@ -501,7 +502,7 @@ class CustomerController extends Controller
         try {
             $user = $request->user();
             $ids = $request->ids;
-            if ($user->role !== 'superadmin' && $user->kios_id) {
+            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
                 $ids = Customer::whereIn('id', $ids)
                     ->where('kios_id', $user->kios_id)
                     ->pluck('id')
@@ -520,10 +521,10 @@ class CustomerController extends Controller
         $filters = $request->only(['search', 'per_page', 'customer_type', 'sisa_angsuran', 'ownership', 'marketing_id']);
         $user = $request->user();
 
-        // Marketing: only their assigned customers. UH: filtered by marketing_id param (or all if empty).
+        // Marketing: only their assigned customers. UH/AO: filtered by marketing_id param (or all if empty).
         $marketingId = $user->role === 'marketing' ? $user->id : ($request->query('marketing_id') ? (int) $request->query('marketing_id') : null);
 
-        // UH/marketing: scope to their kios
+        // UH/marketing: scope to their kios. AO sees ALL kios.
         if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
             $filters['kios_id'] = $user->kios_id;
         }
@@ -600,7 +601,7 @@ class CustomerController extends Controller
         }
 
         $user = $request->user();
-        if ($user->role !== 'superadmin' && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
@@ -632,7 +633,7 @@ class CustomerController extends Controller
                 $q->where('marketing_id', $user->id)
                     ->orWhereIn('id', $sharedIds);
             });
-        } elseif ($user->role !== 'superadmin' && $user->kios_id) {
+        } elseif (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
 
@@ -715,10 +716,10 @@ class CustomerController extends Controller
                 ->orWhere('no_contract', 'like', "%{$q}%")
                 ->orWhere('name', 'like', "%{$q}%");
         });
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->where('kios_id', $user->kios_id);
         }
-        if ($user->role !== 'superadmin') {
+        if (! in_array($user->role, ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $query->where(function ($q2) use ($existingUserIds, $user) {
                 $q2->whereIn('uploaded_by', $existingUserIds);

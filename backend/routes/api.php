@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BroadcastController;
 use App\Http\Controllers\Api\BroadcastSettingController;
+use App\Http\Controllers\Api\CloudExcelController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerShareController;
 use App\Http\Controllers\Api\GoogleSheetsController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TemplateController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WhatsappConnectionController;
+use App\Http\Controllers\CabangWilayahController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('kios', [KiosController::class, 'index']);
@@ -37,7 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('customers/search-calculator', [CustomerController::class, 'searchCalculator']);
 
     // registered BEFORE any customers/{id} to prevent route collision
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:prospect_list')->group(function () {
             Route::get('customers/assigned-to-me', [CustomerController::class, 'assignedToMe']);
             Route::post('customers/mark-sent/{id}', [CustomerController::class, 'markSent']);
@@ -46,7 +48,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH')->group(function () {
+    Route::middleware('role:superadmin,UH,AO')->group(function () {
         Route::middleware('feature:customer_management')->group(function () {
             Route::apiResource('customers', CustomerController::class)->only(['store', 'update', 'destroy']);
             Route::post('customers/import', [CustomerController::class, 'import']);
@@ -63,11 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('assignments/unassign', [AssignmentController::class, 'unassign']);
             Route::get('assignments/distribution', [AssignmentController::class, 'distribution']);
             Route::get('assignments/auto-calculate', [AssignmentController::class, 'autoCalculate']);
+            Route::post('assignments/distribute-to-uh', [AssignmentController::class, 'distributeToUh']);
         });
 
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:broadcast_history')->group(function () {
             Route::get('broadcast/history', [BroadcastController::class, 'history']);
         });
@@ -86,14 +89,14 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:dashboard')->group(function () {
             Route::get('broadcast/marketing-summary', [BroadcastController::class, 'marketingSummary']);
             Route::get('broadcast/daily-stats', [BroadcastController::class, 'dailyStats']);
         });
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:broadcast')->group(function () {
             Route::post('broadcast/prepare', [BroadcastController::class, 'prepare']);
             Route::get('broadcast/progress', [BroadcastController::class, 'progress']);
@@ -103,7 +106,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:data_rolling')->group(function () {
             Route::get('customer-shares/info/{marketingId}', [CustomerShareController::class, 'info']);
             Route::post('customer-shares/request', [CustomerShareController::class, 'requestShare']);
@@ -111,7 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH')->group(function () {
+    Route::middleware('role:superadmin,UH,AO')->group(function () {
         Route::middleware('feature:data_rolling')->group(function () {
             Route::get('customer-shares/pending', [CustomerShareController::class, 'pendingRequests']);
             Route::post('customer-shares/{id}/approve', [CustomerShareController::class, 'approveShare']);
@@ -119,7 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:template_management')->group(function () {
             Route::get('templates', [TemplateController::class, 'index']);
             Route::get('templates/{template}', [TemplateController::class, 'show']);
@@ -133,7 +136,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('admin/permissions', [PermissionController::class, 'index']);
 
-    Route::middleware('role:superadmin,UH,marketing')->group(function () {
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:qr_scanner')->group(function () {
             Route::prefix('whatsapp')->group(function () {
                 Route::get('status', [WhatsappConnectionController::class, 'status']);
@@ -142,7 +145,7 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 
-    Route::middleware('role:superadmin,UH')->group(function () {
+    Route::middleware('role:superadmin,UH,AO')->group(function () {
         Route::middleware('feature:user_management')->group(function () {
             Route::get('admin/users', [UserController::class, 'index']);
             Route::patch('admin/users/{id}/role', [UserController::class, 'updateRole']);
@@ -163,6 +166,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
         Route::post('customers/delete-orphan', [CustomerController::class, 'deleteOrphan']);
         Route::get('customers/{id}/broadcast-marks', [CustomerController::class, 'broadcastMarks']);
+    });
+
+    // Cabang Wilayah (superadmin & AO)
+    Route::middleware('role:superadmin,AO')->group(function () {
+        Route::get('cabang-wilayah', [CabangWilayahController::class, 'index']);
+        Route::put('cabang-wilayah/{cabangId}', [CabangWilayahController::class, 'update']);
+    });
+
+    // Single Data Module — Excel Config (AO only)
+    Route::middleware('role:superadmin,AO')->group(function () {
+        Route::post('single-data/preview-excel', [CloudExcelController::class, 'previewExcel']);
+        Route::post('single-data/save-excel-config', [CloudExcelController::class, 'saveConfig']);
+        Route::post('single-data/import-from-excel', [CloudExcelController::class, 'importFromExcel']);
+        Route::get('single-data/excel-configs', [CloudExcelController::class, 'index']);
+        Route::delete('single-data/excel-configs/{id}', [CloudExcelController::class, 'destroy']);
     });
 
     Route::get('notifications', [NotificationController::class, 'index']);

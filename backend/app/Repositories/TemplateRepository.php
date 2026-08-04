@@ -44,7 +44,7 @@ class TemplateRepository implements TemplateRepositoryInterface
 
         $template = $query->findOrFail($id);
 
-        if ($template->is_default && (! $user || $user->role !== 'superadmin')) {
+        if ($template->is_default && (! $user || ! in_array($user->role, ['superadmin', 'AO']))) {
             abort(403, 'Template default hanya bisa diubah oleh superadmin.');
         }
 
@@ -62,7 +62,7 @@ class TemplateRepository implements TemplateRepositoryInterface
     {
         $template = Template::findOrFail($id);
 
-        if ($template->is_default && (! $user || $user->role !== 'superadmin')) {
+        if ($template->is_default && (! $user || ! in_array($user->role, ['superadmin', 'AO']))) {
             abort(403, 'Template default hanya bisa dihapus oleh superadmin.');
         }
 

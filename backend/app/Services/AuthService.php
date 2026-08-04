@@ -34,8 +34,8 @@ class AuthService
 
     public function login(array $credentials): array
     {
-        $identifier = strtoupper($credentials['npo_mce_id']);
-        $user = User::where('npo_mce_id', $identifier)
+        $identifier = $credentials['npo_mce_id'];
+        $user = User::where('npo_mce_id', strtoupper($identifier))
             ->orWhere('email', $identifier)
             ->first();
 

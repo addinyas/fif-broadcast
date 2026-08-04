@@ -23,9 +23,10 @@ return new class extends Migration
                 DB::statement('ALTER TABLE users RENAME COLUMN email_tmp TO email');
                 DB::statement('CREATE UNIQUE INDEX users_email_unique ON users (email)');
             } else {
-                Schema::table('users', function (Blueprint $table) {
-                    $table->text('email')->nullable()->unique()->change();
-                });
+                DB::statement('ALTER TABLE users ALTER COLUMN email TYPE TEXT');
+                DB::statement('ALTER TABLE users ALTER COLUMN email DROP NOT NULL');
+                DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_unique');
+                DB::statement('CREATE UNIQUE INDEX users_email_unique ON users (email) WHERE email IS NOT NULL');
             }
         }
     }
@@ -41,9 +42,12 @@ return new class extends Migration
             DB::statement('ALTER TABLE users RENAME COLUMN email_tmp TO email');
             DB::statement('CREATE UNIQUE INDEX users_email_unique ON users (email)');
         } else {
-            Schema::table('users', function (Blueprint $table) {
-                $table->string('email')->unique()->change();
-            });
+            DB::statement('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_unique');
+            DB::statement("UPDATE users SET email = '' WHERE email IS NULL");
+            DB::statement('ALTER TABLE users ALTER COLUMN email TYPE VARCHAR(255)');
+            DB::statement('ALTER TABLE users ALTER COLUMN email SET NOT NULL');
+            DB::statement("ALTER TABLE users ALTER COLUMN email SET DEFAULT ''");
+            DB::statement('CREATE UNIQUE INDEX users_email_unique ON users (email)');
         }
     }
 };

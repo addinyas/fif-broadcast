@@ -144,4 +144,63 @@ class GoogleSheetsService
 
         return $options;
     }
+
+    /**
+     * Get list of sheet/tab names in a spreadsheet.
+     *
+     * @return array<int, array{id: string, name: string}>
+     */
+    public function getSheetNames(string $spreadsheetId): array
+    {
+        if (! $this->hasCredentials()) {
+            return [['id' => 'Sheet1', 'name' => 'Sheet1']];
+        }
+
+        try {
+            if (! $this->accessToken) {
+                $this->accessToken = $this->getAccessToken();
+            }
+
+            $response = Http::withToken($this->accessToken)
+                ->get("https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheetId}");
+
+            if (! $response->successful()) {
+                return [['id' => 'Sheet1', 'name' => 'Sheet1']];
+            }
+
+            $sheets = $response->json('sheets', []);
+
+            return array_map(fn ($s) => [
+                'id' => $s['properties']['sheetId'] ?? '',
+                'name' => $s['properties']['title'] ?? 'Sheet1',
+            ], $sheets);
+        } catch (Exception $e) {
+            return [['id' => 'Sheet1', 'name' => 'Sheet1']];
+        }
+    }
+
+    /**
+     * Write a value to a specific range in Google Sheets.
+     */
+    public function writeCell(string $spreadsheetId, string $range, array $values): bool
+    {
+        if (! $this->hasCredentials()) {
+            return false;
+        }
+
+        try {
+            if (! $this->accessToken) {
+                $this->accessToken = $this->getAccessToken();
+            }
+
+            $response = Http::withToken($this->accessToken)
+                ->put("https://sheets.googleapis.com/v4/spreadsheets/{$spreadsheetId}/values/{$range}", [
+                    'values' => $values,
+                ]);
+
+            return $response->successful();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
 }

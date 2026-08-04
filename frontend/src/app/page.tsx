@@ -11,7 +11,7 @@ export default function HomePage() {
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (user.role === 'superadmin' || user.role === 'UH') {
+      if (user.role === 'superadmin' || user.role === 'UH' || user.role === 'AO') {
         router.replace('/admin/dashboard');
       } else {
         router.replace('/marketing/dashboard');

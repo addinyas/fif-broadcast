@@ -121,7 +121,7 @@ export default function LoginPage() {
       await login(npoMceId, password);
       const freshUser = JSON.parse(sessionStorage.getItem('user') || '{}');
       router.replace(
-        freshUser.role === 'superadmin' || freshUser.role === 'UH'
+        freshUser.role === 'superadmin' || freshUser.role === 'UH' || freshUser.role === 'AO'
           ? '/admin/dashboard'
           : '/marketing/dashboard'
       );

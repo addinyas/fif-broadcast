@@ -21,7 +21,7 @@ class CustomerShareController extends Controller
             ->where('assignment_status', 'assigned');
 
         // Kios scope: non-superadmin can only see marketing from same kios
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $marketing = User::find($marketingId);
             if (! $marketing || $marketing->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Marketing tidak ditemukan'], 404);
@@ -192,7 +192,7 @@ class CustomerShareController extends Controller
         $query = CustomerShare::with(['customer', 'fromMarketing', 'requestedBy'])
             ->where('status', 'pending');
 
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $query->whereHas('fromMarketing', fn ($q) => $q->where('kios_id', $user->kios_id));
         }
 
@@ -226,7 +226,7 @@ class CustomerShareController extends Controller
             return response()->json(['message' => 'Request tidak ditemukan atau sudah diproses'], 404);
         }
 
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $fromMarketing = User::find($firstShare->from_marketing_id);
             if (! $fromMarketing || $fromMarketing->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Request tidak ditemukan'], 404);
@@ -280,7 +280,7 @@ class CustomerShareController extends Controller
             return response()->json(['message' => 'Request tidak ditemukan'], 404);
         }
 
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $fromMarketing = User::find($firstShare->from_marketing_id);
             if (! $fromMarketing || $fromMarketing->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Request tidak ditemukan'], 404);

@@ -230,6 +230,11 @@ class CustomerService
         return $this->customerRepository->deleteOrphan($kiosId);
     }
 
+    public function distributeToUh(?string $kiosId = null): array
+    {
+        return $this->customerRepository->distributeToUh($kiosId);
+    }
+
     public function getDistributionReport(?string $viewerRole = null, ?string $kiosId = null): array
     {
         $report = $this->customerRepository->getDistributionReport($viewerRole, $kiosId);

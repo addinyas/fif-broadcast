@@ -16,12 +16,12 @@ class RolePermissionSeeder extends Seeder
             'data_rolling',
         ];
 
-        $roles = ['UH', 'marketing'];
+        $roles = ['UH', 'AO', 'marketing'];
 
         foreach ($roles as $role) {
             foreach ($features as $feature) {
                 $defaultEnabled = match ($feature) {
-                    'user_management' => false,
+                    'user_management' => in_array($role, ['UH', 'AO']),
                     default => true,
                 };
                 DB::table('role_permissions')->insertOrIgnore([

@@ -18,7 +18,9 @@ class Customer extends Model
         'phone_number',
         'uploaded_by',
         'kios_id',
+        'cabang_id',
         'marketing_id',
+        'uh_id',
         'assignment_status',
         'dynamic_data',
     ];
@@ -38,6 +40,11 @@ class Customer extends Model
     public function marketing(): BelongsTo
     {
         return $this->belongsTo(User::class, 'marketing_id');
+    }
+
+    public function uh(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uh_id');
     }
 
     public function broadcastHistories(): HasMany

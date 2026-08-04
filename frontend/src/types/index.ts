@@ -1,4 +1,4 @@
-export type UserRole = 'superadmin' | 'UH' | 'marketing';
+export type UserRole = 'superadmin' | 'UH' | 'marketing' | 'AO';
 
 export interface User {
   id: number;
@@ -18,7 +18,6 @@ export interface User {
   whatsapp_connection?: string;
   last_connected_at?: string | null;
   last_broadcast_at?: string | null;
-  wa_proxy?: string | null;
 }
 
 export interface Kios {
@@ -41,6 +40,7 @@ export interface Customer {
   marketing_id: number | null;
   assignment_status: 'unassigned' | 'assigned';
   dynamic_data: Record<string, string> | null;
+  wilayah_kabupaten?: string | null;
   created_at: string;
   updated_at: string;
   uploader?: User;

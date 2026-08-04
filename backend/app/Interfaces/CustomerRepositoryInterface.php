@@ -35,4 +35,6 @@ interface CustomerRepositoryInterface
     public function getOrphanStats(): array;
 
     public function deleteOrphan(?string $kiosId = null): int;
+
+    public function distributeToUh(?string $viewerKiosId = null): array;
 }

@@ -34,7 +34,7 @@ class AssignmentController extends Controller
         $user = $request->user();
 
         // Kios scope: UH/marketing can only assign customers from their kios to marketing from same kios
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $marketing = User::find($request->marketing_id);
             if (! $marketing || $marketing->kios_id !== $user->kios_id) {
                 return response()->json(['message' => 'Marketing tidak berada di kios yang sama'], 422);
@@ -103,7 +103,7 @@ class AssignmentController extends Controller
         $user = $request->user();
 
         // Kios scope: non-superadmin can only unassign customers from their kios
-        if ($user->role !== 'superadmin' && $user->kios_id) {
+        if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id) {
             $customerKiosMismatch = Customer::whereIn('id', $request->customer_ids)
                 ->where('kios_id', '!=', $user->kios_id)
                 ->exists();
@@ -156,7 +156,7 @@ class AssignmentController extends Controller
         }
 
         $user = $request->user();
-        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : null;
 
         // Kios scope: non-superadmin can only assign to marketing from same kios
         if ($kiosId) {
@@ -230,10 +230,28 @@ class AssignmentController extends Controller
         return response()->json(['assigned' => $assigned, 'total' => count($assigned)]);
     }
 
+    public function distributeToUh(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $kiosId = $request->input('kios_id');
+
+        if (! $kiosId) {
+            $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : null;
+        }
+
+        try {
+            $result = $this->customerService->distributeToUh($kiosId);
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+    }
+
     public function autoCalculate(Request $request): JsonResponse
     {
         $user = $request->user();
-        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : null;
 
         $nmcQuery = Customer::where('assignment_status', 'unassigned')
             ->where('no_contract', 'LIKE', '4020%');

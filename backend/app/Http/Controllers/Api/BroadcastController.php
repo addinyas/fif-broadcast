@@ -31,7 +31,7 @@ class BroadcastController extends Controller
 
         try {
             $user = $request->user();
-            if ($user->role !== 'superadmin') {
+            if (! in_array($user->role, ['superadmin', 'AO'])) {
                 $customer = Customer::find($request->customer_id);
                 if (! $customer) {
                     return response()->json(['message' => 'Customer tidak ditemukan'], 404);
@@ -120,7 +120,7 @@ class BroadcastController extends Controller
     {
         $user = $request->user();
         $marketingId = $user->role === 'marketing' ? $user->id : null;
-        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : null;
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : null;
 
         return response()->json(
             $this->broadcastService->marketingSummary($marketingId, $kiosId)
@@ -130,7 +130,7 @@ class BroadcastController extends Controller
     public function dailyStats(Request $request): JsonResponse
     {
         $user = $request->user();
-        $kiosId = $user->role !== 'superadmin' ? $user->kios_id : ($request->query('kios_id') ?: null);
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : ($request->query('kios_id') ?: null);
         $marketingId = $user->role === 'marketing' ? $user->id : null;
 
         return response()->json(

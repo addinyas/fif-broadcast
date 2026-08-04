@@ -158,9 +158,10 @@ export default function UserManagementPage() {
   };
 
   const roleBadge = (role: string) => {
-    const variants: Record<string, 'danger' | 'info' | 'success'> = {
+    const variants: Record<string, 'danger' | 'info' | 'success' | 'warning'> = {
       superadmin: 'danger',
       UH: 'info',
+      AO: 'warning',
       marketing: 'success',
     };
     return <Badge variant={variants[role] || 'default'}>{role}</Badge>;
@@ -241,6 +242,7 @@ export default function UserManagementPage() {
                                 className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
                               >
                                 <option value="UH">UH</option>
+                                <option value="AO">AO</option>
                                 <option value="marketing">marketing</option>
                               </select>
                             ) : (

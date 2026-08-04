@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const isAdmin = user?.role === 'superadmin' || user?.role === 'UH';
+  const isAdmin = user?.role === 'superadmin' || user?.role === 'UH' || user?.role === 'AO';
   const isMarketing = user?.role === 'marketing';
 
   return (

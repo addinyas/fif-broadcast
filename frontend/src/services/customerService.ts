@@ -220,4 +220,9 @@ export const customerService = {
     const { data } = await api.get(`/customers/${customerId}/broadcast-marks`);
     return data;
   },
+
+  async distributeToUh(kiosId?: string): Promise<{ message: string; distributed: number; per_kios: Record<string, { total: number; uh_count: number; per_uh: Record<string, { nmc: number; refi: number; other: number }> }> }> {
+    const { data } = await api.post('/assignments/distribute-to-uh', { kios_id: kiosId });
+    return data;
+  },
 };

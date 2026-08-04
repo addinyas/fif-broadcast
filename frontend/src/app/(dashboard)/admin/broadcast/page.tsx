@@ -155,7 +155,7 @@ export default function ProspectListPage() {
     setLoading(true);
     try {
       const params: Record<string, string> = { page: page.toString(), search, per_page: String(PER_PAGE), customer_type: customerTypeFilter, sisa_angsuran: sisaAngsuranFilter, ownership: ownershipFilter };
-      if (user?.role === 'UH' && selectedMarketingFilter !== '') {
+      if ((user?.role === 'UH' || user?.role === 'AO') && selectedMarketingFilter !== '') {
         params.marketing_id = String(selectedMarketingFilter);
       }
       const res = await customerService.getAssignedToMe(params);
@@ -1023,7 +1023,7 @@ export default function ProspectListPage() {
           </div>
         )}
 
-        {user?.role === 'UH' && marketingUsers.length > 0 && (
+        {(user?.role === 'UH' || user?.role === 'AO') && marketingUsers.length > 0 && (
           <div ref={marketingFilterRef} className="relative">
             <button
               onClick={() => setShowMarketingFilterDropdown((p) => !p)}
@@ -1333,6 +1333,7 @@ export default function ProspectListPage() {
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-fif-500 to-fif-600 text-[10px] font-bold text-white">{g.sender.charAt(0).toUpperCase()}</div>
                           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{g.sender}</span>
                           {g.role === 'UH' && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">UH</span>}
+                          {g.role === 'AO' && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">AO</span>}
                         </div>
                         <div className="mt-1.5 space-y-1">
                           {g.entries.map((e, j) => (

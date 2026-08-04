@@ -28,6 +28,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 const ROLE_LABEL: Record<string, string> = {
   superadmin: 'Superadmin',
   UH: 'UH',
+  AO: 'AO',
   marketing: 'MCE',
 };
 

@@ -16,12 +16,14 @@ import { registerPushNotifications } from '@/services/pushService';
 const roleColorMap: Record<string, string> = {
   superadmin: 'bg-red-500/15 text-red-300 border border-red-500/20',
   UH:         'bg-blue-500/15 text-blue-300 border border-blue-500/20',
+  AO:         'bg-amber-500/15 text-amber-300 border border-amber-500/20',
   marketing:  'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20',
 };
 
 const roleLabel: Record<string, string> = {
   superadmin: 'Superadmin',
   UH: 'UH',
+  AO: 'AO',
   marketing: 'MCE',
 };
 

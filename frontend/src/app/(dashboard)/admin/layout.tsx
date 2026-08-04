@@ -15,7 +15,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
       router.replace('/login');
       return;
     }
-    if (user.role !== 'superadmin' && user.role !== 'UH') {
+    if (user.role !== 'superadmin' && user.role !== 'UH' && user.role !== 'AO') {
       router.replace('/login');
     }
   }, [user, loading, router]);
@@ -28,7 +28,7 @@ export default function AdminDashboardLayout({ children }: { children: React.Rea
     );
   }
 
-  if (!user || (user.role !== 'superadmin' && user.role !== 'UH')) return null;
+  if (!user || (user.role !== 'superadmin' && user.role !== 'UH' && user.role !== 'AO')) return null;
 
   return <AdminLayoutComponent>{children}</AdminLayoutComponent>;
 }

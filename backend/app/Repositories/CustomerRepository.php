@@ -3,8 +3,10 @@
 namespace App\Repositories;
 
 use App\Interfaces\CustomerRepositoryInterface;
+use App\Models\CabangWilayah;
 use App\Models\Customer;
 use App\Models\CustomerShare;
+use App\Models\Kios;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -75,7 +77,7 @@ class CustomerRepository implements CustomerRepositoryInterface
             $query->where('no_contract', 'LIKE', $prefix);
         }
 
-        if (($filters['viewer_role'] ?? '') !== 'superadmin') {
+        if (! in_array(($filters['viewer_role'] ?? ''), ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $viewerKiosId = $filters['kios_id'] ?? null;
             $query->where(function ($q) use ($existingUserIds, $viewerKiosId) {
@@ -90,22 +92,77 @@ class CustomerRepository implements CustomerRepositoryInterface
             });
         }
 
-        return $query->latest()->paginate($filters['per_page'] ?? 50);
+        $customers = $query->latest()->paginate($filters['per_page'] ?? 50);
+        $this->attachWilayahKabupaten($customers->getCollection());
+
+        return $customers;
     }
 
     public function findById(int $id)
     {
-        return Customer::with(['uploader', 'marketing', 'broadcastHistories'])->findOrFail($id);
+        $customer = Customer::with(['uploader', 'marketing', 'broadcastHistories'])->findOrFail($id);
+        $this->attachWilayahKabupaten(collect([$customer]));
+
+        return $customer;
+    }
+
+    private function attachWilayahKabupaten(iterable $customers): void
+    {
+        $lookup = CabangWilayah::query()
+            ->whereNotNull('kelurahan')
+            ->get(['kecamatan', 'kelurahan', 'kabupaten_kota'])
+            ->mapWithKeys(fn ($w) => [
+                $this->stripRegionSpaces($w->kecamatan).'|'.$this->stripRegionSpaces($w->kelurahan) => $w->kabupaten_kota,
+            ]);
+
+        foreach ($customers as $customer) {
+            $d = $customer->dynamic_data;
+            if (! is_array($d)) {
+                continue;
+            }
+            $kec = $this->normalizeRegion($d['kecamatan'] ?? null);
+            $kel = $this->normalizeRegion($d['kelurahan'] ?? null);
+            if (! $kec || ! $kel) {
+                continue;
+            }
+            $key = $this->stripRegionSpaces($kec).'|'.$this->stripRegionSpaces($kel);
+            $customer->wilayah_kabupaten = $lookup[$key] ?? null;
+        }
     }
 
     public function create(array $data)
     {
+        $dynamicData = $data['dynamic_data'] ?? null;
+        if (is_string($dynamicData)) {
+            $dynamicData = json_decode($dynamicData, true);
+        }
+
+        [$cabangId, $kiosOverride] = $this->detectCabangFromData(is_array($dynamicData) ? $dynamicData : null);
+
+        if ($cabangId) {
+            $data['cabang_id'] = $cabangId;
+        }
+        if ($kiosOverride) {
+            $data['kios_id'] = $kiosOverride;
+        }
+
         return Customer::create($data);
     }
 
     public function update(int $id, array $data)
     {
         $customer = Customer::findOrFail($id);
+
+        if (array_key_exists('dynamic_data', $data)) {
+            $dynamicData = $data['dynamic_data'];
+            if (is_string($dynamicData)) {
+                $dynamicData = json_decode($dynamicData, true);
+            }
+
+            [$cabangId, $kiosOverride] = $this->detectCabangFromData(is_array($dynamicData) ? $dynamicData : null);
+            $data['cabang_id'] = $cabangId;
+        }
+
         $customer->update($data);
 
         return $customer->fresh();
@@ -208,7 +265,7 @@ class CustomerRepository implements CustomerRepositoryInterface
             });
         }
 
-        if (($filters['viewer_role'] ?? '') !== 'superadmin') {
+        if (! in_array(($filters['viewer_role'] ?? ''), ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $viewerKiosId = $filters['kios_id'] ?? null;
             $query->where(function ($q) use ($existingUserIds, $viewerKiosId) {
@@ -517,6 +574,260 @@ class CustomerRepository implements CustomerRepositoryInterface
         return $count;
     }
 
+    public function distributeToUh(?string $viewerKiosId = null): array
+    {
+        $query = Customer::where('assignment_status', 'unassigned');
+        if ($viewerKiosId) {
+            $query->where('kios_id', $viewerKiosId);
+        }
+        Customer::applyOrphanFilter($query, $viewerKiosId);
+
+        $customers = $query->select('id', 'kios_id', 'no_contract')->get();
+
+        if ($customers->isEmpty()) {
+            return ['message' => 'Tidak ada data yang belum diassign', 'distributed' => 0, 'per_kios' => []];
+        }
+
+        $byKios = $customers->groupBy('kios_id');
+        $result = [];
+        $assignments = [];
+
+        foreach ($byKios as $kiosId => $kiosCustomers) {
+            $uhUsers = User::where('role', 'UH')
+                ->when($kiosId, fn ($q) => $q->where('kios_id', $kiosId))
+                ->pluck('id')
+                ->toArray();
+
+            if (empty($uhUsers)) {
+                $result[$kiosId ?? 'null'] = ['total' => $kiosCustomers->count(), 'uh_count' => 0, 'per_uh' => []];
+
+                continue;
+            }
+
+            $nmc = $kiosCustomers->filter(fn ($c) => $c->no_contract && str_starts_with($c->no_contract, '4020'))->values();
+            $refi = $kiosCustomers->filter(fn ($c) => $c->no_contract && str_starts_with($c->no_contract, '4029'))->values();
+            $other = $kiosCustomers->filter(fn ($c) => ! $c->no_contract || (! str_starts_with($c->no_contract, '4020') && ! str_starts_with($c->no_contract, '4029')))->values();
+
+            $uhCount = count($uhUsers);
+            $perUh = array_fill_keys($uhUsers, ['nmc' => 0, 'refi' => 0, 'other' => 0]);
+
+            foreach ([['items' => $nmc, 'type' => 'nmc'], ['items' => $refi, 'type' => 'refi'], ['items' => $other, 'type' => 'other']] as $group) {
+                $items = $group['items'];
+                $type = $group['type'];
+                $idx = 0;
+                foreach ($items as $item) {
+                    $uhId = $uhUsers[$idx % $uhCount];
+                    $assignments[$item->id] = $uhId;
+                    $perUh[$uhId][$type]++;
+                    $idx++;
+                }
+            }
+
+            $result[$kiosId ?? 'null'] = [
+                'total' => $kiosCustomers->count(),
+                'uh_count' => $uhCount,
+                'per_uh' => $perUh,
+            ];
+        }
+
+        // Batch update
+        DB::beginTransaction();
+        try {
+            $chunks = array_chunk($assignments, 500, true);
+            foreach ($chunks as $chunk) {
+                foreach ($chunk as $customerId => $uhId) {
+                    Customer::where('id', $customerId)->update(['uh_id' => $uhId]);
+                }
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
+
+        return [
+            'message' => 'Distribusi berhasil',
+            'distributed' => count($assignments),
+            'per_kios' => $result,
+        ];
+    }
+
+    private function detectCabangFromData(?array $dynamicData): array
+    {
+        $cabangId = null;
+        $kiosIdOverride = null;
+
+        if (! $dynamicData) {
+            return [$cabangId, $kiosIdOverride];
+        }
+
+        $kabupaten = $this->normalizeRegion(
+            $dynamicData['kabupaten_kota']
+                ?? $dynamicData['kabupaten']
+                ?? $dynamicData['kab_kota']
+                ?? $dynamicData['kota_kabupaten']
+                ?? null,
+            false
+        );
+        $kecamatan = $this->normalizeRegion($dynamicData['kecamatan'] ?? null);
+        $kelurahan = $this->resolveKelurahanAlias(
+            $kecamatan,
+            $this->normalizeRegion($dynamicData['kelurahan'] ?? null)
+        );
+
+        $wilayah = null;
+
+        if ($kelurahan) {
+            $wilayah = $this->matchCabangWilayah($kabupaten, $kecamatan, $kelurahan);
+        }
+
+        if (! $wilayah && $kecamatan) {
+            $wilayah = $this->matchCabangWilayah($kabupaten, $kecamatan, null);
+        }
+
+        if ($wilayah) {
+            $cabangId = $wilayah->cabang_id;
+        }
+
+        return [$cabangId, $kiosIdOverride];
+    }
+
+    private function matchCabangWilayah(?string $kabupaten, string $kecamatan, ?string $kelurahan): ?CabangWilayah
+    {
+        $wilayah = $this->queryCabangWilayah($kabupaten, $kecamatan, $kelurahan);
+        if (! $wilayah) {
+            $wilayah = $this->queryCabangWilayah($kabupaten, $kecamatan, $kelurahan, true);
+        }
+
+        return $wilayah;
+    }
+
+    private function queryCabangWilayah(?string $kabupaten, string $kecamatan, ?string $kelurahan, bool $stripSpaces = false): ?CabangWilayah
+    {
+        $query = CabangWilayah::query();
+
+        if ($stripSpaces) {
+            $query->whereRaw("LOWER(REPLACE(kecamatan, ' ', '')) = ?", [$this->stripRegionSpaces($kecamatan)]);
+        } else {
+            $query->whereRaw('LOWER(kecamatan) = ?', [mb_strtolower($kecamatan)]);
+        }
+
+        if ($kelurahan !== null) {
+            if ($stripSpaces) {
+                $query->whereRaw("LOWER(REPLACE(kelurahan, ' ', '')) = ?", [$this->stripRegionSpaces($kelurahan)]);
+            } else {
+                $query->whereRaw('LOWER(kelurahan) = ?', [mb_strtolower($kelurahan)]);
+            }
+        } else {
+            $query->whereNull('kelurahan');
+        }
+
+        if ($kabupaten) {
+            if ($stripSpaces) {
+                $query->whereRaw("LOWER(REPLACE(kabupaten_kota, ' ', '')) = ?", [$this->stripRegionSpaces($kabupaten)]);
+            } else {
+                $query->whereRaw('LOWER(kabupaten_kota) = ?', [mb_strtolower($kabupaten)]);
+            }
+        }
+
+        $matches = $query->get();
+
+        return $matches->count() === 1 ? $matches->first() : null;
+    }
+
+    private function stripRegionSpaces(string $value): string
+    {
+        return preg_replace('/\s+/', '', mb_strtolower($value));
+    }
+
+    private const KELURAHAN_ALIASES = [
+        'cangkringan' => [
+            'wukir sari' => 'Wukisari',
+            'kepuh harjo' => 'Kepuharjo',
+        ],
+    ];
+
+    private function resolveKelurahanAlias(?string $kecamatan, ?string $kelurahan): ?string
+    {
+        if (! $kecamatan || ! $kelurahan) {
+            return $kelurahan;
+        }
+
+        return self::KELURAHAN_ALIASES[mb_strtolower($kecamatan)][mb_strtolower($kelurahan)] ?? $kelurahan;
+    }
+
+    private function normalizeRegion(?string $value, bool $stripRegionPrefix = true): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        if ($stripRegionPrefix) {
+            $value = preg_replace('/^(kecamatan|kec|kelurahan|kel)\s+/i', '', $value);
+        } else {
+            $value = preg_replace('/^(kabupaten|kab\.|kab)\s+/i', '', $value);
+        }
+
+        $value = preg_replace('/\s+/', ' ', trim($value));
+
+        return $value === '' ? null : $value;
+    }
+
+    public function syncCustomerCabang(int $chunkSize = 500): int
+    {
+        $updated = 0;
+
+        Customer::whereNotNull('dynamic_data')
+            ->chunk($chunkSize, function ($customers) use (&$updated) {
+                foreach ($customers as $customer) {
+                    $dynamicData = $customer->dynamic_data;
+                    if (! $dynamicData) {
+                        continue;
+                    }
+
+                    [$cabangId, $kiosOverride] = $this->detectCabangFromData($dynamicData);
+
+                    $updateData = [];
+                    if ($cabangId) {
+                        $updateData['cabang_id'] = $cabangId;
+                    }
+                    if ($kiosOverride) {
+                        $updateData['kios_id'] = $kiosOverride;
+                    }
+
+                    if (! empty($updateData)) {
+                        Customer::where('id', $customer->id)->update($updateData);
+                        $updated++;
+                    }
+                }
+            });
+
+        return $updated;
+    }
+
+    public function syncCustomerCabangFromKios(int $chunkSize = 500): int
+    {
+        $updated = 0;
+
+        Customer::whereNotNull('kios_id')
+            ->chunk($chunkSize, function ($customers) use (&$updated) {
+                foreach ($customers as $customer) {
+                    $kios = Kios::where('kios_id', $customer->kios_id)->first();
+                    if ($kios && $kios->cabang_id) {
+                        Customer::where('id', $customer->id)->update(['cabang_id' => $kios->cabang_id]);
+                        $updated++;
+                    }
+                }
+            });
+
+        return $updated;
+    }
+
     private function processBatch(array $batch, array $indexMap, int $uploadedBy, ?string $kiosId, int &$imported, array &$failed): void
     {
         DB::beginTransaction();
@@ -528,12 +839,15 @@ class CustomerRepository implements CustomerRepositoryInterface
                 }
                 $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
 
+                [$cabangId, $kiosOverride] = $this->detectCabangFromData($dynamicData);
+
                 Customer::create([
                     'no_contract' => $noContract,
                     'name' => $data['name'] ?? '',
                     'phone_number' => $data['phone_number'] ?? '',
                     'uploaded_by' => $uploadedBy,
-                    'kios_id' => $kiosId,
+                    'kios_id' => $kiosOverride ?? $kiosId,
+                    'cabang_id' => $cabangId,
                     'dynamic_data' => $dynamicData,
                 ]);
             }
@@ -555,13 +869,16 @@ class CustomerRepository implements CustomerRepositoryInterface
                 }
                 $noContract = $dynamicData['no_contract'] ?? $data['no_contract'] ?? null;
 
+                [$cabangId, $kiosOverride] = $this->detectCabangFromData($dynamicData);
+
                 DB::beginTransaction();
                 Customer::create([
                     'no_contract' => $noContract,
                     'name' => $data['name'] ?? '',
                     'phone_number' => $data['phone_number'] ?? '',
                     'uploaded_by' => $uploadedBy,
-                    'kios_id' => $kiosId,
+                    'kios_id' => $kiosOverride ?? $kiosId,
+                    'cabang_id' => $cabangId,
                     'dynamic_data' => $dynamicData,
                 ]);
                 DB::commit();
