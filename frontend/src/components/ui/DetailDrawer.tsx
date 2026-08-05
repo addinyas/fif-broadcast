@@ -38,7 +38,7 @@ export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate',
         <>
           <motion.div
             key="overlay"
-            className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -47,7 +47,7 @@ export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate',
           />
           <motion.aside
             key="drawer"
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl dark:bg-slate-900"
+            className="fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col bg-white shadow-2xl dark:bg-slate-900"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
