@@ -8,6 +8,7 @@ interface BadgeProps {
   size?: 'xs' | 'sm' | 'md';
   pulse?: boolean;
   dot?: boolean;
+  onClick?: () => void;
 }
 
 const variantStyles: Record<BadgeVariant, { pill: string; dot: string }> = {
@@ -32,12 +33,16 @@ export function Badge({
   size = 'sm',
   pulse = false,
   dot = false,
+  onClick,
 }: BadgeProps) {
   const cfg = variantStyles[variant] ?? variantStyles.default;
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full tracking-wide ${cfg.pill} ${sizeStyles[size]}`}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full tracking-wide ${cfg.pill} ${sizeStyles[size]} ${
+        onClick ? 'cursor-pointer transition-transform hover:scale-105' : ''
+      }`}
     >
       {(dot || pulse) && (
         <span className="relative flex shrink-0 items-center justify-center" style={{ width: 6, height: 6 }}>

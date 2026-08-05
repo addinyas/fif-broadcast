@@ -13,6 +13,9 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DetailDrawer } from '@/components/ui/DetailDrawer';
+import { StatusHistoryPanel } from '@/components/ui/StatusHistoryPanel';
 import { getSocket } from '@/services/socketService';
 import type { BroadcastStats, DistributionReport, DailyBroadcastStats } from '@/types';
 
@@ -249,6 +252,8 @@ export default function DashboardPage() {
   const [dailyStats, setDailyStats] = useState<DailyBroadcastStats | null>(null);
   const [showBroadcastDetail, setShowBroadcastDetail] = useState(false);
   const [showDailyDetail, setShowDailyDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [drawerTick, setDrawerTick] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
@@ -278,6 +283,21 @@ export default function DashboardPage() {
     ? Math.round((dist.assigned / dist.total_customers) * 100) : 0;
 
   const canSeeDetail = user?.role === 'superadmin' || user?.role === 'UH' || user?.role === 'AO';
+
+  const openStatus = (status: string) => {
+    setStatusFilter(status);
+    setDrawerTick((t) => t + 1);
+  };
+
+  const STATUS_DRAWER: Record<string, { title: string; accent: 'amber' | 'blue' | 'emerald' | 'red' | 'slate' }> = {
+    pending: { title: 'Pesan Menunggu', accent: 'amber' },
+    processing: { title: 'Pesan Diproses', accent: 'blue' },
+    sent: { title: 'Pesan Terkirim', accent: 'emerald' },
+    failed: { title: 'Pesan Gagal', accent: 'red' },
+    cancelled: { title: 'Pesan Dibatalkan', accent: 'slate' },
+  };
+
+  const drawerConfig = statusFilter ? STATUS_DRAWER[statusFilter] : null;
 
   return (
     <div className="font-poppins space-y-6">
@@ -320,7 +340,9 @@ export default function DashboardPage() {
         ) : (
           <>
             <StatCard title="Pending" value={stats?.pending ?? '-'}
-              icon={<Clock className="h-5 w-5" />} color="amber" index={4} />
+              icon={<Clock className="h-5 w-5" />} color="amber" index={4}
+              clickable
+              onClick={() => openStatus('pending')} />
             <StatCard
               title="Broadcast Harian"
               value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)}
@@ -330,9 +352,13 @@ export default function DashboardPage() {
               onClick={() => setShowDailyDetail(true)}
             />
             <StatCard title="Sent" value={stats?.sent ?? '-'}
-              icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" index={6} />
+              icon={<CheckCircle2 className="h-5 w-5" />} color="emerald" index={6}
+              clickable
+              onClick={() => openStatus('sent')} />
             <StatCard title="Failed" value={stats?.failed ?? '-'}
-              icon={<XCircle className="h-5 w-5" />} color="red" index={7} />
+              icon={<XCircle className="h-5 w-5" />} color="red" index={7}
+              clickable
+              onClick={() => openStatus('failed')} />
           </>
         )}
       </div>
@@ -656,6 +682,20 @@ export default function DashboardPage() {
           </div>
         )}
       </DetailModal>
+
+      {/* ── Status Detail Drawer ──────────────── */}
+      <DetailDrawer
+        open={!!statusFilter}
+        onClose={() => setStatusFilter(null)}
+        title={drawerConfig?.title ?? ''}
+        subtitle={`Detail pesan per status · auto-refresh 15 detik`}
+        accent={drawerConfig?.accent ?? 'slate'}
+        icon={statusFilter ? <StatusBadge status={statusFilter} size="sm" /> : null}
+      >
+        {statusFilter && (
+          <StatusHistoryPanel status={statusFilter} keyRef={drawerTick} />
+        )}
+      </DetailDrawer>
     </div>
   );
 }

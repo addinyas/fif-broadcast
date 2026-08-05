@@ -10,6 +10,7 @@ interface StatusBadgeProps {
   status: string;
   size?: 'xs' | 'sm' | 'md';
   className?: string;
+  onClick?: () => void;
 }
 
 interface StateConfig {
@@ -68,14 +69,17 @@ const sizeStyles = {
 
 const iconSize = { xs: 'h-3 w-3', sm: 'h-3.5 w-3.5', md: 'h-4 w-4' };
 
-export function StatusBadge({ status, size = 'sm', className }: StatusBadgeProps) {
+export function StatusBadge({ status, size = 'sm', className, onClick }: StatusBadgeProps) {
   const key = (status in CONFIG ? status : 'idle') as StatusKey;
   const cfg = CONFIG[key];
   const { Icon } = cfg;
 
   return (
     <span
-      className={`relative inline-flex items-center gap-1.5 rounded-full tracking-wide ${cfg.pill} ${sizeStyles[size]} ${className ?? ''}`}
+      onClick={onClick}
+      className={`relative inline-flex items-center gap-1.5 rounded-full tracking-wide ${cfg.pill} ${sizeStyles[size]} ${
+        onClick ? 'cursor-pointer transition-transform hover:scale-105' : ''
+      } ${className ?? ''}`}
     >
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span

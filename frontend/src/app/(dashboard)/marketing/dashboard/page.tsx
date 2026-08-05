@@ -13,6 +13,8 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { DetailDrawer } from '@/components/ui/DetailDrawer';
+import { StatusHistoryPanel } from '@/components/ui/StatusHistoryPanel';
 import { getSocket } from '@/services/socketService';
 import type { MarketingSummary, DailyBroadcastStats } from '@/types';
 
@@ -159,6 +161,22 @@ export default function MarketingDashboardPage() {
   const [summary, setSummary] = useState<MarketingSummary | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyBroadcastStats | null>(null);
   const [showDailyDetail, setShowDailyDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [drawerTick, setDrawerTick] = useState(0);
+
+  const openStatus = (status: string) => {
+    setStatusFilter(status);
+    setDrawerTick((t) => t + 1);
+  };
+
+  const STATUS_DRAWER: Record<string, { title: string; accent: 'amber' | 'blue' | 'emerald' | 'red' | 'slate' }> = {
+    pending: { title: 'Pesan Menunggu', accent: 'amber' },
+    processing: { title: 'Pesan Diproses', accent: 'blue' },
+    sent: { title: 'Pesan Terkirim', accent: 'emerald' },
+    failed: { title: 'Pesan Gagal', accent: 'red' },
+  };
+
+  const drawerConfig = statusFilter ? STATUS_DRAWER[statusFilter] : null;
 
   const fetchData = useCallback(async () => {
     try {
@@ -245,9 +263,12 @@ export default function MarketingDashboardPage() {
           <><CardSkeleton /><CardSkeleton /><CardSkeleton /><CardSkeleton /></>
         ) : (
           <>
-            <StatCard title="Pending" value={summary?.broadcast.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="yellow" index={4} />
-            <StatCard title="Diproses" value={summary?.broadcast.processing ?? 0} icon={<Activity className="h-5 w-5" />} color="purple" index={5} />
-            <StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" index={6} />
+            <StatCard title="Pending" value={summary?.broadcast.pending ?? '-'} icon={<Clock className="h-5 w-5" />} color="yellow" index={4}
+              clickable onClick={() => openStatus('pending')} />
+            <StatCard title="Diproses" value={summary?.broadcast.processing ?? 0} icon={<Activity className="h-5 w-5" />} color="purple" index={5}
+              clickable onClick={() => openStatus('processing')} />
+            <StatCard title="Gagal" value={summary?.broadcast.failed ?? '-'} icon={<XCircle className="h-5 w-5" />} color="red" index={6}
+              clickable onClick={() => openStatus('failed')} />
             <StatCard
               title="Broadcast Harian"
               value={(summary?.broadcast.sent_today ?? 0) + (summary?.broadcast.broadcast_manual_today ?? 0)}
@@ -446,6 +467,20 @@ export default function MarketingDashboardPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── Status Detail Drawer ──────────────── */}
+      <DetailDrawer
+        open={!!statusFilter}
+        onClose={() => setStatusFilter(null)}
+        title={drawerConfig?.title ?? ''}
+        subtitle="Detail pesan per status broadcast Anda"
+        accent={drawerConfig?.accent ?? 'slate'}
+        icon={statusFilter ? <StatusBadge status={statusFilter} size="sm" /> : null}
+      >
+        {statusFilter && (
+          <StatusHistoryPanel status={statusFilter} keyRef={drawerTick} />
+        )}
+      </DetailDrawer>
     </div>
   );
 }
