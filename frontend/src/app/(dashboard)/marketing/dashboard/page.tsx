@@ -12,19 +12,9 @@ import { StatCard } from '@/components/ui/StatCard';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton, CardSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { getSocket } from '@/services/socketService';
 import type { MarketingSummary, DailyBroadcastStats } from '@/types';
-
-const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' | 'purple' => {
-  switch (status) {
-    case 'pending': return 'warning';
-    case 'processing': return 'info';
-    case 'sent': return 'success';
-    case 'failed': return 'danger';
-    case 'cancelled': return 'danger';
-    default: return 'purple';
-  }
-};
 
 /* ── Real-time clock ──────────────────────────────────── */
 function useClock() {
@@ -326,9 +316,7 @@ export default function MarketingDashboardPage() {
                     {formatDate(summary.last_broadcast.sent_at || summary.last_broadcast.created_at)}
                   </p>
                 </div>
-                <Badge variant={statusVariant(summary.last_broadcast.status)}>
-                  {summary.last_broadcast.status}
-                </Badge>
+                <StatusBadge status={summary.last_broadcast.status} />
               </div>
             </div>
           ) : (
@@ -374,7 +362,7 @@ export default function MarketingDashboardPage() {
                   <tr key={item.id} className="transition-colors duration-150 hover:bg-blue-50/40 dark:hover:bg-blue-950/20">
                     <td className="px-5 py-3.5 font-medium text-slate-700 dark:text-slate-300">{item.customer_name}</td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={statusVariant(item.status)}>{item.status}</Badge>
+                      <StatusBadge status={item.status} />
                     </td>
                     <td className="px-5 py-3.5 tabular-nums text-slate-400 dark:text-slate-500">{formatDate(item.sent_at || item.created_at)}</td>
                   </tr>

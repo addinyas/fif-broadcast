@@ -14,7 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { calcPlafon } from '@/finance/financeEngine';
 import { DataTable } from '@/components/ui/DataTable';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { RollingDataModal } from '@/components/ui/RollingDataModal';
@@ -560,26 +560,6 @@ export default function ProspectListPage() {
     window.open(waLink(c), '_blank', 'noopener');
   };
 
-  const statusLabel = (s: string) => {
-    const map: Record<string, string> = {
-      pending: 'Tertunda',
-      processing: 'Diproses',
-      sent: 'Terkirim',
-      failed: 'Gagal',
-    };
-    return map[s] || s;
-  };
-
-  const statusVariant = (s: string) => {
-    const map: Record<string, 'warning' | 'info' | 'success' | 'danger'> = {
-      pending: 'warning',
-      processing: 'info',
-      sent: 'success',
-      failed: 'danger',
-    };
-    return map[s] || 'default';
-  };
-
   const columns = [
     { key: 'no_contract', header: 'No Contract', render: (c: Customer) => (
       <span className="font-satoshi text-xs font-medium text-slate-700 dark:text-slate-300">{c.no_contract || dyn(c, 'no_contract')}</span>
@@ -731,7 +711,7 @@ export default function ProspectListPage() {
                 onClick={(e) => setStatusPopover({ customerId: c.id, type: 'broadcast', anchorEl: e.currentTarget })}
                 className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs transition-all hover:ring-1 hover:ring-blue-300 dark:hover:ring-blue-700"
               >
-                <Badge variant={statusVariant(latestBroadcast.status)} size="sm">{statusLabel(latestBroadcast.status)}</Badge>
+                <StatusBadge status={latestBroadcast.status} size="sm" />
                 {broadcastCount > 1 && (
                   <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">
                     +{broadcastCount - 1} kirim
@@ -1338,7 +1318,7 @@ export default function ProspectListPage() {
                         <div className="mt-1.5 space-y-1">
                           {g.entries.map((e, j) => (
                             <div key={j} className="flex items-center justify-between text-[11px]">
-                              <Badge variant={statusVariant(e.status)} size="sm">{statusLabel(e.status)}</Badge>
+                              <StatusBadge status={e.status} size="sm" />
                               <span className="text-slate-400 dark:text-slate-500">{e.sent_at ? new Date(e.sent_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                             </div>
                           ))}

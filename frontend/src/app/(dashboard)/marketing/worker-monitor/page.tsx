@@ -8,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { Card } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { WorkerStatus, WorkerUser } from '@/types';
 
 export default function WorkerMonitorPage() {
@@ -107,6 +108,14 @@ export default function WorkerMonitorPage() {
 
   const isActive = data && (data.summary.total_pending > 0 || data.summary.total_processing > 0);
 
+  const workerState = (s: WorkerStatus): string => {
+    if (s.summary.total_processing > 0) return 'processing';
+    if (s.summary.total_pending > 0) return 'pending';
+    if (s.summary.total_sent_today > 0) return 'sent';
+    if (s.summary.total_failed_today > 0) return 'failed';
+    return 'idle';
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -148,15 +157,9 @@ export default function WorkerMonitorPage() {
         </div>
 
         {/* Live indicator */}
-        {isActive && (
-          <div className="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            Sedang memproses
-          </div>
-        )}
+        <div className="relative mt-4 inline-flex items-center">
+          <StatusBadge status={data ? workerState(data) : 'idle'} size="sm" />
+        </div>
       </div>
 
       {/* Summary cards */}

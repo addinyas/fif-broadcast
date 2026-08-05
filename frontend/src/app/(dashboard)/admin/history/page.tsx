@@ -8,7 +8,7 @@ import { authService } from '@/services/authService';
 import { getSocket } from '@/services/socketService';
 import { useAuth } from '@/context/AuthContext';
 import { DataTable } from '@/components/ui/DataTable';
-import { Badge } from '@/components/ui/Badge';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { BroadcastHistory, Kios } from '@/types';
 
 type Tab = 'sent' | 'not_sent' | 'failed';
@@ -86,17 +86,6 @@ export default function BroadcastHistoryPage() {
     return () => { socket.off('broadcast:status', handler); };
   }, [token, fetchData]);
 
-  const statusVariant = (status: string): 'warning' | 'info' | 'success' | 'danger' => {
-    switch (status) {
-      case 'pending': return 'warning';
-      case 'processing': return 'info';
-      case 'sent': return 'success';
-      case 'failed': return 'danger';
-      case 'cancelled': return 'danger';
-      default: return 'warning';
-    }
-  };
-
   const columns = [
     { key: 'customer', header: 'Customer', render: (b: BroadcastHistory) => b.customer?.name || `#${b.customer_id}` },
     {
@@ -106,7 +95,7 @@ export default function BroadcastHistoryPage() {
     },
     {
       key: 'status', header: 'Status', render: (b: BroadcastHistory) => (
-        <Badge variant={statusVariant(b.status)}>{b.status}</Badge>
+        <StatusBadge status={b.status} />
       )
     },
     {
