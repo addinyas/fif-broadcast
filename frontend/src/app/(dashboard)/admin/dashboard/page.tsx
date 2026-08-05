@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Send, Clock, CheckCircle2, XCircle, UserCheck,
-  TrendingUp, BarChart3, PieChart, RefreshCw, X, Zap, Target,
+  TrendingUp, BarChart3, PieChart, RefreshCw, Zap,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { broadcastService } from '@/services/broadcastService';
 import { customerService } from '@/services/customerService';
 import { useAuth } from '@/context/AuthContext';
@@ -173,75 +173,7 @@ function ProgressRing({ value, max, color, label, subLabel }: {
 }
 
 /* ── Detail Modal ──────────────────────────────────────── */
-function DetailModal({
-  isOpen,
-  onClose,
-  title,
-  icon: Icon,
-  iconColor,
-  children,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  icon: React.ElementType;
-  iconColor: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <motion.div
-            className="absolute inset-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
-            onClick={onClose}
-          />
-          <motion.div
-            className="relative w-full max-w-md rounded-2xl overflow-hidden"
-            initial={{ opacity: 0, scale: 0.92, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 10 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            style={{
-              background: 'linear-gradient(135deg, #0f172a, #111827)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
-            }}
-          >
-            {/* Top shine */}
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
-
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg"
-                  style={{ background: `${iconColor}18` }}>
-                  <Icon className="h-4 w-4" style={{ color: iconColor }} />
-                </div>
-                <h3 className="text-base font-bold text-slate-100">{title}</h3>
-              </div>
-              <button
-                onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-white/8 hover:text-slate-300"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="max-h-[70vh] overflow-y-auto">
-              {children}
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
-  );
-}
+/* (diganti DetailDrawer) */
 
 /* ── Dashboard Page ────────────────────────────────────── */
 export default function DashboardPage() {
@@ -566,16 +498,17 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      {/* ── Broadcast Detail Modal ────────────── */}
-      <DetailModal
-        isOpen={showBroadcastDetail}
+      {/* ── Total Broadcast Drawer ────────────── */}
+      <DetailDrawer
+        open={showBroadcastDetail}
         onClose={() => setShowBroadcastDetail(false)}
         title="Total Broadcast per MCE"
-        icon={Send}
-        iconColor="#10b981"
+        subtitle="Rincian broadcast WA vs manual per marketing"
+        accent="emerald"
+        icon={<Send className="h-5 w-5 text-emerald-500" />}
       >
         {dist && (
-          <div className="px-6 py-4 space-y-4">
+          <div className="space-y-4">
             {dist.by_marketing
               .filter((m) => m.total_broadcasts > 0 || m.manual_broadcasts > 0)
               .sort((a, b) => (b.total_broadcasts + b.manual_broadcasts) - (a.total_broadcasts + a.manual_broadcasts))
@@ -585,22 +518,22 @@ export default function DashboardPage() {
                 const waPct = total > 0 ? Math.round((item.total_broadcasts / maxBc) * 100) : 0;
                 const manualPct = total > 0 ? Math.round((item.manual_broadcasts / maxBc) * 100) : 0;
                 return (
-                  <div key={item.marketing_id} className="space-y-1.5">
+                  <div key={item.marketing_id} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-slate-300">
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         {item.marketing?.name || `User #${item.marketing_id}`}
                       </span>
-                      <span className="font-satoshi text-sm font-bold tabular-nums text-white">{total}</span>
+                      <span className="font-satoshi text-sm font-bold tabular-nums text-slate-800 dark:text-slate-100">{total}</span>
                     </div>
-                    <div className="flex gap-1.5 text-[11px] font-medium tabular-nums">
-                      {item.total_broadcasts > 0 && <span className="text-yellow-400">{item.total_broadcasts} WA</span>}
-                      {item.manual_broadcasts > 0 && <span className="text-emerald-400">{item.manual_broadcasts} Manual</span>}
+                    <div className="mt-1 flex gap-1.5 text-[11px] font-medium tabular-nums">
+                      {item.total_broadcasts > 0 && <span className="text-amber-600 dark:text-amber-400">{item.total_broadcasts} WA</span>}
+                      {item.manual_broadcasts > 0 && <span className="text-emerald-600 dark:text-emerald-400">{item.manual_broadcasts} Manual</span>}
                     </div>
-                    <div className="relative h-2.5 overflow-hidden rounded-full bg-slate-700/80">
+                    <div className="relative mt-2 h-2.5 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/80">
                       <motion.div className="absolute right-0 top-0 h-full rounded-l-full bg-emerald-400"
                         initial={{ width: 0 }} animate={{ width: `${manualPct}%` }}
                         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} />
-                      <motion.div className="absolute left-0 top-0 h-full rounded-r-full bg-yellow-400"
+                      <motion.div className="absolute left-0 top-0 h-full rounded-r-full bg-amber-400"
                         initial={{ width: 0 }} animate={{ width: `${waPct}%` }}
                         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }} />
                     </div>
@@ -608,37 +541,34 @@ export default function DashboardPage() {
                 );
               })}
             {dist.by_marketing.filter((m) => m.total_broadcasts > 0 || m.manual_broadcasts > 0).length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-500">Belum ada broadcast</p>
+              <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Belum ada broadcast</p>
             )}
-          </div>
-        )}
-        {dist && (
-          <div className="border-t border-white/[0.06] px-6 py-3">
-            <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-yellow-400" />WA: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts, 0)}</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" />Manual: {dist.by_marketing.reduce((a, m) => a + m.manual_broadcasts, 0)}</span>
-              <span className="font-semibold text-slate-300">Total: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts + m.manual_broadcasts, 0)}</span>
+            <div className="rounded-xl bg-slate-100/80 px-4 py-3 text-center text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-400" />WA: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts, 0)}</span>
+              <span className="mx-3 inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" />Manual: {dist.by_marketing.reduce((a, m) => a + m.manual_broadcasts, 0)}</span>
+              <span className="font-semibold">Total: {dist.by_marketing.reduce((a, m) => a + m.total_broadcasts + m.manual_broadcasts, 0)}</span>
             </div>
           </div>
         )}
-      </DetailModal>
+      </DetailDrawer>
 
-      {/* ── Daily Broadcast Modal ─────────────── */}
-      <DetailModal
-        isOpen={showDailyDetail}
+      {/* ── Daily Broadcast Drawer ─────────────── */}
+      <DetailDrawer
+        open={showDailyDetail}
         onClose={() => setShowDailyDetail(false)}
         title="Broadcast Hari Ini"
-        icon={Target}
-        iconColor="#3b82f6"
+        subtitle="Pesan terkirim hari ini per marketing"
+        accent="blue"
+        icon={<Zap className="h-5 w-5 text-blue-500" />}
       >
         {dailyStats && (
-          <div className="px-6 py-4 space-y-4">
+          <div className="space-y-4">
             {dailyStats.users
               .filter((u) => u.items && u.items.length > 0)
               .map((item) => (
                 <div key={item.marketing_id}>
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-sm font-semibold text-slate-300">{item.marketing_name}</span>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{item.marketing_name}</span>
                     <span className="font-satoshi text-xs font-bold tabular-nums text-slate-400">
                       {item.sent_today + item.manual_today} kirim
                     </span>
@@ -647,14 +577,13 @@ export default function DashboardPage() {
                     {item.items.map((bc, i) => (
                       <motion.div
                         key={i}
-                        className="flex items-center justify-between rounded-xl px-3 py-2"
-                        style={{ background: 'rgba(255,255,255,0.04)' }}
+                        className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/40"
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.03 }}
                       >
-                        <span className="text-sm font-medium text-slate-300">{bc.customer_name}</span>
-                        <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-slate-700 dark:text-slate-300">{bc.customer_name}</span>
+                        <div className="flex shrink-0 items-center gap-2">
                           <Badge variant={bc.type === 'manual' ? 'success' : 'purple'} size="xs">
                             {bc.type === 'manual' ? 'Manual' : 'Broadcast'}
                           </Badge>
@@ -668,20 +597,16 @@ export default function DashboardPage() {
                 </div>
               ))}
             {dailyStats.users.filter((u) => u.items && u.items.length > 0).length === 0 && (
-              <p className="py-6 text-center text-sm text-slate-500">Belum ada broadcast hari ini</p>
+              <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Belum ada broadcast hari ini</p>
             )}
-          </div>
-        )}
-        {dailyStats && (
-          <div className="border-t border-white/[0.06] px-6 py-3">
-            <p className="text-center text-xs text-slate-500">
-              Total: <span className="font-semibold text-slate-300">
+            <div className="rounded-xl bg-slate-100/80 px-4 py-3 text-center text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+              Total: <span className="font-semibold">
                 {dailyStats.totals.sent_today + dailyStats.totals.manual_today}
               </span> terkirim hari ini
-            </p>
+            </div>
           </div>
         )}
-      </DetailModal>
+      </DetailDrawer>
 
       {/* ── Status Detail Drawer ──────────────── */}
       <DetailDrawer

@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Send, Clock, CheckCircle2, XCircle, UserCheck, Activity,
-  TrendingUp, CalendarDays, ArrowLeftRight, RefreshCw, X, Zap, Target
+  TrendingUp, CalendarDays, ArrowLeftRight, RefreshCw, Zap
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { broadcastService } from '@/services/broadcastService';
 import { useAuth } from '@/context/AuthContext';
 import { StatCard } from '@/components/ui/StatCard';
@@ -396,77 +396,48 @@ export default function MarketingDashboardPage() {
         )}
       </Card>
 
-      {/* ── Daily Detail Modal ────────────────── */}
-      <AnimatePresence>
-        {showDailyDetail && dailyStats && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              className="absolute inset-0"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
-              onClick={() => setShowDailyDetail(false)}
-            />
-            <motion.div
-              className="relative w-full max-w-sm rounded-2xl overflow-hidden"
-              initial={{ opacity: 0, scale: 0.92, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.92, y: 10 }}
-              style={{
-                background: 'linear-gradient(135deg, #0f172a, #111827)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
-              }}
-            >
-              <div className="flex items-center justify-between border-b border-white/[0.06] px-6 py-4">
-                <div className="flex items-center gap-2.5">
-                  <Send className="h-4.5 w-4.5 text-blue-400" />
-                  <h3 className="text-base font-bold text-slate-100">Broadcast Hari Ini</h3>
-                </div>
-                <button
-                  onClick={() => setShowDailyDetail(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/8 hover:text-slate-300"
+      {/* ── Daily Broadcast Drawer ─────────────── */}
+      <DetailDrawer
+        open={showDailyDetail}
+        onClose={() => setShowDailyDetail(false)}
+        title="Broadcast Hari Ini"
+        subtitle="Pesan terkirim hari ini"
+        accent="blue"
+        icon={<Zap className="h-5 w-5 text-blue-500" />}
+      >
+        {(() => {
+          const myStats = dailyStats?.users.find((u) => u.marketing_id === user?.id);
+          if (!myStats || !myStats.items || myStats.items.length === 0) {
+            return <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">Belum ada broadcast hari ini</p>;
+          }
+          return (
+            <div className="space-y-2">
+              {myStats.items.map((bc, i) => (
+                <motion.div
+                  key={i}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-800/40"
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.03 }}
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  <div>
+                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{bc.customer_name}</p>
+                    <p className="text-[11px] tabular-nums text-slate-500">
+                      {new Date(bc.sent_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <Badge variant={bc.type === 'manual' ? 'success' : 'purple'} size="xs">
+                    {bc.type === 'manual' ? 'Manual' : 'Broadcast'}
+                  </Badge>
+                </motion.div>
+              ))}
+              <div className="rounded-xl bg-slate-100/80 px-4 py-3 text-center text-xs text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
+                Total: <span className="font-semibold">{myStats.items.length}</span> pesan hari ini
               </div>
-
-              <div className="max-h-96 overflow-y-auto px-6 py-4">
-                {(() => {
-                  const myStats = dailyStats.users.find((u) => u.marketing_id === user?.id);
-                  if (!myStats || !myStats.items || myStats.items.length === 0) {
-                    return <p className="py-6 text-center text-sm text-slate-500">Belum ada broadcast hari ini</p>;
-                  }
-                  return (
-                    <div className="space-y-1.5">
-                      {myStats.items.map((bc, i) => (
-                        <div key={i} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                          <div>
-                            <p className="text-sm font-medium text-slate-300">{bc.customer_name}</p>
-                            <p className="text-[11px] tabular-nums text-slate-500">
-                              {new Date(bc.sent_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                          <Badge variant={bc.type === 'manual' ? 'success' : 'purple'} size="xs">
-                            {bc.type === 'manual' ? 'Manual' : 'Broadcast'}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="border-t border-white/[0.06] px-6 py-3">
-                <p className="text-center text-xs text-slate-500">
-                  Total: <span className="font-semibold text-slate-300">{dailyStats.users.find((u) => u.marketing_id === user?.id)?.items?.length ?? 0}</span> pesan hari ini
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+            </div>
+          );
+        })()}
+      </DetailDrawer>
 
       {/* ── Status Detail Drawer ──────────────── */}
       <DetailDrawer

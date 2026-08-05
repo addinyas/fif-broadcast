@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 
 interface DetailDrawerProps {
   open: boolean;
@@ -12,7 +12,6 @@ interface DetailDrawerProps {
   accent?: 'amber' | 'blue' | 'emerald' | 'red' | 'slate' | 'violet';
   icon?: React.ReactNode;
   children: React.ReactNode;
-  footer?: React.ReactNode;
 }
 
 const ACCENT: Record<NonNullable<DetailDrawerProps['accent']>, string> = {
@@ -24,7 +23,7 @@ const ACCENT: Record<NonNullable<DetailDrawerProps['accent']>, string> = {
   violet: 'from-violet-500/20 via-violet-500/5 to-transparent',
 };
 
-export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate', icon, children, footer }: DetailDrawerProps) {
+export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate', icon, children }: DetailDrawerProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -54,9 +53,17 @@ export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate',
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
           >
-            <div className={`relative flex items-start gap-3 px-5 pb-4 pt-6 bg-gradient-to-b ${ACCENT[accent]}`}>
+            <div className={`relative flex items-start gap-3 px-4 pb-4 pt-5 sm:px-5 sm:pt-6 bg-gradient-to-b ${ACCENT[accent]}`}>
+              {/* Back button (mobile first) */}
+              <button
+                onClick={onClose}
+                className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-slate-600 shadow-sm ring-1 ring-slate-900/5 transition-colors hover:bg-white sm:hidden dark:bg-slate-800/80 dark:text-slate-300"
+                aria-label="Kembali ke dashboard"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
               {icon && (
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-slate-900/5 dark:bg-slate-800/80">
+                <div className="mt-0.5 hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/80 shadow-sm ring-1 ring-slate-900/5 sm:flex dark:bg-slate-800/80">
                   {icon}
                 </div>
               )}
@@ -66,14 +73,22 @@ export function DetailDrawer({ open, onClose, title, subtitle, accent = 'slate',
               </div>
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-900/5 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-900/5 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
                 aria-label="Tutup"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-            {footer && <div className="border-t border-slate-100 px-5 py-3 dark:border-slate-800">{footer}</div>}
+            <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">{children}</div>
+            <div className="border-t border-slate-100 px-4 py-3 sm:px-5 dark:border-slate-800">
+              <button
+                onClick={onClose}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Kembali ke Dashboard
+              </button>
+            </div>
           </motion.aside>
         </>
       )}
