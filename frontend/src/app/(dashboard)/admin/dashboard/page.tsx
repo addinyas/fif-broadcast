@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Send, Clock, CheckCircle2, XCircle, UserCheck,
-  TrendingUp, BarChart3, PieChart, RefreshCw, Zap,
+  TrendingUp, BarChart3, PieChart, RefreshCw, Zap, Activity,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { broadcastService } from '@/services/broadcastService';
 import { customerService } from '@/services/customerService';
 import { useAuth } from '@/context/AuthContext';
@@ -23,6 +26,8 @@ const MARKETING_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b',
   '#10b981', '#06b6d4', '#f97316', '#ef4444',
 ];
+
+const DAILY_LIMIT = 150; // kuota broadcast harian per MCE
 
 /* ── Real-time clock ──────────────────────────────────── */
 function useClock() {
@@ -172,6 +177,85 @@ function ProgressRing({ value, max, color, label, subLabel }: {
   );
 }
 
+/* ── Daily Activity Chart ─────────────────────────────── */
+function DailyActivityChart({ dailyStats, onOpenDetail }: {
+  dailyStats: DailyBroadcastStats | null;
+  onOpenDetail: () => void;
+}) {
+  const users = (dailyStats?.users ?? []).filter(
+    (u) => u.sent_today + u.failed_today + u.pending_today + u.manual_today > 0,
+  );
+  const maxTotal = Math.max(1, ...users.map((u) => u.sent_today + u.failed_today + u.pending_today + u.manual_today));
+
+  if (users.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-slate-400 dark:text-slate-500">
+        Belum ada broadcast hari ini
+      </p>
+    );
+  }
+
+  return (
+    <TooltipProvider delayDuration={120}>
+      <div className="space-y-3">
+        {users.map((u, idx) => {
+          const total = u.sent_today + u.failed_today + u.pending_today + u.manual_today;
+          const segments = [
+            { label: 'Terkirim', value: u.sent_today, cls: 'bg-emerald-500' },
+            { label: 'Manual', value: u.manual_today, cls: 'bg-blue-500' },
+            { label: 'Pending', value: u.pending_today, cls: 'bg-amber-400' },
+            { label: 'Gagal', value: u.failed_today, cls: 'bg-red-500' },
+          ].filter((s) => s.value > 0);
+
+          return (
+            <Tooltip key={u.marketing_id}>
+              <TooltipTrigger asChild>
+                <motion.button
+                  type="button"
+                  onClick={onOpenDetail}
+                  className="group flex w-full items-center gap-3 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.35 }}
+                >
+                  <span className="w-32 shrink-0 truncate text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {u.marketing_name || `User #${u.marketing_id}`}
+                  </span>
+                  <span className="flex h-2.5 flex-1 items-center overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/50">
+                    {segments.map((s) => (
+                      <motion.span
+                        key={s.label}
+                        className={`h-full ${s.cls}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(s.value / maxTotal) * 100}%` }}
+                        transition={{ duration: 0.7, delay: idx * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                      />
+                    ))}
+                  </span>
+                  <span className="w-10 shrink-0 text-right text-xs font-bold tabular-nums text-slate-800 dark:text-slate-100">
+                    {total}
+                  </span>
+                </motion.button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold">{u.marketing_name}</p>
+                  {segments.map((s) => (
+                    <p key={s.label} className="flex items-center gap-2 text-xs">
+                      <span className={`h-2 w-2 rounded-full ${s.cls}`} />
+                      {s.label}: {s.value}
+                    </p>
+                  ))}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
+  );
+}
+
 /* ── Detail Modal ──────────────────────────────────────── */
 /* (diganti DetailDrawer) */
 
@@ -211,8 +295,13 @@ export default function DashboardPage() {
   const maxAssigned    = Math.max(1, ...(dist?.by_marketing.map((m) => m.total) ?? [1]));
   const totalBroadcasted = dist?.by_marketing.reduce((acc, m) => acc + m.total_broadcasts, 0) ?? 0;
   const mceActive      = dist?.by_marketing.filter((m) => m.total > 0).length ?? 0;
-  const completionPct  = dist && dist.total_customers > 0
-    ? Math.round((dist.assigned / dist.total_customers) * 100) : 0;
+
+  const activeToday = dailyStats?.users.filter(
+    (u) => u.sent_today + u.failed_today + u.pending_today + u.manual_today > 0,
+  ).length ?? 0;
+  const todaySent = (stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0);
+  const quotaCap  = Math.max(1, activeToday * DAILY_LIMIT);
+  const quotaPct  = Math.min(Math.round((todaySent / quotaCap) * 100), 100);
 
   const canSeeDetail = user?.role === 'superadmin' || user?.role === 'UH' || user?.role === 'AO';
 
@@ -295,8 +384,8 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ── Summary + Distribution ───────────── */}
-      <div className="grid gap-5 lg:grid-cols-2">
+      {/* ── Ringkasan + Aktivitas Hari Ini (Bento) ─────── */}
+      <div className="grid gap-5 lg:grid-cols-3">
         {/* Ringkasan with progress rings */}
         <Card animDelay={0.1}>
           <CardHeader>
@@ -318,22 +407,74 @@ export default function DashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-wrap justify-around gap-4 py-2">
-              <ProgressRing value={dist?.assigned ?? 0} max={dist?.total_customers ?? 1}
-                color="#3b82f6" label="Progress Assign" subLabel={`${dist?.assigned ?? 0} / ${dist?.total_customers ?? 0}`} />
-              <ProgressRing value={totalBroadcasted} max={dist?.assigned ?? 1}
-                color="#10b981" label="Sudah Broadcast" subLabel={`${totalBroadcasted} pesan`} />
-              <ProgressRing value={(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)}
-                max={totalBroadcasted || 1} color="#8b5cf6" label="Broadcast Hari Ini"
-                subLabel={`${(stats?.sent_today ?? 0) + (stats?.broadcast_manual_today ?? 0)} kirim`} />
-              <ProgressRing value={mceActive} max={dist?.by_marketing.length || 1}
-                color="#f59e0b" label="MCE Online" subLabel={`dari ${dist?.by_marketing.length ?? 0}`} />
+            <div>
+              <div className="flex flex-wrap justify-around gap-4 py-2">
+                <ProgressRing value={dist?.assigned ?? 0} max={dist?.total_customers ?? 1}
+                  color="#3b82f6" label="Progress Assign" subLabel={`${dist?.assigned ?? 0} / ${dist?.total_customers ?? 0}`} />
+                <ProgressRing value={totalBroadcasted} max={dist?.assigned ?? 1}
+                  color="#10b981" label="Sudah Broadcast" subLabel={`${totalBroadcasted} pesan`} />
+                <ProgressRing value={todaySent}
+                  max={totalBroadcasted || 1} color="#8b5cf6" label="Broadcast Hari Ini"
+                  subLabel={`${todaySent} kirim`} />
+              </div>
+
+              {/* Kuota broadcast harian */}
+              <div className="mt-4 rounded-xl border border-blue-100/80 bg-blue-50/50 p-3.5 dark:border-blue-900/40 dark:bg-blue-950/20">
+                <div className="mb-2 flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 font-semibold text-slate-600 dark:text-slate-300">
+                    <Zap className="h-3.5 w-3.5 text-blue-500" /> Kuota Broadcast Hari Ini
+                  </span>
+                  <span className="font-satoshi font-bold tabular-nums text-blue-600 dark:text-blue-400">
+                    {todaySent} / {quotaCap}
+                  </span>
+                </div>
+                <Progress value={quotaPct} className="h-2 bg-blue-100 dark:bg-slate-700" />
+                <p className="mt-2 text-[10px] text-slate-400">
+                  Limit {DAILY_LIMIT} pesan per MCE/hari · {activeToday} MCE mengirim hari ini
+                </p>
+              </div>
             </div>
           )}
         </Card>
 
-        {/* Distribusi MCE */}
-        <Card animDelay={0.15}>
+        {/* Aktivitas Hari Ini chart */}
+        <Card animDelay={0.15} glow className="lg:col-span-2">
+          <CardHeader className="flex-wrap gap-y-2">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-4.5 w-4.5 text-blue-500" />
+              AKTIVITAS HARI INI
+            </CardTitle>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />Terkirim</span>
+              <Separator orientation="vertical" className="h-3.5" />
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-500" />Manual</span>
+              <Separator orientation="vertical" className="h-3.5" />
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-400" />Pending</span>
+              <Separator orientation="vertical" className="h-3.5" />
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Gagal</span>
+            </div>
+          </CardHeader>
+          {loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-32" />
+                  <Skeleton className="h-2.5 flex-1" />
+                  <Skeleton className="h-3 w-8" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <DailyActivityChart
+              dailyStats={dailyStats}
+              onOpenDetail={() => setShowDailyDetail(true)}
+            />
+          )}
+        </Card>
+      </div>
+
+      {/* ── Distribusi MCE ──────────────────── */}
+      <Card animDelay={0.15}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-4.5 w-4.5 text-blue-500" />
@@ -396,7 +537,6 @@ export default function DashboardPage() {
             </div>
           )}
         </Card>
-      </div>
 
       {/* ── Detail MCE Table ──────────────────── */}
       <Card animDelay={0.2} padding={false}>

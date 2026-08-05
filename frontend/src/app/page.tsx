@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { SplashScreen } from '@/components/ui/SplashScreen';
 
 export default function HomePage() {
   const { user, loading } = useAuth();
@@ -21,9 +22,5 @@ export default function HomePage() {
     }
   }, [user, loading, router]);
 
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-fif-500 border-t-transparent" />
-    </div>
-  );
+  return <SplashScreen />;
 }
