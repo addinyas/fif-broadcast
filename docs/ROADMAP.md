@@ -27,7 +27,7 @@
 | # | Fitur | Scope | Status | Langkah |
 |---|-------|-------|--------|---------|
 | W.1 | Warm-up profile: migration `number_warmup_profiles` + model + `WarmupService` | Backend/Laravel | ✅ DONE | Migration (stage, started_at, stage_started_at, daily_outbound_limit, messages_sent_today, counter_date, last_send_at, consecutive_active_days, health json, flags json) + `WarmupService` (kalkulasi stage, batas harian, progress) + test |
-| W.2 | Warm-up gate di worker (`queue-consumer` + `wa-manager`) | Worker/Node.js | ⬜ TODO | Stage `passive` = tolak semua outbound; limit harian per stage; jitter jeda **bervariasi per nomor** (bukan interval identik) |
+| W.2 | Warm-up gate di worker (`queue-consumer` + `wa-manager`) | Worker/Node.js | ✅ DONE | `warmup-gate.js` (mirror WarmupService: stage calc, lazy refresh, reset kuota, gate canSend, recordSend) + gate di `queue-consumer.js` (blokir passive/limit) + jitter jeda per nomor; legacy tanpa profile tidak diblokir |
 | W.3 | UI "Tanam nomor baru" + progress warm-up | Web/Next.js | ⬜ TODO | Halaman `/admin/connect`: tombol tanam nomor → QR → masuk stage passive; badge stage, hari ke-, sisa kuota, progress bar (`passive 3/7`) |
 | W.4 | Health monitoring + auto-pause | Backend + Worker | ⬜ TODO | KPI delivery <85% / reply <10% → pause antrian nomor; event Socket.IO `warmup:progress` |
 | W.5 | Consent management (OPT_IN/OUT + honor "STOP") | Backend/Laravel | ⬜ TODO | Tabel `consent` + gate broadcast (`BroadcastService::prepare()`) + handler balasan "STOP" |

@@ -3,6 +3,7 @@ const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa
 const { sendMessage } = require('./wa-manager');
 const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew, emitBroadcastProgress, emitBroadcastGlobalStatus } = require('./events');
 const { loadSettings, randomBetween } = require('./broadcast-config');
+const { canSend: warmupCanSend, recordSend: warmupRecordSend } = require('./warmup-gate');
 
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const NOTIF_POLL_INTERVAL = parseInt(process.env.NOTIF_POLL_INTERVAL_MS || '5000', 10);
@@ -110,6 +111,12 @@ async function processUserQueue(userId) {
         return { sent: totalSent, failed: totalFailed };
       }
 
+      const warmupGate = await warmupCanSend(userId);
+      if (!warmupGate.allowed) {
+        console.log(`[Queue:${userId}] Warmup gate: ${warmupGate.reason}`);
+        return { sent: totalSent, failed: totalFailed };
+      }
+
       const row = await getOne(`
         SELECT bh.id, bh.customer_id, bh.exact_message, bh.retry_count, c.phone_number
         FROM broadcast_histories bh
@@ -150,6 +157,7 @@ async function processUserQueue(userId) {
         const normalized = raw.startsWith('0') ? '62' + raw.slice(1) : raw;
         const jid = `${normalized}@s.whatsapp.net`;
         await sendMessage(userId, jid, row.exact_message);
+        await warmupRecordSend(userId);
 
         totalSent++;
         sentThisSession++;
@@ -187,9 +195,11 @@ async function processUserQueue(userId) {
         await sleep(restDuration * 1000);
         restCounter = 0;
       } else if (sentThisSession < settings.messages_per_session) {
-        const delay = settings.random_delay
+        const base = settings.random_delay
           ? randomBetween(settings.min_delay_sec, settings.max_delay_sec)
           : settings.min_delay_sec;
+        // ponytail: jitter per nomor agar pola jeda antar nomor tidak sinkron/identik
+        const delay = base + (userId % 4);
         await sleep(delay * 1000);
       }
     }

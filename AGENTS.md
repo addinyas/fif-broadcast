@@ -23,13 +23,14 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
-### 2026-08-06 -- Roadmap fitur + W.1 warm-up profile (anti-ban)
+### 2026-08-06 -- Roadmap fitur + W.1-W.2 warm-up (anti-ban)
 
-Status: W.1 SELESAI -- lanjut W.2 (gate worker)
+Status: W.1 & W.2 SELESAI -- lanjut W.3 (UI tanam nomor)
 
 * `docs/ROADMAP.md`: master plan semua fitur (Warm-up W.1-W.9, Single Data M.3-M.12, Meta WABA, API, Mobile)
 * W.1: migration `number_warmup_profiles` + model + `WarmupService` (stage passive/active/mature, batas harian, reset otomatis via `counter_date`)
-* Test 10 pass (82 assertions) + pint
+* W.2: gate di worker `warmup-gate.js` (mirror service) + gate sebelum kirim + jitter jeda per nomor; legacy tanpa profile tidak diblokir
+* Test 10 pass (82 assertions) + pint + worker test PASS; W.1 sudah deploy ke VPS
 
 ---
 

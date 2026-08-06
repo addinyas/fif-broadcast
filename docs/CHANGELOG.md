@@ -5,6 +5,18 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-06 - W.2 Gate warm-up di worker + deploy W.1
+
+Status: W.2 SELESAI, W.1 ter-deploy ke VPS
+
+* Deploy W.1: commit `ffca71e` -> run 31080289259 sukses, site 200, `/api/kios` 200, migration jalan di VPS
+* W.2: `worker/src/warmup-gate.js` baru (mirror `WarmupService`: `canSend`, `recordSend`, `getState`, stage calc WIB, lazy refresh stage, reset kuota via `counter_date`)
+* W.2: `queue-consumer.js` -- gate warm-up diblokir sebelum kirim (passive/limit/kill-switch/auto_pause -> antrian user berhenti, pesan tetap pending), `recordSend` setelah kirim sukses
+* W.2: jitter jeda per nomor (`base + userId % 4`) agar pola antar nomor tidak sinkron; nomor legacy tanpa profile dibiarkan jalan (tidak diblokir)
+* Test worker `node test/warmup-gate.test.js` PASS (pure functions + integrasi PG dev + cleanup)
+
+---
+
 ### 2026-08-06 - W.1 Warm-up profile (anti-ban) + dokumen roadmap fitur
 
 Status: W.1 SELESAI
