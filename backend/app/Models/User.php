@@ -76,4 +76,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(WhatsappConnection::class);
     }
+
+    public function warmupProfile(): HasOne
+    {
+        return $this->hasOne(NumberWarmupProfile::class);
+    }
 }

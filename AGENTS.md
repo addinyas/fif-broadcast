@@ -23,6 +23,16 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-06 -- Roadmap fitur + W.1 warm-up profile (anti-ban)
+
+Status: W.1 SELESAI -- lanjut W.2 (gate worker)
+
+* `docs/ROADMAP.md`: master plan semua fitur (Warm-up W.1-W.9, Single Data M.3-M.12, Meta WABA, API, Mobile)
+* W.1: migration `number_warmup_profiles` + model + `WarmupService` (stage passive/active/mature, batas harian, reset otomatis via `counter_date`)
+* Test 10 pass (82 assertions) + pint
+
+---
+
 ### 2026-08-06 -- Audit keamanan PC + rampungkan modernisasi UI
 
 Status: SELESAI (sisa manual: cek router port-forward + aktifkan UAC)

@@ -5,6 +5,19 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-06 - W.1 Warm-up profile (anti-ban) + dokumen roadmap fitur
+
+Status: W.1 SELESAI
+
+* `docs/ROADMAP.md` dibuat: master plan semua fitur terencana dari PRD + docs (WA Warming W.1-W.9, Single Data M.3-M.12, Meta WABA, API, Mobile) dengan prioritas & status
+* W.1: migration `number_warmup_profiles` + model `NumberWarmupProfile` + relasi `User::warmupProfile()`
+* W.1: `WarmupService` (plant, stageForElapsed, refreshStage, canSend, recordSend, getProgress, resetDailyIfNeeded)
+* Stage: passive 3 hari (0 outbound) -> active 14 hari (50/hari) -> mature (150/hari); counter harian reset otomatis via kolom `counter_date` tanpa scheduler
+* Fix bug Eloquent: reset kuota salah karena `(string) Carbon` != `toDateString()` -> kuota ter-reset tiap panggilan
+* 8 test feature WarmupServiceTest PASS (82 assertions) + pint + tinker verify (sent akumulasi benar)
+
+---
+
 ### 2026-08-06 - Audit keamanan PC + rampungkan modernisasi UI
 
 Status: SELESAI (sisa manual: cek router port-forward, aktifkan UAC)
