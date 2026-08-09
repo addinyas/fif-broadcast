@@ -16,8 +16,19 @@ export function WAConnectGate() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingError, setPairingError] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [wait, setWait] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuth();
+
+  useEffect(() => {
+    if (wait === null) return;
+    if (wait <= 0) {
+      setWait(null);
+      return;
+    }
+    const t = setTimeout(() => setWait((w) => (w === null ? null : w - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
   useEffect(() => {
     if (!token) return;
@@ -25,7 +36,7 @@ export function WAConnectGate() {
     socket.auth = { token };
     socket.connect();
 
-    const handler = (msg: { status: string; qr?: string; message?: string }) => {
+    const handler = (msg: { status: string; qr?: string; message?: string; wait?: number }) => {
       if (msg.status === 'connected') {
         setOpen(false);
         return;
@@ -42,20 +53,24 @@ export function WAConnectGate() {
       }
       if (msg.status === 'reconnecting') {
         setReconnectMsg(msg.message || 'Menghubungkan...');
+        if (typeof msg.wait === 'number') setWait(msg.wait);
       } else {
         setReconnectMsg('');
+        setWait(null);
       }
       setStatus(msg.status);
     };
 
-    const pairingHandler = (msg: { code?: string; error?: string }) => {
+    const pairingHandler = (msg: { code?: string; error?: string; wait?: number }) => {
       setPairingLoading(false);
       if (msg.error) {
         setPairingError(msg.error);
         setPairingCode(null);
+        if (typeof msg.wait === 'number') setWait(msg.wait);
       } else if (msg.code) {
         setPairingCode(msg.code);
         setPairingError(null);
+        setWait(null);
         setStatus('awaiting_scan');
       }
     };
@@ -123,6 +138,11 @@ export function WAConnectGate() {
               ? 'Buka WhatsApp di ponsel → Linked Devices → Scan QR'
               : 'Masukkan kode berikut di WhatsApp Anda'}
           </p>
+        ) : wait !== null ? (
+          <div className="mt-2 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Tunggu {wait} detik sebelum coba lagi...
+          </div>
         ) : reconnectMsg ? (
           <div className="mt-2 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -185,14 +205,16 @@ export function WAConnectGate() {
                   <button
                     type="button"
                     onClick={handlePairing}
-                    disabled={!phoneNumber || phoneNumber.length < 8 || pairingLoading}
+                    disabled={!phoneNumber || phoneNumber.length < 8 || pairingLoading || wait !== null}
                     className="flex items-center justify-center gap-2 rounded-xl bg-fif-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-fif-700 disabled:opacity-50"
                   >
                     {pairingLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                     Dapatkan Kode
                   </button>
                 </div>
-                {pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
+                {wait !== null ? (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">Tunggu {wait} detik sebelum coba lagi...</p>
+                ) : pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
@@ -210,7 +232,8 @@ export function WAConnectGate() {
             <button
               type="button"
               onClick={handleReconnect}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-fif-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-fif-700"
+              disabled={wait !== null}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-fif-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-fif-700 disabled:opacity-50"
             >
               <Smartphone className="h-4 w-4" />
               Hubungkan Sekarang

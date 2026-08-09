@@ -139,7 +139,7 @@ function createSocketServer(httpServer) {
       console.log(`[Socket] Reconnect request from user ${userId}`);
       const waitSec = checkCooldown(userId);
       if (waitSec > 0) {
-        socket.emit('wa:status', { status: 'reconnecting', message: `Tunggu ${waitSec} detik sebelum coba lagi...` });
+        socket.emit('wa:status', { status: 'reconnecting', message: `Tunggu ${waitSec} detik sebelum coba lagi...`, wait: waitSec });
         return;
       }
       recordAttempt(userId);
@@ -187,7 +187,7 @@ function createSocketServer(httpServer) {
       }
       const waitSec = checkPairCooldown(userId);
       if (waitSec > 0) {
-        socket.emit('wa:pairing_code', { error: `Tunggu ${waitSec} detik sebelum coba lagi...` });
+        socket.emit('wa:pairing_code', { error: `Tunggu ${waitSec} detik sebelum coba lagi...`, wait: waitSec });
         return;
       }
       recordPairAttempt(userId);

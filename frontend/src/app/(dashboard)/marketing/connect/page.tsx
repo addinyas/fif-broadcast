@@ -19,8 +19,19 @@ export default function QRScannerPage() {
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [pairingError, setPairingError] = useState<string | null>(null);
   const [pairingLoading, setPairingLoading] = useState(false);
+  const [wait, setWait] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { token } = useAuth();
+
+  useEffect(() => {
+    if (wait === null) return;
+    if (wait <= 0) {
+      setWait(null);
+      return;
+    }
+    const t = setTimeout(() => setWait((w) => (w === null ? null : w - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [wait]);
 
   useEffect(() => {
     if (!token) return;
@@ -29,12 +40,14 @@ export default function QRScannerPage() {
     socket.auth = { token };
     socket.connect();
 
-    const handleWAStatus = (msg: { status: string; qr?: string; message?: string }) => {
+    const handleWAStatus = (msg: { status: string; qr?: string; message?: string; wait?: number }) => {
       if (msg.status === 'reconnecting') {
         setReconnectMsg(msg.message || 'Menghubungkan...');
+        if (typeof msg.wait === 'number') setWait(msg.wait);
       } else {
         setReconnecting(false);
         setReconnectMsg('');
+        setWait(null);
       }
       setWaStatus(msg.status);
       if (msg.qr) setWaQR(msg.qr);
@@ -44,14 +57,16 @@ export default function QRScannerPage() {
       }
     };
 
-    const handlePairingCode = (msg: { code?: string; error?: string; message?: string }) => {
+    const handlePairingCode = (msg: { code?: string; error?: string; message?: string; wait?: number }) => {
       setPairingLoading(false);
       if (msg.error) {
         setPairingError(msg.error);
         setPairingCode(null);
+        if (typeof msg.wait === 'number') setWait(msg.wait);
       } else if (msg.code) {
         setPairingCode(msg.code);
         setPairingError(null);
+        setWait(null);
         setWaStatus('awaiting_scan');
       }
     };
@@ -226,7 +241,7 @@ export default function QRScannerPage() {
                     onKeyDown={(e) => e.key === 'Enter' && !pairingLoading && handleRequestPairingCode()}
                     disabled={pairingLoading}
                   />
-                  <Button variant="primary" onClick={handleRequestPairingCode} disabled={!phoneNumber || phoneNumber.length < 8 || pairingLoading} loading={pairingLoading}>
+                  <Button variant="primary" onClick={handleRequestPairingCode} disabled={!phoneNumber || phoneNumber.length < 8 || pairingLoading || wait !== null} loading={pairingLoading}>
                     Dapatkan Kode
                   </Button>
                 </div>
@@ -237,7 +252,9 @@ export default function QRScannerPage() {
                     Menyiapkan koneksi ke WhatsApp...
                   </div>
                 )}
-                {pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
+                {wait !== null ? (
+                  <p className="text-sm text-amber-600 dark:text-amber-400">Tunggu {wait} detik sebelum coba lagi...</p>
+                ) : pairingError && <p className="text-sm text-red-500">{pairingError}</p>}
               </>
             ) : (
               <div className="flex flex-col items-center gap-4 py-2">
@@ -277,7 +294,7 @@ export default function QRScannerPage() {
 
         {effectiveStatus === 'logged_out' && (
           <div className="flex justify-center">
-            <Button variant="primary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect} disabled={reconnecting}>
+            <Button variant="primary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect} disabled={reconnecting || wait !== null}>
               Reconnect
             </Button>
           </div>
@@ -285,7 +302,7 @@ export default function QRScannerPage() {
 
         {effectiveStatus === 'disconnected' && !reconnecting && (
           <div className="flex justify-center">
-            <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect}>
+            <Button variant="secondary" icon={<RefreshCw className="h-4 w-4" />} onClick={handleForceReconnect} disabled={wait !== null}>
               Coba Hubungkan
             </Button>
           </div>
@@ -294,7 +311,7 @@ export default function QRScannerPage() {
         {effectiveStatus === 'disconnected' && reconnecting && (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {reconnectMsg || 'Menyiapkan koneksi ke WhatsApp server...'}
+            {wait !== null ? `Tunggu ${wait} detik sebelum coba lagi...` : (reconnectMsg || 'Menyiapkan koneksi ke WhatsApp server...')}
           </div>
         )}
       </div>
