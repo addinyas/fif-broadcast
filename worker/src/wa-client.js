@@ -12,6 +12,13 @@ const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 const MAX_RECONNECT_ATTEMPTS = 10;
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
+let proxyAgent = null;
+if (process.env.WA_PROXY) {
+  const { SocksProxyAgent } = require('socks-proxy-agent');
+  proxyAgent = new SocksProxyAgent(process.env.WA_PROXY);
+  console.log(`[WA] Using outbound proxy: ${process.env.WA_PROXY}`);
+}
+
 const connections = new Map();
 const reconnectState = new Map();
 const lastConnectedAt = new Map();
@@ -107,6 +114,7 @@ async function createWAClientForUser(userId, onReady) {
 
   sock = makeWASocket({
     auth: state,
+    agent: proxyAgent,
     printQRInTerminal: false,
     syncFullHistory: false,
     emitOwnEvents: false,
