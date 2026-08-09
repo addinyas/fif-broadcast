@@ -16,14 +16,16 @@ if [ ! -f /etc/debian_version ]; then
   echo "Script ini untuk Debian/Ubuntu saja." >&2
   exit 1
 fi
+CODENAME="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+CODENAME="${CODENAME:-bookworm}"
 
-echo "==> Menambahkan repo cloudflare-warp"
+echo "==> Menambahkan repo cloudflare-warp ($CODENAME)"
 if [ ! -f /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg ]; then
   curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg \
     | gpg --dearmor \
     > /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
 fi
-echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ bookworm main" \
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $CODENAME main" \
   > /etc/apt/sources.list.d/cloudflare-client.list
 
 echo "==> Menginstal cloudflare-warp"
