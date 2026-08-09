@@ -1,14 +1,13 @@
 const { pool, query, getOne, getAll } = require('./db');
 const { isConnectedForUser, getConnectedUsers, lastConnectedAt } = require('./wa-client');
 const { sendMessage } = require('./wa-manager');
-const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew, emitBroadcastProgress, emitBroadcastGlobalStatus } = require('./events');
+const { emitBroadcastStatus, emitPendingStuck, emitNotificationNew, emitBroadcastProgress, emitBroadcastGlobalStatus, sendPushNotification } = require('./events');
 const { loadSettings, randomBetween } = require('./broadcast-config');
 const { canSend: warmupCanSend, recordSend: warmupRecordSend } = require('./warmup-gate');
 
 const POLL_INTERVAL = parseInt(process.env.POLL_INTERVAL_MS || '5000', 10);
 const NOTIF_POLL_INTERVAL = parseInt(process.env.NOTIF_POLL_INTERVAL_MS || '5000', 10);
 const PENDING_STUCK_THRESHOLD = 5;
-const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
 const WARMUP_GRACE_MS = 10_000;
 
 function isWithinBusinessHours() {
@@ -26,28 +25,6 @@ const activeProcessors = new Map();
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
-}
-
-async function sendPushNotification(userId, title, body) {
-  if (!FCM_SERVER_KEY) return;
-  try {
-    const user = await getOne('SELECT fcm_token FROM users WHERE id = $1', [userId]);
-    if (!user?.fcm_token) return;
-    await fetch('https://fcm.googleapis.com/fcm/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `key=${FCM_SERVER_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: user.fcm_token,
-        notification: { title, body },
-        priority: 'high',
-      }),
-    });
-  } catch (err) {
-    console.error(`[Push] Failed to send notification to user ${userId}:`, err.message);
-  }
 }
 
 async function emitUserProgress(userId) {

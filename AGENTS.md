@@ -23,6 +23,20 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-10 -- Rampungkan W.6-W.11 + Screenshot Drive + Fase 3 AI + Fase 4 Nav
+
+Status: SEMUA TODO SELESAI
+
+* W.9 audit log: route `admin/audit-logs` (superadmin) + migration dijalankan + halaman `/admin/audit` + menu sidebar
+* M.10 laporan prospect: filter prospect_score/date range (reuse applyViewerScope) + endpoint `admin/reports/prospect-history` + export .xlsx (PhpSpreadsheet sudah ada) + `/admin/reports`
+* M.11 pie chart skor per marketing: `prospectSummary()` + endpoint `prospect-summary` + `ProspectPieCharts.tsx` (conic-gradient CSS, tanpa dependency chart)
+* Screenshot chat ke Drive: migration `conversations.drive_url` + `GoogleDriveService` (extends GoogleSheetsService, scope drive.file) + `saveToDrive` endpoint + tombol per chat di Inbox (html2canvas)
+* Fase 3 AI: `AiService` (Ollama /api/chat) + `AiController` (test/classify/suggest-reply) + settings AI di BroadcastSettingController (type string) + worker `src/ai.js` (auto-reply pintar fallback rule W.7 + klasifikasi inbound -> customers.prospect_score) + Pengaturan tab AI + Inbox tombol sparkles saran balasan + halaman `/admin/panduan-ai`
+* Fase 4: `WAConnectGate` modal global (muncul saat WA disconnected) + hapus menu Connect dari sidebar + AndroidBottomNav Settings->Pengaturan + tab Chat + `FloatingChatButton` mengambang di web
+* Checks: backend 10 test PASS + pint, frontend build+lint PASS, worker 3 test PASS
+
+---
+
 ### 2026-08-06 -- Roadmap fitur + W.1-W.2 warm-up (anti-ban)
 
 Status: W.1 & W.2 SELESAI -- lanjut W.3 (UI tanam nomor)

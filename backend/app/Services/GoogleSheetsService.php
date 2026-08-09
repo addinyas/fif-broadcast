@@ -15,11 +15,11 @@ class GoogleSheetsService
         return Storage::disk('local')->exists('google/credentials.json');
     }
 
-    protected function getAccessToken(): string
+    protected function getAccessToken(string $scope = 'https://www.googleapis.com/auth/spreadsheets.readonly'): string
     {
         $credentials = json_decode(Storage::disk('local')->get('google/credentials.json'), true);
 
-        $jwt = $this->createJwtAssertion($credentials);
+        $jwt = $this->createJwtAssertion($credentials, $scope);
 
         $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
             'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
@@ -33,13 +33,13 @@ class GoogleSheetsService
         return $response->json()['access_token'];
     }
 
-    protected function createJwtAssertion(array $credentials): string
+    protected function createJwtAssertion(array $credentials, string $scope): string
     {
         $header = self::base64UrlEncode(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
         $now = time();
         $payload = self::base64UrlEncode(json_encode([
             'iss' => $credentials['client_email'],
-            'scope' => 'https://www.googleapis.com/auth/spreadsheets.readonly',
+            'scope' => $scope,
             'aud' => 'https://oauth2.googleapis.com/token',
             'exp' => $now + 3600,
             'iat' => $now,

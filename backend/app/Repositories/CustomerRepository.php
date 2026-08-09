@@ -21,28 +21,7 @@ class CustomerRepository implements CustomerRepositoryInterface
             $q->with('user:id,name,role')->latest();
         }]);
 
-        if (! empty($filters['kios_id'])) {
-            $query->where('kios_id', $filters['kios_id']);
-        }
-
-        // Marketing viewers: only own assigned + shared (borrowed) customers
-        if (($filters['viewer_role'] ?? '') === 'marketing' && ! empty($filters['viewer_id'])) {
-            $viewerId = (int) $filters['viewer_id'];
-            $sharedIds = CustomerShare::where('to_marketing_id', $viewerId)
-                ->where('status', 'approved')
-                ->pluck('customer_id')
-                ->toArray();
-
-            $query->where(function ($q) use ($viewerId, $sharedIds) {
-                $q->where(function ($q2) use ($viewerId) {
-                    $q2->where('marketing_id', $viewerId)
-                        ->where('assignment_status', 'assigned');
-                });
-                if (! empty($sharedIds)) {
-                    $q->orWhereIn('id', $sharedIds);
-                }
-            });
-        }
+        $this->applyViewerScope($query, $filters);
 
         if (! empty($filters['search'])) {
             $searchTerm = $filters['search'];
@@ -77,6 +56,52 @@ class CustomerRepository implements CustomerRepositoryInterface
             $query->where('no_contract', 'LIKE', $prefix);
         }
 
+        if (! empty($filters['prospect_score'])) {
+            $scores = is_array($filters['prospect_score'])
+                ? $filters['prospect_score']
+                : explode(',', $filters['prospect_score']);
+            $query->whereIn('prospect_score', array_map('intval', $scores));
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        $customers = $query->latest()->paginate($filters['per_page'] ?? 50);
+        $this->attachWilayahKabupaten($customers->getCollection());
+
+        return $customers;
+    }
+
+    private function applyViewerScope($query, array $filters): void
+    {
+        if (! empty($filters['kios_id'])) {
+            $query->where('kios_id', $filters['kios_id']);
+        }
+
+        // Marketing viewers: only own assigned + shared (borrowed) customers
+        if (($filters['viewer_role'] ?? '') === 'marketing' && ! empty($filters['viewer_id'])) {
+            $viewerId = (int) $filters['viewer_id'];
+            $sharedIds = CustomerShare::where('to_marketing_id', $viewerId)
+                ->where('status', 'approved')
+                ->pluck('customer_id')
+                ->toArray();
+
+            $query->where(function ($q) use ($viewerId, $sharedIds) {
+                $q->where(function ($q2) use ($viewerId) {
+                    $q2->where('marketing_id', $viewerId)
+                        ->where('assignment_status', 'assigned');
+                });
+                if (! empty($sharedIds)) {
+                    $q->orWhereIn('id', $sharedIds);
+                }
+            });
+        }
+
         if (! in_array(($filters['viewer_role'] ?? ''), ['superadmin', 'AO'])) {
             $existingUserIds = User::pluck('id');
             $viewerKiosId = $filters['kios_id'] ?? null;
@@ -91,11 +116,37 @@ class CustomerRepository implements CustomerRepositoryInterface
                 }
             });
         }
+    }
 
-        $customers = $query->latest()->paginate($filters['per_page'] ?? 50);
-        $this->attachWilayahKabupaten($customers->getCollection());
+    public function prospectSummary(array $filters = []): array
+    {
+        $query = Customer::query()
+            ->select('prospect_score')
+            ->selectRaw('COUNT(*) as total')
+            ->whereNotNull('prospect_score')
+            ->groupBy('prospect_score');
 
-        return $customers;
+        $this->applyViewerScope($query, $filters);
+
+        $byScore = $query->pluck('total', 'prospect_score');
+
+        $marketingQuery = Customer::query()
+            ->select('marketing_id')
+            ->selectRaw('prospect_score')
+            ->selectRaw('COUNT(*) as total')
+            ->whereNotNull('prospect_score')
+            ->groupBy('marketing_id', 'prospect_score');
+
+        $this->applyViewerScope($marketingQuery, $filters);
+
+        $byMarketing = $marketingQuery->get()->groupBy('marketing_id')->map(function ($rows) {
+            return $rows->pluck('total', 'prospect_score');
+        });
+
+        return [
+            'by_score' => $byScore,
+            'by_marketing' => $byMarketing,
+        ];
     }
 
     public function findById(int $id)

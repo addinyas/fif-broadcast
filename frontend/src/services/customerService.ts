@@ -1,9 +1,25 @@
 import api from './api';
 import type { Customer, PaginatedResponse, DistributionReport } from '@/types';
 
+export interface ProspectSummary {
+  by_score: Record<string, number>;
+  by_marketing: Record<string, Record<string, number>>;
+  marketing_names: Record<string, string>;
+}
+
 export const customerService = {
   async getAll(params?: Record<string, string>): Promise<PaginatedResponse<Customer>> {
     const { data } = await api.get('/customers', { params });
+    return data;
+  },
+
+  async getProspectHistory(params?: Record<string, string>): Promise<PaginatedResponse<Customer>> {
+    const { data } = await api.get('/admin/reports/prospect-history', { params });
+    return data;
+  },
+
+  async getProspectSummary(params?: Record<string, string>): Promise<ProspectSummary> {
+    const { data } = await api.get('/admin/reports/prospect-summary', { params });
     return data;
   },
 

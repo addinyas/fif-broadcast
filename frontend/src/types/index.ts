@@ -45,6 +45,8 @@ export interface Customer {
   updated_at: string;
   uploader?: User;
   marketing?: User;
+  prospect_score?: number | null;
+  nmc_refi_flag?: string | null;
   broadcast_histories?: BroadcastHistory[];
   sent_marks?: SentMark[];
   from_marketing_name?: string;

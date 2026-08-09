@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Services\BroadcastService;
 use Illuminate\Http\JsonResponse;
@@ -50,6 +51,8 @@ class BroadcastController extends Controller
                 $request->template_body,
                 $request->form_values ?? []
             );
+
+            AuditLog::record($request->user()->id, 'broadcast_send', 'customer', $request->customer_id, ['template' => mb_substr($request->template_body, 0, 200)], $request->ip());
 
             return response()->json($result, 201);
         } catch (\Exception $e) {
@@ -136,6 +139,23 @@ class BroadcastController extends Controller
         return response()->json(
             $this->broadcastService->getDailyStats($kiosId, $marketingId)
         );
+    }
+
+    public function responseRate(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $marketingId = $user->role === 'marketing' ? $user->id : null;
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : ($request->query('kios_id') ?: null);
+
+        if ($user->role !== 'marketing' && $request->query('marketing_id') && $request->query('marketing_id') !== 'all') {
+            $marketingId = (int) $request->query('marketing_id');
+        }
+
+        $days = (int) ($request->query('days') ?: 14);
+
+        return response()->json([
+            'data' => $this->broadcastService->responseRate($marketingId, $kiosId, $days),
+        ]);
     }
 
     public function progress(Request $request): JsonResponse

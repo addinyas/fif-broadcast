@@ -23,6 +23,9 @@ import {
   Activity,
   ChevronRight,
   Map,
+  MessageSquare,
+  BarChart3,
+  Bot,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -45,18 +48,22 @@ const adminLinks: LinkItem[] = [
   { to: '/admin/dashboard',        label: 'Dashboard',        icon: <LayoutDashboard className="h-4.5 w-4.5" />, feature: 'dashboard',        section: 'main' },
   { to: '/admin/broadcast',        label: 'Broadcast',        icon: <SendHorizontal className="h-4.5 w-4.5" />,  feature: 'prospect_list',    section: 'main' },
   { to: '/admin/customers',        label: 'Customers',        icon: <Users className="h-4.5 w-4.5" />,           feature: 'customer_management', section: 'main' },
-  { to: '/admin/connect',          label: 'Connect WA',       icon: <Smartphone className="h-4.5 w-4.5" />,      feature: 'qr_scanner',       section: 'main' },
   { to: '/admin/calculator',       label: 'Kalkulator',       icon: <Calculator className="h-4.5 w-4.5" />,                                   section: 'tools' },
   { to: '/admin/rolling',          label: 'Rolling Data',     icon: <ArrowLeftRight className="h-4.5 w-4.5" />,  feature: 'data_rolling',     section: 'tools' },
   { to: '/admin/history',          label: 'History',          icon: <History className="h-4.5 w-4.5" />,         feature: 'broadcast_history', section: 'tools' },
+  { to: '/admin/inbox',            label: 'Inbox',            icon: <MessageSquare className="h-4.5 w-4.5" />,   feature: 'broadcast',        section: 'tools' },
   { to: '/admin/worker-monitor',   label: 'Worker Monitor',   icon: <Activity className="h-4.5 w-4.5" />,        feature: 'broadcast',        section: 'tools' },
   { to: '/admin/users',            label: 'Users',            icon: <Shield className="h-4.5 w-4.5" />,          feature: 'user_management',  section: 'admin' },
   { to: '/admin/settings',         label: 'Settings',         icon: <Settings className="h-4.5 w-4.5" />,                                     section: 'admin' },
   { to: '/admin/kios-wilayah',     label: 'Wilayah Cabang',   icon: <Map className="h-4.5 w-4.5" />,                                            section: 'admin' },
+  { to: '/admin/pengaturan',       label: 'Pengaturan',       icon: <Settings2 className="h-4.5 w-4.5" />,                                    section: 'admin' },
 ];
 
 const superadminOnlyLinks: LinkItem[] = [
   { to: '/admin/wa-monitor',        label: 'WA Monitor',          icon: <Smartphone className="h-4.5 w-4.5" />, section: 'admin' },
+  { to: '/admin/audit',             label: 'Audit Log',            icon: <FileText className="h-4.5 w-4.5" />,     section: 'admin' },
+  { to: '/admin/reports',           label: 'Laporan Prospect',     icon: <BarChart3 className="h-4.5 w-4.5" />,    section: 'admin' },
+  { to: '/admin/panduan-ai',        label: 'Panduan AI',           icon: <Bot className="h-4.5 w-4.5" />,           section: 'admin' },
   { to: '/admin/broadcast-settings', label: 'Broadcast Settings', icon: <Settings2 className="h-4.5 w-4.5" />,  section: 'admin' },
   { to: '/admin/permissions',       label: 'Permissions',         icon: <Settings2 className="h-4.5 w-4.5" />,  section: 'admin' },
   { to: '/admin/templates',         label: 'Templates',           icon: <FileText className="h-4.5 w-4.5" />,   section: 'admin' },
@@ -66,12 +73,13 @@ const superadminOnlyLinks: LinkItem[] = [
 const marketingLinks: LinkItem[] = [
   { to: '/marketing/dashboard',      label: 'Dashboard',       icon: <LayoutDashboard className="h-4.5 w-4.5" />, feature: 'dashboard',          section: 'main' },
   { to: '/marketing/broadcast',      label: 'Broadcast',       icon: <SendHorizontal className="h-4.5 w-4.5" />,  feature: 'prospect_list',      section: 'main' },
-  { to: '/marketing/connect',        label: 'Connect WA',      icon: <Smartphone className="h-4.5 w-4.5" />,      feature: 'qr_scanner',         section: 'main' },
   { to: '/marketing/customers',      label: 'Customer',        icon: <Users className="h-4.5 w-4.5" />,           feature: 'customer_management', section: 'main' },
   { to: '/marketing/calculator',     label: 'Kalkulator',      icon: <Calculator className="h-4.5 w-4.5" />,                                     section: 'tools' },
   { to: '/marketing/history',        label: 'History',         icon: <History className="h-4.5 w-4.5" />,         feature: 'broadcast_history',  section: 'tools' },
+  { to: '/marketing/inbox',          label: 'Inbox',           icon: <MessageSquare className="h-4.5 w-4.5" />,   feature: 'broadcast',          section: 'tools' },
   { to: '/marketing/worker-monitor', label: 'Worker Monitor',  icon: <Activity className="h-4.5 w-4.5" />,        feature: 'broadcast',          section: 'tools' },
   { to: '/marketing/settings',       label: 'Settings',        icon: <Settings className="h-4.5 w-4.5" />,                                       section: 'admin' },
+  { to: '/marketing/pengaturan',     label: 'Pengaturan',       icon: <Settings2 className="h-4.5 w-4.5" />,                                    section: 'admin' },
 ];
 
 const sectionLabels: Record<string, string> = {

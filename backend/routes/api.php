@@ -1,10 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\AssignmentController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AutoReplyRuleController;
 use App\Http\Controllers\Api\BroadcastController;
+use App\Http\Controllers\Api\BroadcastScheduleController;
 use App\Http\Controllers\Api\BroadcastSettingController;
 use App\Http\Controllers\Api\CloudExcelController;
+use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\CustomerController;
 use App\Http\Controllers\Api\CustomerShareController;
 use App\Http\Controllers\Api\GoogleSheetsController;
@@ -103,7 +107,42 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('broadcast/cancel', [BroadcastController::class, 'cancel']);
             Route::get('broadcast/worker-status', [BroadcastController::class, 'workerStatus']);
             Route::post('broadcast/cancel-item', [BroadcastController::class, 'cancelItem']);
+            Route::get('broadcast/response-rate', [BroadcastController::class, 'responseRate']);
         });
+    });
+
+    // Broadcast Schedules (Jadwal & Notifikasi)
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
+        Route::get('broadcast-schedules', [BroadcastScheduleController::class, 'index']);
+        Route::post('broadcast-schedules', [BroadcastScheduleController::class, 'store']);
+        Route::put('broadcast-schedules/{id}', [BroadcastScheduleController::class, 'update']);
+        Route::delete('broadcast-schedules/{id}', [BroadcastScheduleController::class, 'destroy']);
+        Route::get('broadcast-schedules/notif-settings', [BroadcastScheduleController::class, 'notifSettings']);
+        Route::put('broadcast-schedules/notif-settings', [BroadcastScheduleController::class, 'updateNotifSettings']);
+    });
+
+    // Team Inbox (W.6)
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
+        Route::get('inbox/conversations', [ConversationController::class, 'index']);
+        Route::get('inbox/unread-count', [ConversationController::class, 'unreadCount']);
+        Route::get('inbox/conversations/{id}', [ConversationController::class, 'show']);
+        Route::post('inbox/conversations/{id}/reply', [ConversationController::class, 'reply']);
+        Route::post('inbox/conversations/{id}/drive-screenshot', [ConversationController::class, 'saveToDrive']);
+    });
+
+    // AI (Fase 3)
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
+        Route::post('ai/test', [AiController::class, 'test']);
+        Route::post('ai/classify', [AiController::class, 'classify']);
+        Route::post('ai/suggest-reply', [AiController::class, 'suggestReply']);
+    });
+
+    // Auto-reply rules (W.7)
+    Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
+        Route::get('auto-reply-rules', [AutoReplyRuleController::class, 'index']);
+        Route::post('auto-reply-rules', [AutoReplyRuleController::class, 'store']);
+        Route::put('auto-reply-rules/{id}', [AutoReplyRuleController::class, 'update']);
+        Route::delete('auto-reply-rules/{id}', [AutoReplyRuleController::class, 'destroy']);
     });
 
     Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
@@ -135,6 +174,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('google-sheets/tenors', [GoogleSheetsController::class, 'getTenors']);
 
     Route::get('admin/permissions', [PermissionController::class, 'index']);
+
+    Route::middleware('role:superadmin')->group(function () {
+        Route::get('admin/audit-logs', [AuditLogController::class, 'index']);
+        Route::get('admin/reports/prospect-history', [CustomerController::class, 'prospectHistory']);
+        Route::get('admin/reports/prospect-history/export', [CustomerController::class, 'exportProspectHistory']);
+        Route::get('admin/reports/prospect-summary', [CustomerController::class, 'prospectSummary']);
+    });
 
     Route::middleware('role:superadmin,UH,AO,marketing')->group(function () {
         Route::middleware('feature:qr_scanner')->group(function () {

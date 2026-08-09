@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Interfaces\BroadcastRepositoryInterface;
 use App\Models\BroadcastHistory;
+use App\Models\BroadcastSchedule;
 use App\Models\Customer;
 use App\Models\CustomerSentMark;
 use App\Models\CustomerShare;
@@ -11,6 +12,7 @@ use App\Models\Template;
 use App\Models\User;
 use App\Models\WhatsappConnection;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 
 class BroadcastService
 {
@@ -330,7 +332,6 @@ class BroadcastService
         $query = BroadcastHistory::query()
             ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
             ->join('users', 'broadcast_histories.marketing_id', '=', 'users.id');
-
         // Kios scoping
         if ($user->role === 'marketing') {
             $query->where('broadcast_histories.marketing_id', $user->id);
@@ -417,5 +418,135 @@ class BroadcastService
             'users' => $users,
             'pending_items' => $pendingItems,
         ];
+    }
+
+    /**
+     * Run due broadcast schedules. Returns summary per schedule.
+     */
+    public function runScheduledBroadcasts(): array
+    {
+        $results = [];
+        $now = now('Asia/Jakarta');
+        $todayName = $now->format('D'); // e.g. 'Mon'
+        $todayDate = $now->format('Y-m-d');
+        $currentTime = $now->format('H:i:00');
+
+        $schedules = BroadcastSchedule::where('active', true)
+            ->where(function ($q) use ($todayDate) {
+                $q->whereNull('last_run_date')
+                    ->orWhereDate('last_run_date', '!=', $todayDate);
+            })
+            ->get()
+            ->filter(function (BroadcastSchedule $s) use ($todayName, $currentTime) {
+                $days = $s->days_active ?? [];
+                if (! in_array($todayName, $days, true)) {
+                    return false;
+                }
+
+                return $s->schedule_time <= $currentTime;
+            });
+
+        foreach ($schedules as $schedule) {
+            $results[] = DB::transaction(function () use ($schedule, $todayDate) {
+                $user = $schedule->user;
+                if (! $user) {
+                    return ['schedule_id' => $schedule->id, 'enqueued' => 0];
+                }
+
+                // Customers assigned to this user, not yet broadcast today.
+                $customerQuery = Customer::where('marketing_id', $user->id)
+                    ->where('assignment_status', 'assigned');
+                Customer::applyOrphanFilter($customerQuery);
+
+                $alreadySent = BroadcastHistory::where('marketing_id', $user->id)
+                    ->where('created_at', '>=', $todayDate.' 00:00:00')
+                    ->whereIn('status', ['pending', 'processing', 'sent'])
+                    ->pluck('customer_id')
+                    ->all();
+
+                $customers = $customerQuery
+                    ->whereNotIn('id', $alreadySent)
+                    ->get(['id', 'dynamic_data']);
+
+                $templateBody = $schedule->template_body ?: 'random';
+                $enqueued = 0;
+
+                foreach ($customers as $customer) {
+                    $formValues = array_merge(
+                        (array) ($customer->dynamic_data ?? []),
+                        [
+                            '_namapanggilan' => $user->display_name ?? $user->name ?? '',
+                            '_nomor' => $user->phone_number ?? '',
+                        ]
+                    );
+
+                    $effectiveBody = $templateBody === 'random'
+                        ? $this->pickRandomTemplate($user)
+                        : $templateBody;
+
+                    $this->broadcastRepository->create([
+                        'customer_id' => $customer->id,
+                        'marketing_id' => $user->id,
+                        'exact_message' => $this->mapFormToMessage($effectiveBody, $formValues),
+                        'status' => 'pending',
+                    ]);
+                    $enqueued++;
+                }
+
+                $schedule->update(['last_run_date' => $todayDate]);
+
+                return ['schedule_id' => $schedule->id, 'user_id' => $user->id, 'enqueued' => $enqueued];
+            });
+        }
+
+        return $results;
+    }
+
+    public function responseRate(?int $marketingId = null, ?string $kiosId = null, int $days = 14): array
+    {
+        $days = max(1, min($days, 90));
+
+        $query = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->leftJoin('conversations', function ($join) {
+                $join->on('conversations.user_id', '=', 'broadcast_histories.marketing_id')
+                    ->whereRaw('RIGHT(conversations.contact_phone, 10) = RIGHT(customers.phone_number, 10)');
+            })
+            ->leftJoin('conversation_messages', function ($join) {
+                $join->on('conversation_messages.conversation_id', '=', 'conversations.id')
+                    ->where('conversation_messages.direction', '=', 'inbound')
+                    ->whereColumn('conversation_messages.created_at', '>=', 'broadcast_histories.sent_at');
+            })
+            ->where('broadcast_histories.status', 'sent')
+            ->whereNotNull('broadcast_histories.sent_at')
+            ->where('broadcast_histories.sent_at', '>=', now()->subDays($days))
+            ->when($kiosId, fn ($q) => $q->where('customers.kios_id', $kiosId))
+            ->when($marketingId !== null, fn ($q) => $q->where('broadcast_histories.marketing_id', $marketingId));
+
+        $rows = (clone $query)
+            ->selectRaw('date(broadcast_histories.sent_at) as day, count(*) as total')
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get();
+
+        $replied = (clone $query)
+            ->whereNotNull('conversation_messages.id')
+            ->selectRaw('date(broadcast_histories.sent_at) as day, count(distinct conversation_messages.id) as replied')
+            ->groupBy('day')
+            ->get();
+
+        $repliedByDay = $replied->pluck('replied', 'day')->toArray();
+
+        return $rows->map(function ($row) use ($repliedByDay) {
+            $day = (string) $row->day;
+            $replied = (int) ($repliedByDay[$day] ?? 0);
+
+            return [
+                'date' => $day,
+                'sent' => (int) $row->total,
+                'replied' => $replied,
+                'response_rate' => $row->total > 0 ? round($replied / $row->total * 100, 1) : 0,
+            ];
+        })->toArray();
     }
 }

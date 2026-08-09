@@ -6,6 +6,7 @@ const { pool } = require('./db');
 
 const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
+const { startInboxQueue, stopInboxQueue } = require('./inbox');
 const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
 const { closePool } = require('./db');
 
@@ -68,6 +69,7 @@ async function main() {
   });
 
   startQueue();
+  startInboxQueue();
 
   console.log('[Worker] Ready. Waiting for user connections...');
 }
@@ -75,6 +77,7 @@ async function main() {
 function gracefulShutdown(signal) {
   console.log(`[Worker] Received ${signal}, shutting down gracefully...`);
   stopQueue();
+  stopInboxQueue();
   disconnectAllConnections();
   closePool();
   const io = getIO();

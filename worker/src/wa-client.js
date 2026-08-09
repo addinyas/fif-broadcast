@@ -3,7 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const { pool } = require('./db');
 
-const { emitWAStatus, emitPairingCode, emitGlobalWAStatus } = require('./events');
+const { emitWAStatus, emitPairingCode, emitGlobalWAStatus, sendPushNotification, saveNotification } = require('./events');
+const { loadNotifSettings } = require('./broadcast-config');
+const { captureInboundMessage } = require('./inbox');
 
 const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
 
@@ -23,6 +25,17 @@ function ensureAuthDir(userId) {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+}
+
+async function shouldNotifyDisconnect() {
+  const s = await loadNotifSettings();
+  return s.notif_disconnect_enabled === '1';
+}
+
+async function sendDisconnectNotifications(userId, body) {
+  if (!(await shouldNotifyDisconnect())) return;
+  sendPushNotification(userId, 'WhatsApp Terputus', body);
+  saveNotification(userId, 'system', 'WhatsApp Terputus', body);
 }
 
 function cleanupOldLidFiles() {
@@ -130,6 +143,19 @@ async function createWAClientForUser(userId, onReady) {
 
   sock.ev.on('creds.update', saveCreds);
 
+  sock.ev.on('messages.upsert', ({ type, messages }) => {
+    if (type !== 'notify') return;
+    for (const msg of messages || []) {
+      if (msg?.key?.fromMe) continue;
+      if (!msg?.key?.remoteJid) continue;
+      if (msg.key.remoteJid.endsWith('@g.us')) continue;
+      if (msg.key.remoteJid.endsWith('@newsletter')) continue;
+      captureInboundMessage(userId, msg.key.remoteJid, msg).catch((err) => {
+        console.error(`[Inbox] Failed to capture inbound for user ${userId}:`, err.message);
+      });
+    }
+  });
+
   sock.ev.on('connection.update', (update) => {
     const { connection, lastDisconnect, qr } = update;
 
@@ -187,6 +213,7 @@ async function createWAClientForUser(userId, onReady) {
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
         emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
+        sendDisconnectNotifications(userId, 'Sesi WhatsApp Anda logout. Silakan sambungkan kembali.');
         return;
       }
 
@@ -217,6 +244,7 @@ async function createWAClientForUser(userId, onReady) {
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
         emitGlobalWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
+        sendDisconnectNotifications(userId, 'Koneksi WhatsApp terputus dan gagal tersambung ulang. Silakan periksa.');
         return;
       }
 

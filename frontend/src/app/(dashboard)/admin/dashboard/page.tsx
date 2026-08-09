@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { DetailDrawer } from '@/components/ui/DetailDrawer';
 import { StatusHistoryPanel } from '@/components/ui/StatusHistoryPanel';
+import ResponseRatePanel from '@/components/features/ResponseRatePanel';
 import { getSocket } from '@/services/socketService';
 import type { BroadcastStats, DistributionReport, DailyBroadcastStats } from '@/types';
 
@@ -747,6 +748,11 @@ export default function DashboardPage() {
           </div>
         )}
       </DetailDrawer>
+
+      {/* ── Response Rate ──────────────────── */}
+      <div className="mt-6">
+        <ResponseRatePanel />
+      </div>
 
       {/* ── Status Detail Drawer ──────────────── */}
       <DetailDrawer

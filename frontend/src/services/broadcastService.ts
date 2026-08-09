@@ -46,6 +46,11 @@ export const broadcastService = {
     return data;
   },
 
+  async getResponseRate(params?: Record<string, string>): Promise<{ date: string; sent: number; replied: number; response_rate: number }[]> {
+    const { data } = await api.get('/broadcast/response-rate', { params });
+    return data.data;
+  },
+
   async cancelItem(id: number): Promise<{ message: string }> {
     const { data } = await api.post('/broadcast/cancel-item', { id });
     return data;

@@ -346,6 +346,24 @@ fi
 systemctl enable --now nginx "$FPM_SERVICE" fif-queue fif-worker fif-frontend
 systemctl restart nginx "$FPM_SERVICE" fif-queue fif-worker fif-frontend
 
+# --- Ollama AI (idempotent: lewati jika sudah terpasang) ---
+# backend (PHP-FPM) dan worker (fif) sama-sama panggil http://localhost:11434
+if ! command -v ollama &>/dev/null; then
+    echo "=> Installing Ollama..."
+    curl -fsSL https://ollama.com/install.sh | sh
+fi
+systemctl enable ollama 2>/dev/null || true
+systemctl restart ollama
+# tunggu daemon siap, lalu pull model default (qwen2.5:1.5b)
+for i in $(seq 1 30); do
+    ollama list &>/dev/null && break
+    sleep 2
+done
+if ! ollama list 2>/dev/null | grep -q "qwen2.5:1.5b"; then
+    echo "=> Pulling qwen2.5:1.5b (sekitar 1GB, sekali jalan)..."
+    ollama pull qwen2.5:1.5b
+fi
+
 # --- Cloudflare WARP proxy (Docker) ---
 if command -v docker &>/dev/null; then
     if docker ps -a --format '{{.Names}}' | grep -q '^warp$'; then

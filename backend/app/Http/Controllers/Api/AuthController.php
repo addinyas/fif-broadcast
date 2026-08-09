@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,6 +56,8 @@ class AuthController extends Controller
         try {
             $result = $this->authService->login(['npo_mce_id' => $identifier, 'password' => $request->password]);
 
+            AuditLog::record($result['user']['id'], 'login', 'user', $result['user']['id'], ['npo_mce_id' => $identifier], $request->ip());
+
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(['message' => $e->getMessage()], 401);
@@ -63,6 +66,7 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        AuditLog::record($request->user()->id, 'logout', 'user', $request->user()->id, null, $request->ip());
         $this->authService->logout($request->user());
 
         return response()->json(['message' => 'Logged out successfully']);

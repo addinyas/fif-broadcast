@@ -11,8 +11,8 @@
 
 | Modul | Total | DONE | TODO | Prioritas |
 |---|---|---|---|---|
-| A. WA Warming & Anti-Ban (W.1–W.9) | 9 | 0 | 9 | **DEADLINE 10 Ags** — W.1–W.4 wajib |
-| B. Single Data (M.3–M.12) | 10 | 0 | 10 | PRIORITAS UTAMA setelah 10 Ags |
+| A. WA Warming & Anti-Ban (W.1–W.9) | 9 | 2 | 7 | **DEADLINE 12 Ags** — W.1–W.4 wajib |
+| B. Single Data (M.3–M.12) | 10 | 0 | 10 | PRIORITAS UTAMA setelah 12 Ags |
 | C. Meta Cloud API Migration | 6 fase | 0 | 6 | Opsional (anti-ban permanen) |
 | D. API Preparation (1.1–1.2) | 2 | 0 | 2 | Bisa paralel |
 | E. Web Modernization (0.1–0.7) | 7 | ~6 | ~1 | Sebagian besar selesai |
@@ -20,7 +20,7 @@
 
 ---
 
-## A. Modul WA Warming & Anti-Ban (DEADLINE 10 Agustus 2026)
+## A. Modul WA Warming & Anti-Ban (DEADLINE 12 Agustus 2026)
 
 > Desain lengkap: `docs/nomor-warming-anti-ban.md`. Tujuan: nomor baru ditanam bertahap (inactive → passive → active → mature) agar tidak kena banned. **Catatan jujur:** pengurang risiko, bukan penjamin bebas ban.
 
@@ -36,20 +36,22 @@
 | W.8 | Analytics response rate per campaign | Backend + Web | ⬜ TODO | Metrik reply/read/delivery agregat per `broadcast_histories` |
 | W.9 | Audit log (login, kirim, setting) | Backend + Web | ⬜ TODO | Tabel `audit_logs` + middleware/observer + halaman audit |
 
-**Prioritas:** W.1–W.4 **WAJIB** sebelum 10 Ags → W.5–W.6 high → W.7–W.9 stretch.
+**Prioritas:** W.1–W.4 **WAJIB** sebelum 12 Ags → W.5–W.6 high → W.7–W.9 stretch.
 
 ### Milestone (dari PRD)
 | Tanggal | Deliverable |
 |---|---|
-| 6 Ags | W.1 migration + WarmupService |
-| 7 Ags | W.2 gate worker + W.4 health monitor & auto_pause |
-| 8 Ags | W.3 UI tanam nomor + progress |
+| 6 Ags | ✅ W.1 migration + WarmupService |
+| 7 Ags | ✅ W.2 gate worker |
+| 8 Ags | W.3 UI tanam nomor + progress + W.4 health monitor & auto_pause |
 | 9 Ags | W.5 consent + W.6 Team Inbox |
-| 10 Ags | Test end-to-end + deploy |
+| 10 Ags | W.7 auto-reply + W.8 analytics response rate |
+| 11 Ags | W.9 audit log |
+| 12 Ags | Test end-to-end + deploy |
 
 ---
 
-## B. Modul Single Data (PRIORITAS UTAMA — setelah 10 Ags)
+## B. Modul Single Data (PRIORITAS UTAMA — setelah 12 Ags)
 
 > Konsep: hierarki AO → UH → Marketing, kirim pesan individual via To-Do List, klasifikasi AI 25/50/75/100%, sync real-time ke Excel.
 
@@ -136,7 +138,7 @@
 
 ## Urutan Pengerjaan (diusulkan)
 
-1. **A. WA Warming (W.1 → W.2 → W.3 → W.4)** — deadline 10 Ags, wajib inti dulu
+1. **A. WA Warming (W.1 → W.2 → W.3 → W.4)** — deadline 12 Ags, wajib inti dulu
 2. **A. W.5 consent + W.7 auto-reply STOP** — kepatuhan, kecil, nilai tinggi
 3. **A. W.6 Team Inbox → W.8 analytics → W.9 audit log**
 4. **B. Single Data: M.3 → M.4 → M.5 → M.7 → M.8 → M.6 → M.9 → M.10 → M.11**

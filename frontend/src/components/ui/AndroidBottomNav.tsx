@@ -9,6 +9,7 @@ import {
   SendHorizontal,
   Calculator,
   History,
+  MessageSquare,
   Settings,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -25,8 +26,9 @@ const tabs: TabItem[] = [
   { to: '/broadcast', label: 'Broadcast', icon: <SendHorizontal className="h-5 w-5" /> },
   { to: '/customers', label: 'Customer', icon: <Users className="h-5 w-5" /> },
   { to: '/calculator', label: 'Kalkulator', icon: <Calculator className="h-5 w-5" /> },
+  { to: '/inbox', label: 'Chat', icon: <MessageSquare className="h-5 w-5" /> },
   { to: '/history', label: 'History', icon: <History className="h-5 w-5" /> },
-  { to: '/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+  { to: '/pengaturan', label: 'Pengaturan', icon: <Settings className="h-5 w-5" /> },
 ];
 
 export function AndroidBottomNav() {

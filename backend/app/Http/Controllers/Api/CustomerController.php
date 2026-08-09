@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class CustomerController extends Controller
 {
@@ -44,6 +45,91 @@ class CustomerController extends Controller
         }
 
         return response()->json($this->customerService->getAll($filters));
+    }
+
+    public function prospectHistory(Request $request): JsonResponse
+    {
+        $filters = $request->only(['search', 'marketing_id', 'prospect_score', 'date_from', 'date_to', 'per_page', 'kios_id']);
+
+        $user = $request->user();
+        $filters['viewer_role'] = $user->role;
+        if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
+            $filters['kios_id'] = $user->kios_id;
+        }
+        if ($user->role === 'marketing') {
+            $filters['viewer_id'] = $user->id;
+        }
+
+        return response()->json($this->customerService->getAll($filters));
+    }
+
+    public function prospectSummary(Request $request): JsonResponse
+    {
+        $filters = $request->only(['prospect_score', 'date_from', 'date_to', 'kios_id', 'marketing_id']);
+
+        $user = $request->user();
+        $filters['viewer_role'] = $user->role;
+        if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
+            $filters['kios_id'] = $user->kios_id;
+        }
+        if ($user->role === 'marketing') {
+            $filters['viewer_id'] = $user->id;
+        }
+
+        $summary = $this->customerService->prospectSummary($filters);
+        $marketingNames = User::whereIn('id', array_keys($summary['by_marketing']->toArray()))
+            ->pluck('name', 'id');
+
+        return response()->json([
+            'by_score' => $summary['by_score'],
+            'by_marketing' => $summary['by_marketing'],
+            'marketing_names' => $marketingNames,
+        ]);
+    }
+
+    public function exportProspectHistory(Request $request): BinaryFileResponse
+    {
+        $filters = $request->only(['search', 'marketing_id', 'prospect_score', 'date_from', 'date_to', 'kios_id']);
+        $filters['per_page'] = 100000;
+
+        $user = $request->user();
+        $filters['viewer_role'] = $user->role;
+        if (in_array($user->role, ['UH', 'marketing'], true) && $user->kios_id) {
+            $filters['kios_id'] = $user->kios_id;
+        }
+        if ($user->role === 'marketing') {
+            $filters['viewer_id'] = $user->id;
+        }
+
+        $customers = $this->customerService->getAll($filters);
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['No Contract', 'Nama', 'No HP', 'Prospect Score', 'NMC/REFI', 'Marketing', 'Tanggal Masuk'],
+        ]);
+
+        $row = 2;
+        foreach ($customers as $c) {
+            $sheet->fromArray([
+                $c->no_contract,
+                $c->name,
+                $c->phone_number,
+                $c->prospect_score,
+                $c->nmc_refi_flag,
+                $c->marketing?->name,
+                $c->created_at?->format('Y-m-d H:i'),
+            ], null, "A{$row}");
+            $row++;
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $fileName = 'prospect-history-'.now()->format('Ymd-His').'.xlsx';
+
+        $temp = tempnam(sys_get_temp_dir(), 'prospect_');
+        $writer->save($temp);
+
+        return Response::download($temp, $fileName)->deleteFileAfterSend(true);
     }
 
     public function show(int $id, Request $request): JsonResponse

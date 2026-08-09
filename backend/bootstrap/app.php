@@ -3,6 +3,7 @@
 use App\Http\Middleware\CheckFeature;
 use App\Http\Middleware\CheckRole;
 use App\Providers\RepositoryServiceProvider;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -25,4 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withExceptions(function (Exceptions $exceptions): void {
         //
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        $schedule->command('broadcast:run-scheduled')->everyMinute();
     })->create();

@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import { Sidebar } from '../ui/Sidebar';
 import { BroadcastStatusBanner } from '../ui/BroadcastStatusBanner';
+import { WAConnectGate } from '../ui/WAConnectGate';
+import { FloatingChatButton } from '../ui/FloatingChatButton';
 import { NotificationBell } from '../ui/NotificationBell';
 import { MobileNavBar } from '../ui/MobileNavBar';
 import { AndroidBottomNav } from '../ui/AndroidBottomNav';
@@ -134,8 +136,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
         <BroadcastStatusBanner />
 
-        {/* ── Main Content ────────────────────────── */}
-        <main
+        {/* ── Main Content ────────────────────────── */}        <main
           id="main-scroll"
           className="flex-1 overflow-auto p-4 pb-28 lg:p-8 lg:pb-8"
         >
@@ -155,6 +156,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <MobileNavBar />
+      <FloatingChatButton />
+      <WAConnectGate />
     </div>
   );
 }

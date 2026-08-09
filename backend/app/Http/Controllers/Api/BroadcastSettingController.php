@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\BroadcastSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,10 @@ class BroadcastSettingController extends Controller
         'random_delay' => ['label' => 'Random Delay', 'type' => 'boolean'],
         'concurrency' => ['label' => 'Concurrency (paralel user)', 'type' => 'number', 'min' => 1, 'max' => 10],
         'queue_enabled' => ['label' => 'Queue Aktif', 'type' => 'boolean'],
+        'ai_ollama_url' => ['label' => 'URL Ollama', 'type' => 'string', 'placeholder' => 'http://localhost:11434'],
+        'ai_ollama_model' => ['label' => 'Model Ollama', 'type' => 'string', 'placeholder' => 'qwen2.5:1.5b'],
+        'ai_auto_reply_enabled' => ['label' => 'Auto-reply Pintar (AI)', 'type' => 'boolean'],
+        'ai_classify_enabled' => ['label' => 'Klasifikasi Skor (AI)', 'type' => 'boolean'],
     ];
 
     public function index(): JsonResponse
@@ -53,6 +58,8 @@ class BroadcastSettingController extends Controller
             $labels[$key] = $def['label'];
             if ($def['type'] === 'boolean') {
                 $rules[$key] = 'sometimes|boolean';
+            } elseif ($def['type'] === 'string') {
+                $rules[$key] = 'sometimes|string';
             } else {
                 $rule = 'sometimes|integer';
                 if (isset($def['min'])) {
@@ -71,6 +78,7 @@ class BroadcastSettingController extends Controller
         }
 
         BroadcastSetting::setMany($validator->validated());
+        AuditLog::record($request->user()->id, 'setting_update', 'broadcast_setting', null, $validator->validated(), $request->ip());
 
         return response()->json(['message' => 'Pengaturan broadcast berhasil diupdate']);
     }

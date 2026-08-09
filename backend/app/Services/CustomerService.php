@@ -20,6 +20,11 @@ class CustomerService
         return $this->customerRepository->getAll($filters);
     }
 
+    public function prospectSummary(array $filters = []): array
+    {
+        return $this->customerRepository->prospectSummary($filters);
+    }
+
     public function findById(int $id)
     {
         return $this->customerRepository->findById($id);

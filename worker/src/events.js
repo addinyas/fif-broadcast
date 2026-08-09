@@ -1,7 +1,44 @@
 let io = null;
 
+const FCM_SERVER_KEY = process.env.FCM_SERVER_KEY || '';
+
 function setIO(socketIO) {
   io = socketIO;
+}
+
+async function sendPushNotification(userId, title, body) {
+  if (!FCM_SERVER_KEY) return;
+  try {
+    const { getOne } = require('./db');
+    const user = await getOne('SELECT fcm_token FROM users WHERE id = $1', [userId]);
+    if (!user?.fcm_token) return;
+    await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `key=${FCM_SERVER_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: user.fcm_token,
+        notification: { title, body },
+        priority: 'high',
+      }),
+    });
+  } catch (err) {
+    console.error(`[Push] Failed to send notification to user ${userId}:`, err.message);
+  }
+}
+
+async function saveNotification(userId, type, title, message, data) {
+  try {
+    const { pool } = require('./db');
+    await pool.query(
+      'INSERT INTO notifications (user_id, type, title, message, data, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())',
+      [userId, type, title, message, data ? JSON.stringify(data) : null]
+    );
+  } catch (err) {
+    console.error(`[Notif] Failed to save notification for user ${userId}:`, err.message);
+  }
 }
 
 function emitWAStatus(userId, data) {
@@ -31,6 +68,12 @@ function emitPairingCode(userId, data) {
 function emitNotificationNew(userId, data) {
   if (io) {
     io.to(`user:${userId}`).emit('notification:new', data);
+  }
+}
+
+function emitInboxNew(userId, data) {
+  if (io) {
+    io.to(`user:${userId}`).emit('inbox:new', data);
   }
 }
 
@@ -64,4 +107,4 @@ async function emitBroadcastGlobalStatus() {
   }
 }
 
-module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck, emitPairingCode, emitNotificationNew, emitBroadcastProgress, emitGlobalWAStatus, emitBroadcastGlobalStatus };
+module.exports = { setIO, emitWAStatus, emitBroadcastStatus, emitPendingStuck, emitPairingCode, emitNotificationNew, emitInboxNew, emitBroadcastProgress, emitGlobalWAStatus, emitBroadcastGlobalStatus, sendPushNotification, saveNotification };
