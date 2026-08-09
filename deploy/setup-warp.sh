@@ -35,19 +35,19 @@ if ! command -v warp-cli >/dev/null 2>&1; then
 fi
 
 echo "==> Registrasi (jika belum)"
-if ! warp-cli account 2>/dev/null | grep -qi 'reg'; then
-  warp-cli registration new
+if ! sudo warp-cli --accept-tos account 2>/dev/null | grep -qi 'reg'; then
+  sudo warp-cli --accept-tos registration new
 fi
 
 echo "==> Mode SOCKS5 proxy"
-warp-cli mode proxy >/dev/null 2>&1 || true
+sudo warp-cli --accept-tos mode proxy >/dev/null 2>&1 || true
 
 echo "==> Menghubungkan"
-warp-cli connect >/dev/null 2>&1 || warp-cli connect 2>/dev/null || true
+sudo warp-cli --accept-tos connect >/dev/null 2>&1 || true
 
 sleep 2
 echo "==> Status:"
-warp-cli status || true
+sudo warp-cli --accept-tos status || true
 
 echo
 echo "==> IP keluar sekarang (harus berbeda dari IP VPS asli, milik Cloudflare):"
