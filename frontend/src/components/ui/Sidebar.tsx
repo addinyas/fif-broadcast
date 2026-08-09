@@ -77,6 +77,7 @@ const marketingLinks: LinkItem[] = [
   { to: '/marketing/calculator',     label: 'Kalkulator',      icon: <Calculator className="h-4.5 w-4.5" />,                                     section: 'tools' },
   { to: '/marketing/history',        label: 'History',         icon: <History className="h-4.5 w-4.5" />,         feature: 'broadcast_history',  section: 'tools' },
   { to: '/marketing/inbox',          label: 'Inbox',           icon: <MessageSquare className="h-4.5 w-4.5" />,   feature: 'broadcast',          section: 'tools' },
+  { to: '/marketing/panduan-ai',     label: 'Panduan AI',      icon: <Bot className="h-4.5 w-4.5" />,                section: 'tools' },
   { to: '/marketing/worker-monitor', label: 'Worker Monitor',  icon: <Activity className="h-4.5 w-4.5" />,        feature: 'broadcast',          section: 'tools' },
   { to: '/marketing/settings',       label: 'Settings',        icon: <Settings className="h-4.5 w-4.5" />,                                       section: 'admin' },
   { to: '/marketing/pengaturan',     label: 'Pengaturan',       icon: <Settings2 className="h-4.5 w-4.5" />,                                    section: 'admin' },
