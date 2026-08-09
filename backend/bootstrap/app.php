@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\CheckFeature;
 use App\Http\Middleware\CheckRole;
 use App\Providers\RepositoryServiceProvider;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
+            'auth' => Authenticate::class,
             'role' => CheckRole::class,
             'feature' => CheckFeature::class,
         ]);
