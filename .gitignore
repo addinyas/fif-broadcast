@@ -56,6 +56,7 @@ npm-debug.log*
 # Sensitive / Riskan
 /PRD.md
 /worker/.env.*
+/deploy/waha/.env
 **/*.key
 **/*.pem
 **/*.p12

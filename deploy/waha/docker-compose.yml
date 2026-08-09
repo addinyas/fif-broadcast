@@ -1,0 +1,14 @@
+services:
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      - WHATSAPP_DEFAULT_ENGINE=GOWS
+      - WHATSAPP_API_PORT=3002
+      - WHATSAPP_API_KEY=${WAHA_API_KEY}
+      - WHATSAPP_PROXY_SERVER=${WAHA_PROXY_SERVER}
+    volumes:
+      - ./sessions:/app/.sessions
+      - ./media:/app/.media

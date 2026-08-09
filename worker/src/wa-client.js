@@ -1,49 +1,49 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
-const path = require('path');
-const fs = require('fs');
 const { pool } = require('./db');
-
 const { emitWAStatus, emitPairingCode, emitGlobalWAStatus, sendPushNotification, saveNotification } = require('./events');
 const { loadNotifSettings } = require('./broadcast-config');
 const { captureInboundMessage } = require('./inbox');
 
-const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
-
-const MAX_RECONNECT_ATTEMPTS = 10;
+const WAHA_URL = (process.env.WAHA_URL || 'http://127.0.0.1:3002').replace(/\/+$/, '');
+const WAHA_API_KEY = process.env.WAHA_API_KEY || '';
+const WAHA_WEBHOOK_URL = process.env.WAHA_WEBHOOK_URL || 'http://127.0.0.1:3001/webhook/waha';
+const POLL_INTERVAL_MS = parseInt(process.env.WAHA_POLL_INTERVAL_MS || '5000', 10);
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
-let proxyAgent = null;
-if (process.env.WA_PROXY) {
-  const { SocksProxyAgent } = require('socks-proxy-agent');
-  proxyAgent = new SocksProxyAgent(process.env.WA_PROXY);
-  console.log(`[WA] Using outbound proxy: ${process.env.WA_PROXY}`);
-}
-
 const connections = new Map();
-const reconnectState = new Map();
+const onReadyCallbacks = new Map();
 const lastConnectedAt = new Map();
 
-function getAuthDir(userId) {
-  return path.join(AUTH_BASE, `user_${userId}`);
+let pollTimer = null;
+
+function sessionName(userId) {
+  return `user_${userId}`;
 }
 
-function ensureAuthDir(userId) {
-  const dir = getAuthDir(userId);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+function parseSessionUserId(name) {
+  const m = /^user_(\d+)$/.exec(name || '');
+  return m ? parseInt(m[1], 10) : null;
 }
 
-function clearAuthDir(userId) {
-  const authDir = getAuthDir(userId);
-  if (fs.existsSync(authDir)) {
+async function waha(path, options = {}) {
+  const res = await fetch(`${WAHA_URL}${path}`, {
+    ...options,
+    headers: {
+      'X-Api-Key': WAHA_API_KEY,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    let detail = '';
     try {
-      fs.rmSync(authDir, { recursive: true, force: true });
-      console.log(`[WA] Cleared auth session for user ${userId}`);
-    } catch (e) {
-      console.error(`[WA] Failed to clear auth session for user ${userId}:`, e.message);
-    }
+      const body = await res.json();
+      detail = body?.message || '';
+    } catch {}
+    const err = new Error(`WAHA ${res.status}: ${res.statusText}${detail ? ` ${detail}` : ''}`);
+    err.status = res.status;
+    throw err;
   }
+  return res.json();
 }
 
 async function shouldNotifyDisconnect() {
@@ -55,33 +55,6 @@ async function sendDisconnectNotifications(userId, body) {
   if (!(await shouldNotifyDisconnect())) return;
   sendPushNotification(userId, 'WhatsApp Terputus', body);
   saveNotification(userId, 'system', 'WhatsApp Terputus', body);
-}
-
-function cleanupOldLidFiles() {
-  const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
-  const now = Date.now();
-  try {
-    if (!fs.existsSync(AUTH_BASE)) return;
-    const entries = fs.readdirSync(AUTH_BASE, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const dirPath = path.join(AUTH_BASE, entry.name);
-      const files = fs.readdirSync(dirPath);
-      for (const file of files) {
-        if (!file.endsWith('.lid')) continue;
-        const filePath = path.join(dirPath, file);
-        try {
-          const stat = fs.statSync(filePath);
-          if (now - stat.mtimeMs > maxAge) {
-            fs.unlinkSync(filePath);
-            console.log(`[WA] Cleaned old LID file: ${filePath}`);
-          }
-        } catch {}
-      }
-    }
-  } catch (err) {
-    console.error('[WA] Error cleaning LID files:', err.message);
-  }
 }
 
 async function saveConnectionStatus(userId, status, qrCode) {
@@ -100,221 +73,169 @@ async function saveConnectionStatus(userId, status, qrCode) {
   }
 }
 
-async function createWAClientForUser(userId, onReady) {
-  const authDir = getAuthDir(userId);
-  ensureAuthDir(userId);
+function emitDisconnected(userId, message, dbStatus) {
+  const entry = connections.get(userId);
+  if (entry) entry.connected = false;
+  saveConnectionStatus(userId, dbStatus || 'logged_out', null);
+  emitWAStatus(userId, { status: dbStatus || 'logged_out', message });
+  emitGlobalWAStatus(userId, { status: dbStatus || 'logged_out', message });
+}
 
-  if (!reconnectState.has(userId)) {
-    reconnectState.set(userId, { attempts: 0, reconnecting: false });
+async function refreshQR(userId) {
+  try {
+    const res = await waha(`/api/${sessionName(userId)}/auth/qr?format=raw`);
+    const value = res?.value || null;
+    const entry = connections.get(userId);
+    if (!value || !entry || entry.lastQR === value) return;
+    entry.lastQR = value;
+    saveConnectionStatus(userId, 'awaiting_scan', value);
+    emitWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: value });
+    emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda' });
+  } catch (err) {
+    console.error(`[WA] QR fetch failed for user ${userId}:`, err.message);
   }
-  const rs = reconnectState.get(userId);
-  let sock = null;
+}
 
-  const { state, saveCreds } = await useMultiFileAuthState(authDir);
+function handleTransition(userId, entry, wahaStatus) {
+  const prev = entry.lastStatus;
+  entry.lastStatus = wahaStatus;
 
-  sock = makeWASocket({
-    auth: state,
-    agent: proxyAgent,
-    printQRInTerminal: false,
-    syncFullHistory: false,
-    emitOwnEvents: false,
-    browser: ['WhatsApp', 'Chrome', '120.0.0.0'],
-    platform: 'Desktop',
-    markOnlineOnConnect: false,
-    connectTimeoutMs: 60_000,
-    keepAliveIntervalMs: 180_000 + Math.floor(Math.random() * 120_000),
-  });
-
-  const wsReadyPromise = new Promise((resolve) => {
-    let resolved = false;
-    const check = (update) => {
-      if (resolved) return;
-      const { connection, qr } = update;
-      if (connection === 'open') {
-        resolved = true;
-        sock.ev.off('connection.update', check);
-        resolve(true);
-        return;
-      }
-      if (qr) {
-        resolved = true;
-        sock.ev.off('connection.update', check);
-        resolve(true);
-        return;
-      }
-      if (connection === 'close') {
-        resolved = true;
-        sock.ev.off('connection.update', check);
-        resolve(false);
-        return;
-      }
-    };
-    sock.ev.on('connection.update', check);
-    setTimeout(() => {
-      if (resolved) return;
-      resolved = true;
-      sock.ev.off('connection.update', check);
-      console.log(`[WA] User ${userId} WS ready timeout`);
-      resolve(false);
-    }, 20_000);
-  });
-
-  connections.set(userId, { sock, wsReadyPromise });
-
-  sock.ev.on('creds.update', saveCreds);
-
-  sock.ev.on('messages.upsert', ({ type, messages }) => {
-    if (type !== 'notify') return;
-    for (const msg of messages || []) {
-      if (msg?.key?.fromMe) continue;
-      if (!msg?.key?.remoteJid) continue;
-      if (msg.key.remoteJid.endsWith('@g.us')) continue;
-      if (msg.key.remoteJid.endsWith('@newsletter')) continue;
-      captureInboundMessage(userId, msg.key.remoteJid, msg).catch((err) => {
-        console.error(`[Inbox] Failed to capture inbound for user ${userId}:`, err.message);
-      });
-    }
-  });
-
-  sock.ev.on('connection.update', (update) => {
-    const { connection, lastDisconnect, qr } = update;
-
-    if (qr) {
-      saveConnectionStatus(userId, 'awaiting_scan', qr);
-      emitWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr });
-      emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda' });
-    }
-
-    if (connection === 'open') {
-      console.log(`[WA] User ${userId} connected successfully!`);
-      rs.attempts = 0;
-      rs.reconnecting = false;
-      lastConnectedAt.set(userId, Date.now());
-      const entry = connections.get(userId);
-      if (entry) {
+  switch (wahaStatus) {
+    case 'WORKING':
+      if (prev !== 'WORKING') {
+        console.log(`[WA] User ${userId} connected successfully!`);
         entry.connected = true;
         entry.connectedAt = Date.now();
         entry.intentionalDisconnect = false;
-      }
-      saveConnectionStatus(userId, 'connected', null);
-      emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
-      emitGlobalWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
-      setTimeout(() => {
-        if (onReady) onReady(sock);
-      }, WARMUP_MS);
-    }
-
-    if (connection === 'close') {
-      const entry = connections.get(userId);
-      if (entry) {
-        if (entry.intentionalDisconnect) {
-          console.log(`[WA] User ${userId} intentional disconnect (auto-timer), skipping reconnect`);
-          entry.connected = false;
-          return;
+        lastConnectedAt.set(userId, Date.now());
+        saveConnectionStatus(userId, 'connected', null);
+        emitWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
+        emitGlobalWAStatus(userId, { status: 'connected', message: 'WhatsApp connected' });
+        const cb = onReadyCallbacks.get(userId);
+        if (cb) {
+          onReadyCallbacks.delete(userId);
+          setTimeout(cb, WARMUP_MS);
         }
+      }
+      break;
+
+    case 'SCAN_QR_CODE':
+      if (prev !== 'SCAN_QR_CODE') {
         entry.connected = false;
-        if (entry.disconnectTimer) {
-          clearTimeout(entry.disconnectTimer);
-          entry.disconnectTimer = null;
-        }
-      }
-
-      const statusCode = lastDisconnect?.error?.output?.statusCode;
-      const isLoggedOut = statusCode === DisconnectReason.loggedOut;
-      const isTimedOut = statusCode === DisconnectReason.timedOut;
-      console.log(`[WA] User ${userId} disconnected. loggedOut: ${isLoggedOut}, timedOut: ${isTimedOut}, reconnectAttempts: ${rs.attempts}`);
-
-      if (isLoggedOut) {
-        console.log(`[WA] User ${userId} logged out.`);
-        rs.reconnecting = false;
-        try { sock.end(undefined); } catch {}
-        connections.delete(userId);
-        reconnectState.delete(userId);
-        clearAuthDir(userId);
-        saveConnectionStatus(userId, 'logged_out', null);
-        emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
-        emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
-        sendDisconnectNotifications(userId, 'Sesi WhatsApp Anda logout. Silakan sambungkan kembali.');
-        return;
-      }
-
-      if (isTimedOut) {
-        console.log(`[WA] User ${userId} connection timed out (QR/pairing expired), waiting for user action`);
-        rs.reconnecting = false;
-        rs.attempts = 0;
-        try { sock.end(undefined); } catch {}
-        connections.delete(userId);
-        reconnectState.delete(userId);
         saveConnectionStatus(userId, 'awaiting_scan', null);
-        emitWAStatus(userId, { status: 'awaiting_scan', message: 'Koneksi expired — silakan coba lagi' });
-        emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Koneksi expired — silakan coba lagi' });
-        return;
+        emitWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda' });
+        emitGlobalWAStatus(userId, { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda' });
       }
+      refreshQR(userId);
+      break;
 
-      if (rs.reconnecting) return;
-
-      rs.reconnecting = true;
-      rs.attempts++;
-      saveConnectionStatus(userId, 'reconnecting', null);
-
-      if (rs.attempts > MAX_RECONNECT_ATTEMPTS) {
-        console.log(`[WA] User ${userId} max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`);
-        rs.reconnecting = false;
-        try { sock.end(undefined); } catch {}
-        connections.delete(userId);
-        reconnectState.delete(userId);
-        saveConnectionStatus(userId, 'logged_out', null);
-        emitWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
-        emitGlobalWAStatus(userId, { status: 'logged_out', message: 'Reconnect gagal, silakan scan QR ulang' });
-        sendDisconnectNotifications(userId, 'Koneksi WhatsApp terputus dan gagal tersambung ulang. Silakan periksa.');
-        return;
+    case 'STARTING':
+      if (prev === 'WORKING') {
+        emitWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
+        emitGlobalWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
       }
+      break;
 
-      const delay = Math.min(1000 * Math.pow(2, Math.min(rs.attempts, 5)), 30000);
-      console.log(`[WA] User ${userId} reconnecting in ${delay}ms (attempt ${rs.attempts})`);
-      emitWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
-      emitGlobalWAStatus(userId, { status: 'reconnecting', message: 'Menghubungkan kembali...' });
-      try { sock.end(undefined); } catch {}
-      setTimeout(() => {
-        rs.reconnecting = false;
-        createWAClientForUser(userId, onReady).catch((err) => {
-          console.error(`[WA] Reconnect failed for user ${userId}:`, err.message);
-        });
-      }, delay);
+    case 'FAILED':
+      if (prev === 'SCAN_QR_CODE') {
+        emitDisconnected(userId, 'QR expired. Silakan coba lagi.');
+      } else if (entry.connected) {
+        emitDisconnected(userId, 'Koneksi gagal. Silakan coba lagi.');
+        sendDisconnectNotifications(userId, 'Koneksi WhatsApp gagal. Silakan periksa.');
+      }
+      break;
+
+    case 'STOPPED':
+    case 'DEPRECATED_VERSION':
+      if (entry.connected) {
+        emitDisconnected(userId, 'WhatsApp terputus.', 'disconnected');
+        sendDisconnectNotifications(userId, 'Koneksi WhatsApp terputus.');
+      }
+      break;
+  }
+}
+
+async function pollSession(userId, entry) {
+  let sess;
+  try {
+    sess = await waha(`/api/sessions/${sessionName(userId)}`);
+  } catch (err) {
+    if (err.status === 404) {
+      emitDisconnected(userId, 'Sesi tidak ditemukan. Silakan sambungkan kembali.');
     }
-  });
+    return;
+  }
+  handleTransition(userId, entry, sess?.status);
+}
 
-  return sock;
+async function pollAllSessions() {
+  if (connections.size === 0) {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    return;
+  }
+  for (const [userId, entry] of connections) {
+    pollSession(userId, entry).catch((err) => {
+      console.error(`[WA] Poll failed for user ${userId}:`, err.message);
+    });
+  }
+}
+
+function startPoller() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollAllSessions, POLL_INTERVAL_MS);
+}
+
+async function ensureSession(userId) {
+  const name = sessionName(userId);
+  try {
+    await waha(`/api/sessions/${name}`);
+  } catch (err) {
+    if (err.status !== 404) throw err;
+    await waha('/api/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+  await waha(`/api/sessions/${name}/webhooks`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      webhooks: [{ url: WAHA_WEBHOOK_URL, events: ['message'] }],
+    }),
+  });
+  return name;
+}
+
+async function createWAClientForUser(userId, onReady) {
+  const entry = {
+    connected: false,
+    connectedAt: null,
+    intentionalDisconnect: false,
+    lastStatus: null,
+    lastQR: null,
+  };
+  connections.set(userId, entry);
+  if (onReady) onReadyCallbacks.set(userId, onReady);
+  else onReadyCallbacks.delete(userId);
+
+  const name = await ensureSession(userId);
+  await waha(`/api/sessions/${name}/start`, { method: 'POST' });
+  startPoller();
+  return null;
 }
 
 async function sendWAMessageForUser(userId, jid, text) {
   const entry = connections.get(userId);
-  if (!entry || !entry.sock) throw new Error('WA client not found for user');
-  if (!entry.connected) throw new Error('WA connection not open for user');
+  if (!entry || !entry.connected) throw new Error('WA connection not open for user');
 
-  const sock = entry.sock;
-  try { await sock.sendPresenceUpdate('composing', jid); } catch {}
   const typingDelay = 2000 + Math.floor(Math.random() * 6000);
   await new Promise((r) => setTimeout(r, typingDelay));
-  const result = await sock.sendMessage(jid, { text });
-  return result;
-}
 
-function waitForWSOpen(sock, timeoutMs = 20_000) {
-  return new Promise((resolve) => {
-    const start = Date.now();
-    const poll = () => {
-      if (sock?.ws && sock.ws.readyState === 1) {
-        resolve(true);
-        return;
-      }
-      if (Date.now() - start > timeoutMs) {
-        resolve(false);
-        return;
-      }
-      setTimeout(poll, 500);
-    };
-    poll();
+  return waha(`/api/sendText?session=${sessionName(userId)}`, {
+    method: 'POST',
+    body: JSON.stringify({ chatId: jid, text }),
   });
 }
 
@@ -324,52 +245,27 @@ async function requestPairingCodeForUser(userId, phoneNumber) {
     throw new Error('WhatsApp sudah terhubung');
   }
 
-  let sock = entry?.sock;
-  if (!sock || sock.ws?.readyState !== 1) {
-    if (sock) {
-      try { sock.ev.removeAllListeners('connection.update'); sock.end(undefined); } catch {}
-      connections.delete(userId);
-      reconnectState.delete(userId);
-    }
-    console.log(`[WA] No usable client for user ${userId}, creating new one for pairing...`);
-    await createWAClientForUser(userId, null);
-    sock = connections.get(userId)?.sock;
-    if (!sock) {
-      throw new Error('Gagal membuat koneksi WhatsApp. Coba lagi.');
-    }
-  }
+  const name = await ensureSession(userId);
+  await waha(`/api/sessions/${name}/start`, { method: 'POST' });
+  startPoller();
 
-  const wsOpen = await waitForWSOpen(sock);
-  if (!wsOpen) {
-    throw new Error('WhatsApp socket belum terbuka. Coba hubungkan ulang.');
-  }
-
-  const code = await sock.requestPairingCode(phoneNumber);
-  console.log(`[WA] Pairing code for user ${userId}: ${code}`);
-  emitPairingCode(userId, { code, message: `Masukkan kode ${code} di WhatsApp Anda` });
-  return code;
+  const res = await waha(`/api/${name}/auth/request-code`, {
+    method: 'POST',
+    body: JSON.stringify({ phoneNumber }),
+  });
+  console.log(`[WA] Pairing code for user ${userId}: ${res?.code}`);
+  emitPairingCode(userId, { code: res?.code, message: `Masukkan kode ${res?.code} di WhatsApp Anda` });
+  return res?.code;
 }
 
 async function disconnectWAForUser(userId) {
+  const name = sessionName(userId);
   const entry = connections.get(userId);
-  if (entry) {
-    if (entry.disconnectTimer) {
-      clearTimeout(entry.disconnectTimer);
-      entry.disconnectTimer = null;
-    }
-    if (entry.sock) {
-      try {
-        // Prevent reconnect loop by detaching listeners before ending
-        entry.sock.ev.removeAllListeners('connection.update');
-        entry.sock.end(undefined);
-      } catch (e) {
-        console.error(`[WA] Error ending socket for user ${userId}:`, e.message);
-      }
-    }
-  }
+  if (entry) entry.intentionalDisconnect = true;
+  try { await waha(`/api/sessions/${name}/stop`, { method: 'POST' }); } catch {}
+  try { await waha(`/api/sessions/${name}`, { method: 'DELETE' }); } catch {}
   connections.delete(userId);
-
-  clearAuthDir(userId);
+  onReadyCallbacks.delete(userId);
 
   await saveConnectionStatus(userId, 'logged_out', null);
   emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
@@ -390,36 +286,102 @@ function getConnectedUsers() {
 }
 
 function disconnectAllConnections() {
-  for (const [userId, entry] of connections) {
-    if (entry.disconnectTimer) {
-      clearTimeout(entry.disconnectTimer);
-      entry.disconnectTimer = null;
-    }
-    if (entry.sock) {
-      try {
-        entry.sock.ev.removeAllListeners();
-        entry.sock.end(undefined);
-      } catch {}
-    }
+  for (const [userId] of connections) {
+    waha(`/api/sessions/${sessionName(userId)}/stop`, { method: 'POST' }).catch(() => {});
   }
   connections.clear();
-  reconnectState.clear();
+  onReadyCallbacks.clear();
 }
 
 function softResetForUser(userId) {
   const entry = connections.get(userId);
   if (entry) {
-    if (entry.disconnectTimer) {
-      clearTimeout(entry.disconnectTimer);
-      entry.disconnectTimer = null;
-    }
-    if (entry.sock) {
-      try { entry.sock.ev.removeAllListeners('connection.update'); } catch {}
-      try { entry.sock.end(undefined); } catch {}
-    }
-    connections.delete(userId);
-    reconnectState.delete(userId);
+    entry.connected = false;
+    entry.lastStatus = null;
+    entry.lastQR = null;
   }
+  waha(`/api/sessions/${sessionName(userId)}/stop`, { method: 'POST' }).catch(() => {});
 }
 
-module.exports = { createWAClientForUser, sendWAMessageForUser, requestPairingCodeForUser, disconnectWAForUser, disconnectAllConnections, isConnectedForUser, getConnectedUsers, cleanupOldLidFiles, softResetForUser, lastConnectedAt };
+async function syncSessionsFromWAHA() {
+  let sessions = [];
+  try {
+    sessions = await waha('/api/sessions');
+  } catch (err) {
+    console.error(`[Worker] WAHA unreachable at ${WAHA_URL}:`, err.message);
+    return;
+  }
+
+  const tracked = new Set();
+  for (const s of sessions) {
+    const userId = parseSessionUserId(s.name);
+    if (!userId) continue;
+    tracked.add(userId);
+    if (connections.has(userId)) continue;
+
+    const entry = { connected: false, connectedAt: null, intentionalDisconnect: false, lastStatus: s.status, lastQR: null };
+    connections.set(userId, entry);
+    handleTransition(userId, entry, s.status);
+    if (s.status === 'SCAN_QR_CODE') refreshQR(userId);
+  }
+
+  try {
+    const rows = await pool.query("SELECT user_id FROM whatsapp_connections WHERE status = 'connected'");
+    for (const row of rows.rows) {
+      if (!tracked.has(row.user_id)) {
+        await pool.query("UPDATE whatsapp_connections SET status = 'logged_out', qr_code = NULL, updated_at = NOW() WHERE user_id = $1", [row.user_id]);
+        console.log(`[Worker] Marked user ${row.user_id} logged_out (no live WAHA session)`);
+      }
+    }
+  } catch (err) {
+    console.error('[Worker] Failed to reconcile connection status:', err.message);
+  }
+
+  startPoller();
+}
+
+function parseWAHAEvent(event) {
+  if (!event || event.event !== 'message') return null;
+  const userId = parseSessionUserId(event.session);
+  if (!userId) return null;
+
+  const payload = event.payload || {};
+  if (payload.fromMe) return null;
+  const chatId = payload.chatId;
+  if (!chatId) return null;
+  if (chatId.endsWith('@g.us') || chatId.endsWith('@newsletter') || chatId.endsWith('@broadcast')) return null;
+
+  const body = payload.text || payload.caption || null;
+  if (!body) return null;
+
+  return {
+    userId,
+    remoteJid: chatId,
+    msg: {
+      key: { id: payload.id, remoteJid: chatId },
+      pushName: payload.senderName || payload.sender?.name || null,
+      message: { conversation: body },
+    },
+  };
+}
+
+async function handleWAHAWebhook(event) {
+  const parsed = parseWAHAEvent(event);
+  if (!parsed) return;
+  await captureInboundMessage(parsed.userId, parsed.remoteJid, parsed.msg);
+}
+
+module.exports = {
+  createWAClientForUser,
+  sendWAMessageForUser,
+  requestPairingCodeForUser,
+  disconnectWAForUser,
+  disconnectAllConnections,
+  isConnectedForUser,
+  getConnectedUsers,
+  softResetForUser,
+  syncSessionsFromWAHA,
+  handleWAHAWebhook,
+  parseWAHAEvent,
+  lastConnectedAt,
+};

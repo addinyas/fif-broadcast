@@ -1,44 +1,22 @@
 const http = require('http');
 const path = require('path');
-const fs = require('fs');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
 const { pool } = require('./db');
 
 const { createSocketServer, getIO } = require('./socket-server');
 const { startQueue, stopQueue } = require('./queue-consumer');
 const { startInboxQueue, stopInboxQueue } = require('./inbox');
-const { disconnectAllConnections, cleanupOldLidFiles } = require('./wa-client');
+const { disconnectAllConnections, syncSessionsFromWAHA, handleWAHAWebhook } = require('./wa-client');
 const { closePool } = require('./db');
 
 const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
-const AUTH_BASE = path.resolve(__dirname, '..', 'auth_info');
-const MAX_CONNECTION_MS = (parseInt(process.env.MAX_CONNECTION_HOURS || '8', 10)) * 60 * 60 * 1000;
 
 let httpServer = null;
 
 async function main() {
   console.log('[Worker] Starting FIF Broadcast Worker...');
 
-  try {
-    const staleCutoff = new Date(Date.now() - MAX_CONNECTION_MS).toISOString();
-    const stale = await pool.query("SELECT user_id FROM whatsapp_connections WHERE status = 'connected' AND updated_at < $1", [staleCutoff]);
-    for (const row of stale.rows) {
-      console.log(`[Worker] Cleaning stale connection for user ${row.user_id} (exceeded ${MAX_CONNECTION_MS / 3600000}h)`);
-      await pool.query("UPDATE whatsapp_connections SET status = 'logged_out', qr_code = NULL, updated_at = NOW() WHERE user_id = $1", [row.user_id]);
-      const authDir = path.join(AUTH_BASE, `user_${row.user_id}`);
-      if (fs.existsSync(authDir)) {
-        fs.rmSync(authDir, { recursive: true, force: true });
-      }
-    }
-  } catch (err) {
-    console.error('[Worker] Failed to clean stale connections:', err.message);
-  }
-
-  try {
-    cleanupOldLidFiles();
-  } catch (err) {
-    console.error('[Worker] Failed to clean LID files:', err.message);
-  }
+  await syncSessionsFromWAHA();
 
   try {
     const stuck = await pool.query("UPDATE broadcast_histories SET status = 'pending', updated_at = NOW() WHERE status = 'processing'");
@@ -50,6 +28,32 @@ async function main() {
   }
 
   httpServer = http.createServer();
+
+  httpServer.on('request', (req, res) => {
+    if (req.method === 'POST' && req.url === '/webhook/waha') {
+      let body = '';
+      req.on('data', (chunk) => { body += chunk; });
+      req.on('end', () => {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end('{"ok":true}');
+        try {
+          handleWAHAWebhook(JSON.parse(body || '{}')).catch((err) => {
+            console.error('[Webhook] WAHA handler error:', err.message);
+          });
+        } catch (err) {
+          console.error('[Webhook] Invalid payload:', err.message);
+        }
+      });
+      req.on('error', () => {
+        res.writeHead(400);
+        res.end();
+      });
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+
   createSocketServer(httpServer);
   const SOCKET_HOST = process.env.SOCKET_HOST || '127.0.0.1';
 
