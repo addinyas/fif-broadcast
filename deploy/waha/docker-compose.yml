@@ -9,6 +9,8 @@ services:
       - WHATSAPP_API_PORT=3002
       - WHATSAPP_API_KEY=${WAHA_API_KEY}
       - WHATSAPP_PROXY_SERVER=${WAHA_PROXY_SERVER}
+      - WHATSAPP_HOOK_URL=http://127.0.0.1:3001/webhook/waha
+      - WHATSAPP_HOOK_EVENTS=message
     volumes:
       - ./sessions:/app/.sessions
       - ./media:/app/.media

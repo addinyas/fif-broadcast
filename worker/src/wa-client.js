@@ -5,7 +5,6 @@ const { captureInboundMessage } = require('./inbox');
 
 const WAHA_URL = (process.env.WAHA_URL || 'http://127.0.0.1:3002').replace(/\/+$/, '');
 const WAHA_API_KEY = process.env.WAHA_API_KEY || '';
-const WAHA_WEBHOOK_URL = process.env.WAHA_WEBHOOK_URL || 'http://127.0.0.1:3001/webhook/waha';
 const POLL_INTERVAL_MS = parseInt(process.env.WAHA_POLL_INTERVAL_MS || '5000', 10);
 const WARMUP_MS = 3000 + Math.floor(Math.random() * 2000);
 
@@ -199,12 +198,6 @@ async function ensureSession(userId) {
       body: JSON.stringify({ name }),
     });
   }
-  await waha(`/api/sessions/${name}/webhooks`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      webhooks: [{ url: WAHA_WEBHOOK_URL, events: ['message'] }],
-    }),
-  });
   return name;
 }
 
