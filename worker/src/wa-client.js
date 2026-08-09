@@ -247,6 +247,7 @@ async function createWAClientForUser(userId, onReady) {
 
       rs.reconnecting = true;
       rs.attempts++;
+      saveConnectionStatus(userId, 'reconnecting', null);
 
       if (rs.attempts > MAX_RECONNECT_ATTEMPTS) {
         console.log(`[WA] User ${userId} max reconnect attempts (${MAX_RECONNECT_ATTEMPTS}) reached, giving up`);
@@ -291,34 +292,51 @@ async function sendWAMessageForUser(userId, jid, text) {
   return result;
 }
 
+function waitForWSOpen(sock, timeoutMs = 20_000) {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const poll = () => {
+      if (sock?.ws && sock.ws.readyState === 1) {
+        resolve(true);
+        return;
+      }
+      if (Date.now() - start > timeoutMs) {
+        resolve(false);
+        return;
+      }
+      setTimeout(poll, 500);
+    };
+    poll();
+  });
+}
+
 async function requestPairingCodeForUser(userId, phoneNumber) {
   const entry = connections.get(userId);
-  const wsOpen = entry?.sock?.ws && entry.sock.ws.readyState === 1;
-  if (entry && entry.sock && !entry.connected && wsOpen) {
-    const ready = await entry.wsReadyPromise;
-    if (ready) {
-      const code = await entry.sock.requestPairingCode(phoneNumber);
-      console.log(`[WA] Pairing code for user ${userId}: ${code}`);
-      emitPairingCode(userId, { code, message: `Masukkan kode ${code} di WhatsApp Anda` });
-      return code;
+  if (entry?.connected) {
+    throw new Error('WhatsApp sudah terhubung');
+  }
+
+  let sock = entry?.sock;
+  if (!sock || sock.ws?.readyState !== 1) {
+    if (sock) {
+      try { sock.ev.removeAllListeners('connection.update'); sock.end(undefined); } catch {}
+      connections.delete(userId);
+      reconnectState.delete(userId);
     }
+    console.log(`[WA] No usable client for user ${userId}, creating new one for pairing...`);
+    await createWAClientForUser(userId, null);
+    sock = connections.get(userId)?.sock;
+    if (!sock) {
+      throw new Error('Gagal membuat koneksi WhatsApp. Coba lagi.');
+    }
+  }
+
+  const wsOpen = await waitForWSOpen(sock);
+  if (!wsOpen) {
     throw new Error('WhatsApp socket belum terbuka. Coba hubungkan ulang.');
   }
 
-  console.log(`[WA] No active client for user ${userId}, creating new one for pairing...`);
-  await createWAClientForUser(userId, null);
-
-  const newEntry = connections.get(userId);
-  if (!newEntry || !newEntry.sock) {
-    throw new Error('Gagal membuat koneksi WhatsApp. Coba lagi.');
-  }
-
-  const ready = await newEntry.wsReadyPromise;
-  if (!ready) {
-    throw new Error('WhatsApp socket belum terbuka. Coba hubungkan ulang.');
-  }
-
-  const code = await newEntry.sock.requestPairingCode(phoneNumber);
+  const code = await sock.requestPairingCode(phoneNumber);
   console.log(`[WA] Pairing code for user ${userId}: ${code}`);
   emitPairingCode(userId, { code, message: `Masukkan kode ${code} di WhatsApp Anda` });
   return code;

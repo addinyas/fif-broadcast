@@ -63,10 +63,16 @@ async function validateToken(token) {
 
 async function getWAStatusFromDB(userId) {
   try {
-    return await getOne('SELECT status, qr_code FROM whatsapp_connections WHERE user_id = $1', [userId]);
+    return await getOne('SELECT status, qr_code, updated_at FROM whatsapp_connections WHERE user_id = $1', [userId]);
   } catch (err) {
     return null;
   }
+}
+
+function isFreshQR(dbStatus) {
+  if (!dbStatus || dbStatus.status !== 'awaiting_scan' || !dbStatus.qr_code) return false;
+  if (!dbStatus.updated_at) return false;
+  return Date.now() - new Date(dbStatus.updated_at).getTime() < 30_000;
 }
 
 function createSocketServer(httpServer) {
@@ -117,7 +123,7 @@ function createSocketServer(httpServer) {
         const dbStatus = await getWAStatusFromDB(userId);
         if (dbStatus && dbStatus.status === 'connected') {
           socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
-        } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
+        } else if (isFreshQR(dbStatus)) {
           socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
         } else {
           socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
@@ -145,7 +151,7 @@ function createSocketServer(httpServer) {
       recordAttempt(userId);
       try {
         const dbStatus = await getWAStatusFromDB(userId);
-        const isRetry = dbStatus && (dbStatus.status === 'awaiting_scan' || dbStatus.status === 'connected');
+        const isRetry = dbStatus && (dbStatus.status === 'awaiting_scan' || dbStatus.status === 'connected' || dbStatus.status === 'reconnecting');
         if (isRetry) {
           console.log(`[Socket] Retrying connection for user ${userId} (keeping auth)`);
           softReset(userId);
@@ -171,7 +177,7 @@ function createSocketServer(httpServer) {
         const dbStatus = await getWAStatusFromDB(userId);
         if (dbStatus && dbStatus.status === 'connected') {
           socket.emit('wa:status', { status: 'connected', message: 'WhatsApp connected' });
-        } else if (dbStatus && dbStatus.status === 'awaiting_scan' && dbStatus.qr_code) {
+        } else if (isFreshQR(dbStatus)) {
           socket.emit('wa:status', { status: 'awaiting_scan', message: 'Scan QR dengan WhatsApp Anda', qr: dbStatus.qr_code });
         } else {
           socket.emit('wa:status', { status: 'disconnected', message: 'Menunggu koneksi...' });
