@@ -7,9 +7,11 @@ const { isConnectedForUser } = require('./wa-client');
 const { setIO } = require('./events');
 
 const COOLDOWN_MS = 60_000;
+const PAIR_COOLDOWN_MS = 15_000;
 
 let io = null;
 const lastAttempt = new Map();
+const lastPairAttempt = new Map();
 
 function checkCooldown(userId) {
   const last = lastAttempt.get(userId) || 0;
@@ -22,6 +24,19 @@ function checkCooldown(userId) {
 
 function recordAttempt(userId) {
   lastAttempt.set(userId, Date.now());
+}
+
+function checkPairCooldown(userId) {
+  const last = lastPairAttempt.get(userId) || 0;
+  const elapsed = Date.now() - last;
+  if (elapsed < PAIR_COOLDOWN_MS) {
+    return Math.ceil((PAIR_COOLDOWN_MS - elapsed) / 1000);
+  }
+  return 0;
+}
+
+function recordPairAttempt(userId) {
+  lastPairAttempt.set(userId, Date.now());
 }
 
 async function validateToken(token) {
@@ -170,12 +185,12 @@ function createSocketServer(httpServer) {
         socket.emit('wa:pairing_code', { error: 'Nomor telepon tidak valid' });
         return;
       }
-      const waitSec = checkCooldown(userId);
+      const waitSec = checkPairCooldown(userId);
       if (waitSec > 0) {
         socket.emit('wa:pairing_code', { error: `Tunggu ${waitSec} detik sebelum coba lagi...` });
         return;
       }
-      recordAttempt(userId);
+      recordPairAttempt(userId);
       try {
         if (isConnectedForUser(userId)) {
           socket.emit('wa:pairing_code', { error: 'WhatsApp sudah terhubung' });

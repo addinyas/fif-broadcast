@@ -27,6 +27,18 @@ function ensureAuthDir(userId) {
   }
 }
 
+function clearAuthDir(userId) {
+  const authDir = getAuthDir(userId);
+  if (fs.existsSync(authDir)) {
+    try {
+      fs.rmSync(authDir, { recursive: true, force: true });
+      console.log(`[WA] Cleared auth session for user ${userId}`);
+    } catch (e) {
+      console.error(`[WA] Failed to clear auth session for user ${userId}:`, e.message);
+    }
+  }
+}
+
 async function shouldNotifyDisconnect() {
   const s = await loadNotifSettings();
   return s.notif_disconnect_enabled === '1';
@@ -136,7 +148,7 @@ async function createWAClientForUser(userId, onReady) {
       sock.ev.off('connection.update', check);
       console.log(`[WA] User ${userId} WS ready timeout`);
       resolve(false);
-    }, 8_000);
+    }, 20_000);
   });
 
   connections.set(userId, { sock, wsReadyPromise });
@@ -210,6 +222,7 @@ async function createWAClientForUser(userId, onReady) {
         try { sock.end(undefined); } catch {}
         connections.delete(userId);
         reconnectState.delete(userId);
+        clearAuthDir(userId);
         saveConnectionStatus(userId, 'logged_out', null);
         emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
         emitGlobalWAStatus(userId, { status: 'logged_out', message: 'WhatsApp logged out' });
@@ -280,7 +293,8 @@ async function sendWAMessageForUser(userId, jid, text) {
 
 async function requestPairingCodeForUser(userId, phoneNumber) {
   const entry = connections.get(userId);
-  if (entry && entry.sock && !entry.connected) {
+  const wsOpen = entry?.sock?.ws && entry.sock.ws.readyState === 1;
+  if (entry && entry.sock && !entry.connected && wsOpen) {
     const ready = await entry.wsReadyPromise;
     if (ready) {
       const code = await entry.sock.requestPairingCode(phoneNumber);
@@ -329,15 +343,7 @@ async function disconnectWAForUser(userId) {
   }
   connections.delete(userId);
 
-  const authDir = getAuthDir(userId);
-  if (fs.existsSync(authDir)) {
-    try {
-      fs.rmSync(authDir, { recursive: true, force: true });
-      console.log(`[WA] Cleared auth session for user ${userId}`);
-    } catch (e) {
-      console.error(`[WA] Failed to clear auth session for user ${userId}:`, e.message);
-    }
-  }
+  clearAuthDir(userId);
 
   await saveConnectionStatus(userId, 'logged_out', null);
   emitWAStatus(userId, { status: 'logged_out', message: 'WhatsApp disconnected' });
