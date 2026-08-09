@@ -23,6 +23,17 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-10 -- Fix integrasi WAHA v2026.7.2 (webhook global + rogue worker)
+
+Status: Worker + WAHA hidup, user_5 menunggu scan QR
+
+* WAHA v2026.7.2 tidak punya route per-session webhooks -> hapus `PUT /api/sessions/{name}/webhooks` dari `ensureSession()` (404 bikin connect gagal)
+* Webhook via env global WAHA `WHATSAPP_HOOK_URL` + `WHATSAPP_HOOK_EVENTS=message` (deploy/waha/docker-compose.yml + /opt/waha VPS, container di-recreate)
+* Kill rogue worker (PID 121111 user ubuntu) yang pegang port 3001 -> crash-loop fif-worker berhenti
+* E2E: createWAClientForUser(5) -> WAHA SCAN_QR_CODE, DB awaiting_scan + QR; `POST /start` terbukti idempotent
+
+---
+
 ### 2026-08-10 -- Rampungkan W.6-W.11 + Screenshot Drive + Fase 3 AI + Fase 4 Nav
 
 Status: SEMUA TODO SELESAI

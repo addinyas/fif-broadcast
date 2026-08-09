@@ -5,6 +5,18 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-10 - Fix integrasi WAHA v2026.7.2: webhook global + bersihkan rogue worker
+
+Status: Worker + WAHA hidup, sesi user_5 menunggu scan QR di frontend
+
+* WAHA v2026.7.2 tidak punya route `PUT /api/sessions/{name}/webhooks` -> hapus call per-session di `ensureSession()` (404 dulu bikin createWAClientForUser/requestPairingCode gagal)
+* Webhook inbound dipasang via env global WAHA: `WHATSAPP_HOOK_URL=http://127.0.0.1:3001/webhook/waha` + `WHATSAPP_HOOK_EVENTS=message` (deploy/waha/docker-compose.yml + /opt/waha/docker-compose.yml di VPS, container di-recreate) -- berlaku untuk semua sesi
+* Kill proses worker rogue (PID 121111, user ubuntu, kode lama) yang pegang port 3001 -> crash-loop `fif-worker` (NRestarts=12) berhenti
+* Verifikasi empiris: `POST /start` idempotent (double-start balas objek sesi, bukan error) -> retry reconnect frontend aman
+* Uji E2E: createWAClientForUser(5) -> WAHA `SCAN_QR_CODE`, DB `whatsapp_connections` = awaiting_scan + QR terisi; worker test parseWAHAEvent PASS
+
+---
+
 ### 2026-08-06 - W.2 Gate warm-up di worker + deploy W.1
 
 Status: W.2 SELESAI, W.1 ter-deploy ke VPS
