@@ -5,6 +5,17 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-10 - Menu baru Broadcast Terjadwal (gabung Jadwal + Auto Reply)
+
+Status: SELESAI -- deployed
+
+* `frontend/src/components/features/BroadcastTerjadwalPage.tsx`: satu halaman dengan tab Jadwal (broadcast-schedules) + Auto Reply (auto-reply-rules), menggantikan dua tab di Pengaturan
+* Menu sidebar "Broadcast Terjadwal" masuk section Menu Utama untuk admin & marketing (route `/admin/broadcast-terjadwal` & `/marketing/broadcast-terjadwal`)
+* `PengaturanPage.tsx` dipangkas -> hanya tab Notifikasi + AI
+* Backend & worker tidak berubah (commit a5cd08c); build + lint PASS
+
+---
+
 ### 2026-08-10 - Fix 500 /api/ai/test (import AiController hilang di routes)
 
 Status: SELESAI -- tab AI Test Koneksi jalan

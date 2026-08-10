@@ -23,6 +23,16 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-10 -- Menu baru Broadcast Terjadwal (gabung Jadwal + Auto Reply)
+
+Status: SELESAI -- deployed
+
+* `BroadcastTerjadwalPage.tsx`: tab Jadwal + Auto Reply jadi satu halaman; menu sidebar "Broadcast Terjadwal" di section Menu Utama (admin & marketing, route `/admin|/marketing/broadcast-terjadwal`)
+* Pengaturan kini hanya tab Notifikasi + AI (Jadwal & Auto Reply dihapus dari sana)
+* Backend tidak berubah (pakai route broadcast-schedules & auto-reply-rules yang sudah ada); build + lint PASS
+
+---
+
 ### 2026-08-10 -- Fix 500 /api/ai/test (import AiController hilang di routes)
 
 Status: SELESAI -- tab AI Test Koneksi jalan
