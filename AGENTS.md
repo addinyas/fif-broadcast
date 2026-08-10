@@ -23,6 +23,15 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-10 -- Fix 500 /api/ai/test (import AiController hilang di routes)
+
+Status: SELESAI -- tab AI Test Koneksi jalan
+
+* `routes/api.php` pakai `[AiController::class]` tapi blok `use` tidak meng-import `App\Http\Controllers\Api\AiController` -> Laravel cari di namespace default, 500 "Class AiController does not exist"
+* Tambah 1 baris import; deploy; `POST /api/ai/test` -> `{"ok":true, model: qwen2.5:1.5b}`
+
+---
+
 ### 2026-08-10 -- Fix integrasi WAHA v2026.7.2 (webhook global + rogue worker)
 
 Status: Worker + WAHA hidup, user_5 menunggu scan QR

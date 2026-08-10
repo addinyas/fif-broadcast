@@ -5,6 +5,15 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-10 - Fix 500 /api/ai/test (import AiController hilang di routes)
+
+Status: SELESAI -- tab AI Test Koneksi jalan
+
+* `routes/api.php` pakai `[AiController::class]` di route `ai/test|classify|suggest-reply` tapi blok `use` tidak meng-import `App\Http\Controllers\Api\AiController` -> Laravel resolve ke namespace default `App\Http\Controllers\AiController` (tidak ada) -> 500 `ReflectionException: Class "AiController" does not exist`
+* Tambah 1 baris import (commit 15003d5); auto-deploy; `POST /api/ai/test` -> `{"data":{"ok":true,"model":"qwen2.5:1.5b","models":["qwen2.5:1.5b"]}}`
+
+---
+
 ### 2026-08-10 - Fix integrasi WAHA v2026.7.2: webhook global + bersihkan rogue worker
 
 Status: Worker + WAHA hidup, sesi user_5 menunggu scan QR di frontend
