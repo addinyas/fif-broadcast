@@ -12,6 +12,7 @@ class BroadcastSchedule extends Model
         'schedule_time',
         'days_active',
         'template_body',
+        'template_ids',
         'active',
         'last_run_date',
     ];
@@ -20,6 +21,7 @@ class BroadcastSchedule extends Model
     {
         return [
             'days_active' => 'array',
+            'template_ids' => 'array',
             'active' => 'boolean',
             'last_run_date' => 'date',
         ];

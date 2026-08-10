@@ -7,6 +7,7 @@ export interface BroadcastSchedule {
   schedule_time: string;
   days_active: string[];
   template_body: string | null;
+  template_ids: number[] | null;
   active: boolean;
   last_run_date: string | null;
   created_at: string;
@@ -25,12 +26,12 @@ export const scheduleService = {
     return data.data;
   },
 
-  async create(payload: { schedule_time: string; days_active: string[]; template_body?: string; active: boolean; user_id?: number }): Promise<BroadcastSchedule> {
+  async create(payload: { schedule_time: string; days_active: string[]; template_ids: number[]; active: boolean; user_id?: number }): Promise<BroadcastSchedule> {
     const { data } = await api.post('/broadcast-schedules', payload);
     return data.data;
   },
 
-  async update(id: number, payload: Partial<{ schedule_time: string; days_active: string[]; template_body: string; active: boolean }>): Promise<BroadcastSchedule> {
+  async update(id: number, payload: Partial<{ schedule_time: string; days_active: string[]; template_ids: number[]; active: boolean }>): Promise<BroadcastSchedule> {
     const { data } = await api.put(`/broadcast-schedules/${id}`, payload);
     return data.data;
   },

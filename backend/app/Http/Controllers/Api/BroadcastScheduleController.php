@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\BroadcastSchedule;
 use App\Models\BroadcastSetting;
+use App\Models\Template;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -37,13 +38,17 @@ class BroadcastScheduleController extends Controller
             'schedule_time' => 'required|date_format:H:i',
             'days_active' => 'required|array|min:1',
             'days_active.*' => 'in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
-            'template_body' => 'nullable|string',
+            'template_ids' => 'required|array|size:3',
+            'template_ids.*' => 'integer|distinct',
             'active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        $validated = $validator->validated();
+        $templateIds = $this->resolveTemplateIds($request->user(), $validated['template_ids']);
 
         $user = $request->user();
         if ($user->role === 'marketing') {
@@ -54,13 +59,13 @@ class BroadcastScheduleController extends Controller
 
         $schedule = BroadcastSchedule::create([
             'user_id' => $userId,
-            'schedule_time' => $validator->validated()['schedule_time'].':00',
-            'days_active' => $validator->validated()['days_active'],
-            'template_body' => $request->input('template_body') ?: null,
+            'schedule_time' => $validated['schedule_time'].':00',
+            'days_active' => $validated['days_active'],
+            'template_ids' => $templateIds,
             'active' => $request->boolean('active', true),
         ]);
 
-        AuditLog::record($request->user()->id, 'schedule_create', 'broadcast_schedule', $schedule->id, $schedule->only(['schedule_time', 'days_active']), $request->ip());
+        AuditLog::record($request->user()->id, 'schedule_create', 'broadcast_schedule', $schedule->id, $schedule->only(['schedule_time', 'days_active', 'template_ids']), $request->ip());
 
         return response()->json(['data' => $schedule], 201);
     }
@@ -81,7 +86,8 @@ class BroadcastScheduleController extends Controller
             'schedule_time' => 'sometimes|date_format:H:i',
             'days_active' => 'sometimes|array|min:1',
             'days_active.*' => 'in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
-            'template_body' => 'nullable|string',
+            'template_ids' => 'sometimes|array|size:3',
+            'template_ids.*' => 'integer|distinct',
             'active' => 'sometimes|boolean',
         ]);
 
@@ -93,12 +99,31 @@ class BroadcastScheduleController extends Controller
         if (isset($data['schedule_time'])) {
             $data['schedule_time'] .= ':00';
         }
-        $data['template_body'] = $request->input('template_body') ?: null;
+        if (isset($data['template_ids'])) {
+            $data['template_ids'] = $this->resolveTemplateIds($request->user(), $data['template_ids']);
+        }
 
         $schedule->update($data);
         AuditLog::record($request->user()->id, 'schedule_update', 'broadcast_schedule', $schedule->id, $schedule->only(['schedule_time', 'days_active', 'active']), $request->ip());
 
         return response()->json(['data' => $schedule]);
+    }
+
+    private function resolveTemplateIds($user, array $ids): array
+    {
+        $query = Template::whereIn('id', $ids);
+        if ($user->role === 'marketing') {
+            $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)->orWhere('is_default', true);
+            });
+        }
+
+        $found = $query->pluck('id')->all();
+        if (count($found) !== 3) {
+            abort(422, 'Pilih 3 template yang valid (template default atau milik Anda).');
+        }
+
+        return $found;
     }
 
     public function destroy(Request $request, int $id): JsonResponse

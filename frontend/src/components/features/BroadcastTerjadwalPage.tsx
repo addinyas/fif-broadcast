@@ -1,14 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Loader2, Plus, Pencil, Trash2, AlarmClock, UserRound, Clock, Bot } from 'lucide-react';
+import { CalendarClock, Loader2, Plus, Pencil, Trash2, AlarmClock, UserRound, Clock, Bot, FileText, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { Input, Select } from '@/components/ui/Input';
 import { scheduleService, type BroadcastSchedule } from '@/services/scheduleService';
 import { customerService } from '@/services/customerService';
+import { templateService } from '@/services/templateService';
 import AutoReplyTab from './AutoReplyTab';
+import TemplateTab from './TemplateTab';
 
 const DAY_OPTIONS = [
   { value: 'Mon', label: 'Senin' },
@@ -25,7 +27,7 @@ const DAY_SHORT: Record<string, string> = { Mon: 'Sen', Tue: 'Sel', Wed: 'Rab', 
 type ScheduleForm = {
   schedule_time: string;
   days_active: string[];
-  template_body: string;
+  template_ids: number[];
   active: boolean;
   user_id?: number;
 };
@@ -33,14 +35,15 @@ type ScheduleForm = {
 export default function BroadcastTerjadwalPage() {
   const { toast } = useToast();
   const { user, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'jadwal' | 'autoreply'>('jadwal');
+  const [activeTab, setActiveTab] = useState<'jadwal' | 'template' | 'autoreply'>('jadwal');
   const [schedules, setSchedules] = useState<BroadcastSchedule[]>([]);
+  const [templates, setTemplates] = useState<{ id: number; title: string; is_default?: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BroadcastSchedule | null>(null);
   const [marketingUsers, setMarketingUsers] = useState<{ id: number; name: string }[]>([]);
-  const [form, setForm] = useState<ScheduleForm>({ schedule_time: '09:00', days_active: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], template_body: '', active: true });
+  const [form, setForm] = useState<ScheduleForm>({ schedule_time: '09:00', days_active: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], template_ids: [], active: true });
 
   const loadSchedules = useCallback(async () => {
     try {
@@ -51,18 +54,28 @@ export default function BroadcastTerjadwalPage() {
     }
   }, [toast]);
 
+  const loadTemplates = useCallback(async () => {
+    try {
+      const data = await templateService.getAll();
+      setTemplates(data.map((t) => ({ id: t.id, title: t.title, is_default: t.is_default })));
+    } catch {
+      toast('error', 'Gagal memuat template');
+    }
+  }, [toast]);
+
   useEffect(() => {
     Promise.all([
       loadSchedules(),
+      loadTemplates(),
       isAdmin ? customerService.getMarketingUsers().catch(() => []) : Promise.resolve([]),
-    ]).then(([, users]) => {
+    ]).then(([, , users]) => {
       setMarketingUsers(users);
     }).finally(() => setLoading(false));
-  }, [loadSchedules, isAdmin]);
+  }, [loadSchedules, loadTemplates, isAdmin]);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ schedule_time: '09:00', days_active: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], template_body: '', active: true });
+    setForm({ schedule_time: '09:00', days_active: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], template_ids: [], active: true });
     setModalOpen(true);
   };
 
@@ -71,10 +84,18 @@ export default function BroadcastTerjadwalPage() {
     setForm({
       schedule_time: s.schedule_time.slice(0, 5),
       days_active: s.days_active,
-      template_body: s.template_body || '',
+      template_ids: s.template_ids ?? [],
       active: s.active,
     });
     setModalOpen(true);
+  };
+
+  const setTemplateSlot = (slot: number, value: string) => {
+    setForm((prev) => {
+      const next = [...prev.template_ids];
+      next[slot] = value ? Number(value) : (0 as number);
+      return { ...prev, template_ids: next };
+    });
   };
 
   const toggleDay = (day: string) => {
@@ -91,12 +112,17 @@ export default function BroadcastTerjadwalPage() {
       toast('error', 'Jam dan hari aktif wajib diisi');
       return;
     }
+    const uniqueIds = [...new Set(form.template_ids.filter(Boolean))];
+    if (uniqueIds.length !== 3) {
+      toast('error', 'Wajib pilih 3 template yang berbeda');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         schedule_time: form.schedule_time,
         days_active: form.days_active,
-        template_body: form.template_body.trim() || undefined,
+        template_ids: uniqueIds,
         active: form.active,
         ...(isAdmin && form.user_id ? { user_id: form.user_id } : {}),
       };
@@ -170,6 +196,18 @@ export default function BroadcastTerjadwalPage() {
         </button>
         <button
           type="button"
+          onClick={() => setActiveTab('template')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
+            activeTab === 'template'
+              ? 'bg-fif-600 text-white shadow'
+              : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+          }`}
+        >
+          <FileText className="h-4 w-4" />
+          Template
+        </button>
+        <button
+          type="button"
           onClick={() => setActiveTab('autoreply')}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
             activeTab === 'autoreply'
@@ -182,13 +220,15 @@ export default function BroadcastTerjadwalPage() {
         </button>
       </div>
 
+      {activeTab === 'template' && <TemplateTab />}
+
       {activeTab === 'autoreply' && <AutoReplyTab />}
 
       {activeTab === 'jadwal' && (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {sortedSchedules.length} jadwal aktif — broadcast otomatis dikirim sesuai jadwal.
+              {sortedSchedules.length} jadwal aktif — broadcast otomatis dikirim sesuai jadwal dengan 3 variasi template.
             </p>
             <button
               type="button"
@@ -235,14 +275,19 @@ export default function BroadcastTerjadwalPage() {
                             {s.user.name}{s.user.kios_name ? ` • ${s.user.kios_name}` : ''}
                           </p>
                         )}
-                        {s.template_body && (
-                          <p className="truncate text-xs text-slate-400 dark:text-slate-500" title={s.template_body}>
-                            {s.template_body}
-                          </p>
-                        )}
-                        {!s.template_body && (
-                          <p className="text-xs italic text-slate-300 dark:text-slate-600">Template default kios</p>
-                        )}
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {(s.template_ids ?? []).map((tid) => {
+                            const t = templates.find((x) => x.id === tid);
+                            return (
+                              <span key={tid} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+                                {t?.title ?? `#${tid}`}
+                              </span>
+                            );
+                          })}
+                          {!s.template_ids?.length && (
+                            <span className="text-xs italic text-slate-300 dark:text-slate-600">Template default kios</span>
+                          )}
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -266,8 +311,11 @@ export default function BroadcastTerjadwalPage() {
             </div>
           )}
 
-          <div className="rounded-xl border border-slate-200/60 bg-white/70 p-4 text-xs text-slate-400 dark:border-slate-700/50 dark:bg-slate-800/50">
-            Broadcast otomatis berjalan saat aplikasi <strong>worker</strong> aktif. Template dikosongkan = gunakan template kios default.
+          <div className="flex items-start gap-2 rounded-xl border border-amber-200/70 bg-amber-50/60 p-4 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Setiap jadwal <strong>wajib</strong> memakai 3 template berbeda. Broadcast dirotasi otomatis per customer untuk menghindari deteksi pesan spam oleh AI WhatsApp/Meta. Kelola template di tab <strong>Template</strong> (superadmin bisa menandai template default untuk semua role).
+            </span>
           </div>
         </div>
       )}
@@ -317,17 +365,25 @@ export default function BroadcastTerjadwalPage() {
 
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Template Pesan
+              Template Broadcast <span className="text-fif-600">(wajib 3, anti-spam)</span>
             </label>
-            <textarea
-              value={form.template_body}
-              onChange={(e) => setForm((prev) => ({ ...prev, template_body: e.target.value }))}
-              rows={4}
-              placeholder="Kosongkan untuk memakai template default kios"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-            />
+            <div className="space-y-2">
+              {[0, 1, 2].map((slot) => (
+                <Select
+                  key={slot}
+                  label={`Template ${slot + 1}`}
+                  options={templates.map((t) => ({
+                    value: String(t.id),
+                    label: t.title + (t.is_default ? ' (Default)' : ''),
+                  }))}
+                  placeholder="Pilih template…"
+                  value={form.template_ids[slot] ? String(form.template_ids[slot]) : ''}
+                  onChange={(e) => setTemplateSlot(slot, e.target.value)}
+                />
+              ))}
+            </div>
             <p className="mt-1 text-xs text-slate-400">
-              Gunakan variabel: <code className="text-fif-600">#nomor_contract #nama #angsuran_kurang #input_angsuran</code>
+              3 template ini dirotasi otomatis per customer agar pesan bervariasi dan terhindar dari deteksi spam.
             </p>
           </div>
 

@@ -468,10 +468,11 @@ class BroadcastService
                     ->whereNotIn('id', $alreadySent)
                     ->get(['id', 'dynamic_data']);
 
-                $templateBody = $schedule->template_body ?: 'random';
+                $templateIds = $schedule->template_ids ?? [];
+                $rotatingBodies = Template::whereIn('id', $templateIds)->pluck('message_body')->values()->all();
                 $enqueued = 0;
 
-                foreach ($customers as $customer) {
+                foreach ($customers as $index => $customer) {
                     $formValues = array_merge(
                         (array) ($customer->dynamic_data ?? []),
                         [
@@ -480,9 +481,14 @@ class BroadcastService
                         ]
                     );
 
-                    $effectiveBody = $templateBody === 'random'
-                        ? $this->pickRandomTemplate($user)
-                        : $templateBody;
+                    if (! empty($rotatingBodies)) {
+                        // rotasi anti-spam: setiap customer dapat 1 dari 3 template
+                        $effectiveBody = $rotatingBodies[$index % count($rotatingBodies)];
+                    } elseif ($schedule->template_body === 'random') {
+                        $effectiveBody = $this->pickRandomTemplate($user);
+                    } else {
+                        $effectiveBody = $schedule->template_body ?: $this->pickRandomTemplate($user);
+                    }
 
                     $this->broadcastRepository->create([
                         'customer_id' => $customer->id,

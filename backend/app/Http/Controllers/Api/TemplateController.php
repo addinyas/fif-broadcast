@@ -56,6 +56,7 @@ class TemplateController extends Controller
         $validator = Validator::make($request->all(), [
             'title' => 'sometimes|string|max:255',
             'message_body' => 'sometimes|string',
+            'is_default' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -63,7 +64,12 @@ class TemplateController extends Controller
         }
 
         try {
-            $template = $this->templateService->update($id, $request->only(['title', 'message_body']), $request->user());
+            $data = $request->only(['title', 'message_body']);
+            if ($request->user()->role === 'superadmin' && $request->has('is_default')) {
+                $data['is_default'] = $request->boolean('is_default');
+            }
+
+            $template = $this->templateService->update($id, $data, $request->user());
 
             return response()->json($template);
         } catch (\Exception $e) {
