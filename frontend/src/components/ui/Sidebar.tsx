@@ -26,6 +26,7 @@ import {
   MessageSquare,
   BarChart3,
   Bot,
+  CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -47,6 +48,7 @@ interface LinkItem {
 const adminLinks: LinkItem[] = [
   { to: '/admin/dashboard',        label: 'Dashboard',        icon: <LayoutDashboard className="h-4.5 w-4.5" />, feature: 'dashboard',        section: 'main' },
   { to: '/admin/broadcast',        label: 'Broadcast',        icon: <SendHorizontal className="h-4.5 w-4.5" />,  feature: 'prospect_list',    section: 'main' },
+  { to: '/admin/broadcast-terjadwal', label: 'Broadcast Terjadwal', icon: <CalendarClock className="h-4.5 w-4.5" />, section: 'main' },
   { to: '/admin/customers',        label: 'Customers',        icon: <Users className="h-4.5 w-4.5" />,           feature: 'customer_management', section: 'main' },
   { to: '/admin/calculator',       label: 'Kalkulator',       icon: <Calculator className="h-4.5 w-4.5" />,                                   section: 'tools' },
   { to: '/admin/rolling',          label: 'Rolling Data',     icon: <ArrowLeftRight className="h-4.5 w-4.5" />,  feature: 'data_rolling',     section: 'tools' },
@@ -73,6 +75,7 @@ const superadminOnlyLinks: LinkItem[] = [
 const marketingLinks: LinkItem[] = [
   { to: '/marketing/dashboard',      label: 'Dashboard',       icon: <LayoutDashboard className="h-4.5 w-4.5" />, feature: 'dashboard',          section: 'main' },
   { to: '/marketing/broadcast',      label: 'Broadcast',       icon: <SendHorizontal className="h-4.5 w-4.5" />,  feature: 'prospect_list',      section: 'main' },
+  { to: '/marketing/broadcast-terjadwal', label: 'Broadcast Terjadwal', icon: <CalendarClock className="h-4.5 w-4.5" />, section: 'main' },
   { to: '/marketing/customers',      label: 'Customer',        icon: <Users className="h-4.5 w-4.5" />,           feature: 'customer_management', section: 'main' },
   { to: '/marketing/calculator',     label: 'Kalkulator',      icon: <Calculator className="h-4.5 w-4.5" />,                                     section: 'tools' },
   { to: '/marketing/history',        label: 'History',         icon: <History className="h-4.5 w-4.5" />,         feature: 'broadcast_history',  section: 'tools' },
