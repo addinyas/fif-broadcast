@@ -23,6 +23,18 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-11 -- Jadwal Broadcast wajib 3 template (rotasi anti-spam) + tab Template
+
+Status: SELESAI -- deployed
+
+* Migration `broadcast_schedules.template_ids` (JSON, 3 ID) + model cast array; `BroadcastScheduleController` validasi wajib 3 (distinct) & `resolveTemplateIds` (marketing hanya boleh template miliknya/global)
+* `BroadcastService::runScheduledBroadcasts` rotasi round-robin 3 template per customer (anti deteksi spam WhatsApp/Meta); fallback lama tetap ada untuk jadwal tanpa template_ids
+* `TemplateController::update` dukung `is_default` (superadmin); `TemplateTab.tsx` baru di Broadcast Terjadwal: superadmin bisa tandai template default, marketing buat/custom punya sendiri
+* `BroadcastTerjadwalPage`: tab Template baru, form jadwal pakai 3 select template wajib + validasi; daftar jadwal tampilkan judul 3 template
+* Backend 10 test PASS + pint, frontend build + lint PASS
+
+---
+
 ### 2026-08-10 -- Menu baru Broadcast Terjadwal (gabung Jadwal + Auto Reply)
 
 Status: SELESAI -- deployed

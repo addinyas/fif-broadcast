@@ -5,6 +5,19 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-11 - Jadwal Broadcast wajib 3 template (rotasi anti-spam) + tab Template
+
+Status: SELESAI -- deployed
+
+* Migration `2026_08_11_000001_add_template_ids_to_broadcast_schedules_table`: kolom `template_ids` JSON nullable di `broadcast_schedules`; model `BroadcastSchedule` cast array + fillable
+* `BroadcastScheduleController`: store/update validasi `template_ids` wajib array size 3 distinct; `resolveTemplateIds` membatasi marketing hanya template `created_by` miliknya atau `is_default`; legacy `template_body` tetap dipertahankan
+* `BroadcastService::runScheduledBroadcasts`: rotasi round-robin 3 template per customer (`$index % count`) untuk anti deteksi spam WhatsApp/Meta; fallback `template_body`/'random' untuk jadwal lama tanpa template_ids
+* `TemplateController::update`: superadmin bisa set/ubah `is_default` (store sudah didukung)
+* Frontend: `TemplateTab.tsx` baru (CRUD template + toggle "Jadikan Template Default" hanya superadmin; marketing buat template sendiri); `BroadcastTerjadwalPage` tab Template + form jadwal 3 select template wajib + validasi berbeda; daftar jadwal tampilkan judul 3 template; banner info anti-spam
+* Checks: backend 10 test PASS (82 assertions) + pint, frontend build + lint PASS (commit 78a66be)
+
+---
+
 ### 2026-08-10 - Menu baru Broadcast Terjadwal (gabung Jadwal + Auto Reply)
 
 Status: SELESAI -- deployed
