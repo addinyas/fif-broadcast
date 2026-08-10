@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\AssignmentController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
