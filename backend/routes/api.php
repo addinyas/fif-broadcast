@@ -129,6 +129,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('inbox/conversations/{id}', [ConversationController::class, 'show']);
         Route::post('inbox/conversations/{id}/reply', [ConversationController::class, 'reply']);
         Route::post('inbox/conversations/{id}/drive-screenshot', [ConversationController::class, 'saveToDrive']);
+        Route::post('inbox/backfill', [ConversationController::class, 'backfill']);
     });
 
     // AI (Fase 3)

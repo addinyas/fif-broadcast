@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
+use App\Models\WhatsappConnection;
 use App\Services\GoogleDriveService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
 class ConversationController extends Controller
@@ -15,6 +17,16 @@ class ConversationController extends Controller
     private function authorizeConversation(Request $request, Conversation $conversation): bool
     {
         return $request->user()->role !== 'marketing' || $conversation->user_id === $request->user()->id;
+    }
+
+    private function contactPhone(string $remoteJid): ?string
+    {
+        $bare = explode('@', $remoteJid)[0];
+        if (str_starts_with($bare, '62')) {
+            return '0'.substr($bare, 2);
+        }
+
+        return $bare ?: null;
     }
 
     public function index(Request $request): JsonResponse
@@ -134,5 +146,95 @@ class ConversationController extends Controller
         }
 
         return response()->json(['data' => ['unread' => $total]]);
+    }
+
+    public function backfill(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $connected = WhatsappConnection::where('user_id', $user->id)
+            ->where('status', 'connected')
+            ->exists();
+
+        if (! $connected) {
+            return response()->json(['message' => 'WhatsApp belum terhubung'], 422);
+        }
+
+        $base = rtrim(config('services.waha.url'), '/');
+        $session = "user_{$user->id}";
+        $waha = Http::timeout(60)->withHeaders(['X-Api-Key' => config('services.waha.api_key')]);
+
+        try {
+            $chats = $waha->get("$base/api/$session/chats", [
+                'limit' => 20,
+                'sortBy' => 'messageTimestamp',
+                'sortOrder' => 'desc',
+            ])->json();
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Gagal terhubung ke WAHA'], 502);
+        }
+
+        if (! is_array($chats)) {
+            return response()->json(['message' => 'Tidak ada riwayat chat'], 200);
+        }
+
+        $chatSaved = 0;
+        $msgSaved = 0;
+
+        foreach ($chats as $chat) {
+            $jid = $chat['id'] ?? null;
+            if (! $jid || str_ends_with($jid, '@g.us') || str_ends_with($jid, '@broadcast') || str_ends_with($jid, '@newsletter')) {
+                continue;
+            }
+
+            try {
+                $messages = $waha->get("$base/api/$session/chats/".urlencode($jid).'/messages', [
+                    'limit' => 50,
+                ])->json();
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            if (! is_array($messages)) {
+                continue;
+            }
+
+            $conversation = Conversation::firstOrCreate(
+                ['user_id' => $user->id, 'remote_jid' => $jid],
+                ['contact_name' => $chat['name'] ?? null, 'contact_phone' => $this->contactPhone($jid), 'is_read' => true]
+            );
+            $chatSaved++;
+
+            $lastAt = $conversation->last_message_at;
+            foreach ($messages as $msg) {
+                $wid = $msg['id'] ?? null;
+                if ($wid && ConversationMessage::where('wa_message_id', $wid)->exists()) {
+                    continue;
+                }
+
+                $body = $msg['body'] ?? $msg['text'] ?? $msg['caption'] ?? null;
+                if (! $body) {
+                    continue;
+                }
+
+                $at = isset($msg['timestamp']) ? date('Y-m-d H:i:s', (int) $msg['timestamp']) : now();
+                ConversationMessage::create([
+                    'conversation_id' => $conversation->id,
+                    'direction' => ($msg['fromMe'] ?? false) ? 'outbound' : 'inbound',
+                    'body' => $body,
+                    'wa_message_id' => $wid,
+                    'is_read' => true,
+                    'status' => 'sent',
+                    'created_at' => $at,
+                ]);
+                $msgSaved++;
+
+                if (! $lastAt || $at > $lastAt) {
+                    $lastAt = $at;
+                    $conversation->update(['last_message' => $body, 'last_message_at' => $at, 'is_read' => true]);
+                }
+            }
+        }
+
+        return response()->json(['data' => ['chats' => $chatSaved, 'messages' => $msgSaved]]);
     }
 }

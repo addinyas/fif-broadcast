@@ -47,4 +47,9 @@ return [
         'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
     ],
 
+    'waha' => [
+        'url' => env('WAHA_URL', 'http://127.0.0.1:3002'),
+        'api_key' => env('WAHA_API_KEY', ''),
+    ],
+
 ];
