@@ -227,6 +227,11 @@ class CustomerRepository implements CustomerRepositoryInterface
     public function assignToMarketing(int $customerId, int $marketingId)
     {
         $customer = Customer::findOrFail($customerId);
+
+        if ($customer->assignment_status === 'assigned' && $customer->marketing_id !== null) {
+            throw new \RuntimeException('Customer sudah diassign ke marketing, tidak bisa diassign ulang');
+        }
+
         $customer->update([
             'marketing_id' => $marketingId,
             'assignment_status' => 'assigned',

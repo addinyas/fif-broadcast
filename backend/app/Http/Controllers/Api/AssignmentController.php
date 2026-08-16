@@ -269,26 +269,25 @@ class AssignmentController extends Controller
         $totalNmc = $nmcQuery->count();
         $totalRefi = $refiQuery->count();
 
-        $marketingQuery = User::where('role', 'marketing')
-            ->whereDoesntHave('assignedCustomers');
+        $marketingQuery = User::where('role', 'marketing');
 
         if ($kiosId) {
             $marketingQuery->where('kios_id', $kiosId);
         }
 
-        $unassignedMarketingCount = $marketingQuery->count();
+        $marketingCount = $marketingQuery->count();
 
-        $nmcPerMarketing = $unassignedMarketingCount > 0
-            ? (int) ceil($totalNmc / $unassignedMarketingCount)
+        $nmcPerMarketing = $marketingCount > 0
+            ? (int) ceil($totalNmc / $marketingCount)
             : 0;
-        $refiPerMarketing = $unassignedMarketingCount > 0
-            ? (int) ceil($totalRefi / $unassignedMarketingCount)
+        $refiPerMarketing = $marketingCount > 0
+            ? (int) ceil($totalRefi / $marketingCount)
             : 0;
 
         return response()->json([
             'total_nmc' => $totalNmc,
             'total_refi' => $totalRefi,
-            'unassigned_marketing_count' => $unassignedMarketingCount,
+            'marketing_count' => $marketingCount,
             'nmc_per_marketing' => $nmcPerMarketing,
             'refi_per_marketing' => $refiPerMarketing,
         ]);
