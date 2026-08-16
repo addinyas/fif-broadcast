@@ -23,6 +23,17 @@ Format: YYYY-MM-DD -- Judul Singkat -> * aksi-aksi -> status diakhir
 
 ---
 
+### 2026-08-16 -- Fix assign data: auto-calc hitung semua marketing + lock cegah double assign
+
+Status: SELESAI -- siap deploy
+
+* `AssignmentController::autoCalculate`: split NMC/REFI dihitung dari SEMUA marketing kios (bukan hanya yang belum punya data) -> tidak terkunci saat semua marketing sudah punya data
+* `CustomerRepository::assignToMarketing` guard throw double-assign; `assign` menangkap -> error per customer di `data` (200, bukan 500)
+* Frontend admin+marketing customers: refresh otomatis setelah assign, filter status, submit disabled + feedback manual
+* Backend 15 test PASS (105 assertions) + frontend build + lint PASS
+
+---
+
 ### 2026-08-11 -- Jadwal Broadcast wajib 3 template (rotasi anti-spam) + tab Template
 
 Status: SELESAI -- deployed

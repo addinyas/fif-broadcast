@@ -5,6 +5,30 @@ AGENTS.md hanya menyimpan 2 entri terbaru sebagai konteks aktif.
 
 ---
 
+### 2026-08-16 - Fix assign data: auto-calc hitung semua marketing + lock cegah double assign
+
+Status: SELESAI -- siap deploy
+
+* `AssignmentController::autoCalculate`: hitung split NMC/REFI dari SEMUA marketing di kios (tidak hanya yang belum punya data) sehingga `nmc_per_marketing`/`refi_per_marketing` tidak 0 dan form assign tidak terkunci
+* `CustomerRepository::assignToMarketing`: guard throw jika customer sudah `assigned` + `marketing_id` tidak null; `AssignmentController::assign` menangkap dan mengembalikan error per customer di `data` (response tetap 200, tidak 500)
+* Frontend admin + marketing customers page: refresh data otomatis setelah assign, filter status, tombol submit disabled + feedback manual (tanpa toast), teks tombol "Memproses..."
+* Tests: `AssignmentTest` (guard double-assign + auto-calc split) -- backend 15 test PASS (105 assertions)
+* Checks: backend composer test PASS, frontend build + lint PASS
+
+---
+
+### 2026-08-11 - Inbox: tombol "Muat Chat Lama" (backfill riwayat WAHA)
+
+Status: SELESAI -- siap deploy
+
+* `ConversationController::backfill` (POST `/api/inbox/backfill`): tarik chat lama dari WAHA `GET /api/{session}/chats?limit=20` + `GET /api/{session}/chats/{chatId}/messages?limit=50` (batas aman 20 chat / 50 pesan), upsert `conversations` + `conversation_messages` dedup via `wa_message_id`, is_read=true, tanpa trigger auto-reply/classify, skip group/newsletter/broadcast
+* `WhatsappConnection` status gate: butuh akun connected, else 422; error koneksi WAHA -> 502
+* Backend env baru `WAHA_URL` + `WAHA_API_KEY` (config/services.php `waha`) -- wajib ditambahkan ke `.env` VPS
+* Frontend: tombol "Muat Chat Lama" di InboxPage header + `inboxService.backfill()`
+* Checks: backend 13 test PASS (98 assertions, +3 InboxBackfillTest) + pint, frontend build + lint PASS
+
+---
+
 ### 2026-08-11 - Jadwal Broadcast wajib 3 template (rotasi anti-spam) + tab Template
 
 Status: SELESAI -- deployed
