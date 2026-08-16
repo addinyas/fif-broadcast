@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, MessageSquare, Send, Phone, ChevronLeft, Search, Save, Sparkles } from 'lucide-react';
+import { Loader2, MessageSquare, Send, Phone, ChevronLeft, Search, Save, Sparkles, History } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { aiService } from '@/services/aiService';
 import { inboxService, type InboxConversation, type InboxMessage } from '@/services/inboxService';
@@ -40,6 +40,7 @@ export default function InboxPage() {
   const [sending, setSending] = useState(false);
   const [saving, setSaving] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
   const [isMobileView, setIsMobileView] = useState(false);
@@ -62,6 +63,33 @@ export default function InboxPage() {
     }
   }, [active, toast]);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      const data = await inboxService.getConversations();
+      setConversations(data);
+      if (data.length > 0 && !active) {
+        setActive(data[0]);
+      }
+    } catch {
+      toast('error', 'Gagal memuat inbox');
+    } finally {
+      setLoading(false);
+    }
+  }, [active, toast]);
+
+  const handleBackfill = useCallback(async () => {
+    setBackfilling(true);
+    try {
+      const { chats, messages } = await inboxService.backfill();
+      await loadConversations();
+      toast('success', `Muat ${chats} chat lama selesai (${messages} pesan)`);
+    } catch {
+      toast('error', 'Gagal memuat chat lama (pastikan WhatsApp terhubung)');
+    } finally {
+      setBackfilling(false);
+    }
+  }, [loadConversations, toast]);
+
   const handleSuggestReply = useCallback(async () => {
     const lastInbound = [...messages].reverse().find((m) => m.direction === 'inbound');
     if (!lastInbound) return;
@@ -82,20 +110,6 @@ export default function InboxPage() {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-
-  const loadConversations = useCallback(async () => {
-    try {
-      const data = await inboxService.getConversations();
-      setConversations(data);
-      if (data.length > 0 && !active) {
-        setActive(data[0]);
-      }
-    } catch {
-      toast('error', 'Gagal memuat inbox');
-    } finally {
-      setLoading(false);
-    }
-  }, [active, toast]);
 
   const openConversation = useCallback(async (c: InboxConversation) => {
     setActive(c);
@@ -193,6 +207,16 @@ export default function InboxPage() {
             Balasan customer dari WhatsApp{totalUnread > 0 ? ` — ${totalUnread} belum dibaca` : ''}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={handleBackfill}
+          disabled={backfilling}
+          title="Muat chat lama dari aplikasi WhatsApp"
+          className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-100"
+        >
+          {backfilling ? <Loader2 className="h-4 w-4 animate-spin" /> : <History className="h-4 w-4" />}
+          Muat Chat Lama
+        </button>
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200/80 bg-white dark:border-slate-700/80 dark:bg-slate-800/90">

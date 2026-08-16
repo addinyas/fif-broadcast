@@ -49,4 +49,9 @@ export const inboxService = {
     const { data } = await api.get('/inbox/unread-count');
     return data.data.unread;
   },
+
+  async backfill(): Promise<{ chats: number; messages: number }> {
+    const { data } = await api.post('/inbox/backfill');
+    return data.data;
+  },
 };
