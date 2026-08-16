@@ -165,7 +165,7 @@ export const customerService = {
   async getAutoCalculate(): Promise<{
     total_nmc: number;
     total_refi: number;
-    unassigned_marketing_count: number;
+    marketing_count: number;
     nmc_per_marketing: number;
     refi_per_marketing: number;
   }> {

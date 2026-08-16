@@ -70,7 +70,7 @@ export default function CustomerManagementPage() {
 
   const [assignSplitNmcRefi, setAssignSplitNmcRefi] = useState(false);
   const [assignMaxData, setAssignMaxData] = useState(1000);
-  const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; unassigned_marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
+  const [autoCalc, setAutoCalc] = useState<{ total_nmc: number; total_refi: number; marketing_count: number; nmc_per_marketing: number; refi_per_marketing: number } | null>(null);
   const [detailCustomer, setDetailCustomer] = useState<Customer | null>(null);
   const [broadcastMarks, setBroadcastMarks] = useState<{ sent_marks: { user_id: number; user_name: string; role: string; sent_at: string }[]; broadcasts: { user_id: number; user_name: string; role: string; status: string; sent_at: string | null; created_at: string }[] } | null>(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -88,6 +88,7 @@ export default function CustomerManagementPage() {
   const [customerTypeFilter, setBussUnitFilter] = useState('');
   const [showCustomerTypeDropdown, setShowBussUnitDropdown] = useState(false);
   const customerTypeRef = useRef<HTMLDivElement>(null);
+  const [statusFilter, setStatusFilter] = useState('');
   const [kiosDataCounts, setKiosDataCounts] = useState<Record<string, number>>({});
   const [selectedKiosFilter, setSelectedKiosFilter] = useState('');
   const [showDistribute, setShowDistribute] = useState(false);
@@ -154,6 +155,9 @@ export default function CustomerManagementPage() {
       if (customerTypeFilter) {
         params.customer_type = customerTypeFilter;
       }
+      if (statusFilter) {
+        params.assignment_status = statusFilter;
+      }
       if (selectedKiosFilter && isAdmin && user?.role === 'superadmin') {
         params.kios_id = selectedKiosFilter;
       }
@@ -164,7 +168,7 @@ export default function CustomerManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [superadminReady, page, debouncedSearch, mceFilterKey, customerTypeFilter, isAdmin, selectedKiosFilter, user?.role]);
+  }, [superadminReady, page, debouncedSearch, mceFilterKey, customerTypeFilter, statusFilter, isAdmin, selectedKiosFilter, user?.role]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -666,6 +670,25 @@ export default function CustomerManagementPage() {
                 {allMarketingUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
+              </select>
+            </div>
+          )}
+          {isAdmin && (
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                  setSelectAllPages(false);
+                  setSelectedIds([]);
+                }}
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2.5 text-xs font-medium text-slate-600 dark:text-slate-400 outline-none transition-all focus:border-fif-500 focus:ring-2 focus:ring-fif-500/20"
+              >
+                <option value="">Semua Status</option>
+                <option value="unassigned">Belum Diassign</option>
+                <option value="assigned">Sudah Diassign</option>
               </select>
             </div>
           )}
@@ -1323,9 +1346,9 @@ export default function CustomerManagementPage() {
               <div className="grid grid-cols-2 gap-2 text-xs text-blue-700 dark:text-blue-300">
                 <div>Tersisa NMC: <strong>{autoCalc.total_nmc}</strong></div>
                 <div>Tersisa REFI: <strong>{autoCalc.total_refi}</strong></div>
-                <div>Marketing kosong: <strong>{autoCalc.unassigned_marketing_count}</strong></div>
+                <div>Marketing tersedia: <strong>{autoCalc.marketing_count}</strong></div>
               </div>
-              {autoCalc.unassigned_marketing_count > 0 && (
+              {autoCalc.total_nmc + autoCalc.total_refi > 0 && (
                 <div className="border-t border-blue-200 dark:border-blue-700 pt-2 text-xs text-blue-800 dark:text-blue-200">
                   Per marketing: <strong>NMC {autoCalc.nmc_per_marketing}</strong>, <strong>REFI {autoCalc.refi_per_marketing}</strong>
                   {selectedMarketingId && (
@@ -1335,8 +1358,8 @@ export default function CustomerManagementPage() {
                   )}
                 </div>
               )}
-              {autoCalc.unassigned_marketing_count === 0 && (
-                <p className="text-xs text-amber-600 dark:text-amber-400">Semua marketing sudah punya data.</p>
+              {autoCalc.total_nmc + autoCalc.total_refi === 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">Tidak ada data unassigned untuk diassign.</p>
               )}
             </div>
           )}
@@ -1388,7 +1411,7 @@ export default function CustomerManagementPage() {
                 setAssigning(true);
                 try {
                   if (selectedIds.length === 0) {
-                    if (!autoCalc || autoCalc.unassigned_marketing_count === 0) return;
+                    if (!autoCalc) return;
                     const res = await customerService.assignByUnit(selectedMarketingId, autoCalc.nmc_per_marketing, autoCalc.refi_per_marketing);
                     toast('success', `${res.total} data berhasil dikirim`);
                   } else if (assignSplitNmcRefi) {
@@ -1398,8 +1421,11 @@ export default function CustomerManagementPage() {
                     toast('success', `${res.total} data berhasil dikirim`);
                   } else {
                     const idsToSend = selectedIds.slice(0, assignMaxData);
-                    await customerService.assign(idsToSend, selectedMarketingId);
-                    toast('success', `${idsToSend.length} data berhasil dikirim`);
+                    const res = await customerService.assign(idsToSend, selectedMarketingId) as { data?: Array<{ error?: string }> };
+                    const results = res?.data ?? [];
+                    const sent = results.length > 0 ? results.filter((r) => !r.error).length : idsToSend.length;
+                    const skipped = results.length > 0 ? results.filter((r) => r.error).length : 0;
+                    toast('success', skipped > 0 ? `${sent} dikirim, ${skipped} dilewati (sudah diassign)` : `${sent} data berhasil dikirim`);
                   }
                   setSelectedIds([]);
                   setShowAssign(false);
@@ -1411,7 +1437,7 @@ export default function CustomerManagementPage() {
                 }
               }}
               loading={assigning}
-              disabled={!selectedMarketingId || (selectedIds.length === 0 && (!autoCalc || autoCalc.unassigned_marketing_count === 0)) || assigning}
+              disabled={!selectedMarketingId || (selectedIds.length === 0 && (!autoCalc || (autoCalc.total_nmc + autoCalc.total_refi === 0))) || assigning}
             >
               {assigning ? 'Mengirim...' : 'Kirim'}
             </Button>
