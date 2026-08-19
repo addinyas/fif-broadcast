@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Bell, Sparkles } from 'lucide-react';
+import { Loader2, Bell, Sparkles, WifiOff, Smartphone } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { Select } from '@/components/ui/Input';
+import { getSocket } from '@/services/socketService';
 import { scheduleService, type NotifSettings } from '@/services/scheduleService';
 import AiTab from './AiTab';
 
@@ -13,6 +14,9 @@ export default function PengaturanPage() {
   const [notif, setNotif] = useState<NotifSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [waPopup, setWaPopup] = useState(true);
+  const [waStatus, setWaStatus] = useState<string>('disconnected');
+  const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
     scheduleService.getNotifSettings().catch(() => null)
@@ -20,6 +24,14 @@ export default function PengaturanPage() {
         setNotif(data);
       })
       .finally(() => setLoading(false));
+    setWaPopup(localStorage.getItem('fif_wa_popup') !== 'false');
+  }, []);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handler = (msg: { status: string }) => setWaStatus(msg.status);
+    socket.on('wa:status', handler);
+    return () => { socket.off('wa:status', handler); };
   }, []);
 
   const handleSaveNotif = async () => {
@@ -39,6 +51,21 @@ export default function PengaturanPage() {
   };
 
   const notifEnabled = notif?.notif_disconnect_enabled.value === '1';
+
+  const handleTogglePopup = () => {
+    const next = !waPopup;
+    setWaPopup(next);
+    localStorage.setItem('fif_wa_popup', String(next));
+  };
+
+  const handleReconnectWA = () => {
+    setReconnecting(true);
+    const socket = getSocket();
+    localStorage.setItem('fif_wa_popup', 'true');
+    setWaPopup(true);
+    socket.emit('wa:reconnect');
+    setTimeout(() => setReconnecting(false), 3000);
+  };
 
   if (loading) {
     return <div className="flex h-64 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-fif-600" /></div>;
@@ -84,6 +111,7 @@ export default function PengaturanPage() {
       {activeTab === 'ai' && <AiTab />}
 
       {activeTab === 'notifikasi' && notif && (
+        <>
         <div className="max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-700/80 dark:bg-slate-800/90">
           <h2 className="font-subheading text-lg font-semibold text-slate-800 dark:text-slate-100">Notifikasi WhatsApp Terputus</h2>
           <p className="mt-1 text-sm text-slate-400">Kirim notifikasi saat koneksi WhatsApp user terputus.</p>
@@ -126,6 +154,47 @@ export default function PengaturanPage() {
             </button>
           </div>
         </div>
+
+        <div className="max-w-2xl rounded-2xl border border-slate-200/80 bg-white p-6 dark:border-slate-700/80 dark:bg-slate-800/90">
+          <h2 className="font-subheading text-lg font-semibold text-slate-800 dark:text-slate-100">Popup WhatsApp</h2>
+          <p className="mt-1 text-sm text-slate-400">Kontrol popup otomatis saat WhatsApp terputus.</p>
+
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Popup otomatis saat terputus</p>
+              <p className="mt-0.5 text-xs text-slate-400">Tampilkan popup saat refresh browser jika WA belum terhubung</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleTogglePopup}
+              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors duration-200 ${waPopup ? 'bg-fif-600' : 'bg-slate-300 dark:bg-slate-600'}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${waPopup ? 'translate-x-[22px]' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${waStatus === 'connected' ? 'bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10' : 'bg-red-50 text-red-500 dark:bg-red-500/10'}`}>
+                {waStatus === 'connected' ? <Smartphone className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Status WhatsApp</p>
+                <p className="text-xs text-slate-400">{waStatus === 'connected' ? 'Terhubung' : 'Terputus'}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleReconnectWA}
+              disabled={waStatus === 'connected' || reconnecting}
+              className="flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-700"
+            >
+              {reconnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Smartphone className="h-4 w-4" />}
+              Hubungkan Ulang
+            </button>
+          </div>
+        </div>
+        </>
       )}
     </div>
   );

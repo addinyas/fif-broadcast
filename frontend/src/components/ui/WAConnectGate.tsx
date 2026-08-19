@@ -42,13 +42,13 @@ export function WAConnectGate() {
         return;
       }
       if (msg.status === 'disconnected' || msg.status === 'logged_out') {
-        setOpen(true);
+        if (localStorage.getItem('fif_wa_popup') !== 'false') setOpen(true);
         setQr(null);
         setPairingCode(null);
         setPairingError(null);
       }
       if (msg.status === 'awaiting_scan') {
-        setOpen(true);
+        if (localStorage.getItem('fif_wa_popup') !== 'false') setOpen(true);
         if (msg.qr) setQr(msg.qr);
       }
       if (msg.status === 'reconnecting') {
@@ -96,6 +96,7 @@ export function WAConnectGate() {
     setQr(null);
     setPairingCode(null);
     setPairingError(null);
+    localStorage.setItem('fif_wa_popup', 'true');
     socket.emit('wa:reconnect');
   };
 
@@ -241,7 +242,7 @@ export function WAConnectGate() {
           )}
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => { localStorage.setItem('fif_wa_popup', 'false'); setOpen(false); }}
             className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-500 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300"
           >
             {showQR || pairingCode ? 'Tutup' : 'Nanti'}
