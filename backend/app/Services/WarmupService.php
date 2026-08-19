@@ -14,7 +14,7 @@ class WarmupService
     private const STAGES = [
         'passive' => ['days' => 3, 'daily_limit' => 0],
         'active' => ['days' => 14, 'daily_limit' => 50],
-        'mature' => ['days' => null, 'daily_limit' => 150],
+        'mature' => ['days' => null, 'daily_limit' => 100],
     ];
 
     /** Tanam nomor baru: mulai dari passive, broadcast terkunci sampai warm-up selesai. */

@@ -208,4 +208,21 @@ class BroadcastController extends Controller
 
         return response()->json(['message' => 'Berhasil dibatalkan']);
     }
+
+    public function broadcastReport(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $marketingId = $user->role === 'marketing' ? $user->id : null;
+        $kiosId = ! in_array($user->role, ['superadmin', 'AO']) ? $user->kios_id : ($request->query('kios_id') ?: null);
+
+        if ($user->role !== 'marketing' && $request->query('marketing_id') && $request->query('marketing_id') !== 'all') {
+            $marketingId = (int) $request->query('marketing_id');
+        }
+
+        $days = (int) ($request->query('days') ?: 7);
+
+        return response()->json([
+            'data' => $this->broadcastService->getBroadcastReport($marketingId, $kiosId, $days),
+        ]);
+    }
 }

@@ -55,7 +55,8 @@ async function captureInboundMessage(userId, remoteJid, msg) {
   emitInboxNew(userId, saved.rows[0]);
 
   await maybeAutoReply(userId, conversationId, remoteJid, body);
-  await maybeClassifyProspect(userId, body);
+  const score = await maybeClassifyProspect(userId, body);
+  await linkToBroadcast(userId, conversationId, score);
 
   return saved.rows[0];
 }
@@ -63,22 +64,21 @@ async function captureInboundMessage(userId, remoteJid, msg) {
 async function maybeClassifyProspect(userId, body) {
   try {
     const score = await ai.classify(body);
-    if (!score) return;
+    if (!score) return null;
 
-    const updated = await pool.query(
+    await pool.query(
       `UPDATE customers c
        SET prospect_score = $2, updated_at = NOW()
        FROM conversations cv
        WHERE cv.user_id = $1
-         AND RIGHT(c.phone_number, 10) = RIGHT(cv.contact_phone, 10)
-         AND c.prospect_score IS NULL`,
+         AND RIGHT(c.phone_number, 10) = RIGHT(cv.contact_phone, 10)`,
       [userId, score]
     );
-    if (updated.rowCount > 0) {
-      console.log(`[AI] Classified ${updated.rowCount} customer(s) as ${score}% (user ${userId})`);
-    }
+    console.log(`[AI] Classified customer as ${score}% (user ${userId})`);
+    return score;
   } catch (err) {
     console.error('[AI] Classify failed:', err.message);
+    return null;
   }
 }
 
@@ -95,6 +95,51 @@ async function maybeAutoReply(userId, conversationId, remoteJid, body) {
     );
   } catch (err) {
     console.error(`[AutoReply] Failed to queue reply for user ${userId}:`, err.message);
+  }
+}
+
+async function linkToBroadcast(userId, conversationId, score) {
+  try {
+    const conversation = await pool.query(
+      `SELECT contact_phone FROM conversations WHERE id = $1`, [conversationId]
+    );
+    if (!conversation.rows.length) return;
+
+    const phone = conversation.rows[0].contact_phone;
+    if (!phone) return;
+
+    const updated = await pool.query(
+      `UPDATE broadcast_histories
+       SET replied_at = COALESCE(replied_at, NOW()),
+           prospect_score = $3,
+           updated_at = NOW()
+       WHERE marketing_id = $1
+         AND status = 'sent'
+         AND RIGHT(exact_message, 1) != ''
+         AND customer_id IN (
+           SELECT id FROM customers
+           WHERE marketing_id = $1
+             AND RIGHT(phone_number, 10) = RIGHT($2, 10)
+         )
+       AND id = (
+           SELECT id FROM broadcast_histories
+           WHERE marketing_id = $1
+             AND status = 'sent'
+             AND customer_id IN (
+               SELECT id FROM customers
+               WHERE marketing_id = $1
+                 AND RIGHT(phone_number, 10) = RIGHT($2, 10)
+             )
+           ORDER BY sent_at DESC
+           LIMIT 1
+         )`,
+      [userId, phone, score]
+    );
+    if (updated.rowCount > 0) {
+      console.log(`[Inbox] Linked reply to broadcast for user ${userId}, score=${score}`);
+    }
+  } catch (err) {
+    console.error('[Inbox] linkToBroadcast failed:', err.message);
   }
 }
 

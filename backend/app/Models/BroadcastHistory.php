@@ -15,12 +15,15 @@ class BroadcastHistory extends Model
         'retry_count',
         'error_log',
         'sent_at',
+        'replied_at',
+        'prospect_score',
     ];
 
     protected function casts(): array
     {
         return [
             'sent_at' => 'datetime',
+            'replied_at' => 'datetime',
         ];
     }
 

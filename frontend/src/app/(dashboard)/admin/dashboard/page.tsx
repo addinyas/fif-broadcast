@@ -28,7 +28,7 @@ const MARKETING_COLORS = [
   '#10b981', '#06b6d4', '#f97316', '#ef4444',
 ];
 
-const DAILY_LIMIT = 150; // kuota broadcast harian per MCE
+const DAILY_LIMIT = 100; // kuota broadcast harian per MCE
 
 /* ── Real-time clock ──────────────────────────────────── */
 function useClock() {

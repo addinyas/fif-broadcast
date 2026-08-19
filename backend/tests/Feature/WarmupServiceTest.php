@@ -82,7 +82,7 @@ class WarmupServiceTest extends TestCase
         $profile->update(['started_at' => now()->subDays(30)]);
 
         $this->assertSame('mature', $service->refreshStage($profile));
-        $this->assertSame(150, $profile->daily_outbound_limit);
+        $this->assertSame(100, $profile->daily_outbound_limit);
         $this->assertTrue($service->canSend($profile)['allowed']);
     }
 

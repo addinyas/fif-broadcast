@@ -215,6 +215,20 @@ export interface DistributionReport {
   }[];
 }
 
+export interface BroadcastReport {
+  total_sent: number;
+  total_replied: number;
+  response_rate: number;
+  scores: { '25': number; '50': number; '75': number; '100': number };
+  recent: {
+    id: number;
+    customer_name: string;
+    sent_at: string | null;
+    replied_at: string | null;
+    prospect_score: number | null;
+  }[];
+}
+
 export interface ShareInfo {
   total: number;
   broadcast_count: number;

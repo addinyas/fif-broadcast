@@ -466,6 +466,7 @@ class BroadcastService
 
                 $customers = $customerQuery
                     ->whereNotIn('id', $alreadySent)
+                    ->limit(20)
                     ->get(['id', 'dynamic_data']);
 
                 $templateIds = $schedule->template_ids ?? [];
@@ -554,5 +555,52 @@ class BroadcastService
                 'response_rate' => $row->total > 0 ? round($replied / $row->total * 100, 1) : 0,
             ];
         })->toArray();
+    }
+
+    public function getBroadcastReport(?int $marketingId = null, ?string $kiosId = null, int $days = 7): array
+    {
+        $days = max(1, min($days, 90));
+
+        $query = BroadcastHistory::query()
+            ->join('customers', 'broadcast_histories.customer_id', '=', 'customers.id')
+            ->where('broadcast_histories.status', 'sent')
+            ->where('broadcast_histories.sent_at', '>=', now()->subDays($days))
+            ->when($kiosId, fn ($q) => $q->where('customers.kios_id', $kiosId))
+            ->when($marketingId !== null, fn ($q) => $q->where('broadcast_histories.marketing_id', $marketingId));
+
+        $total = (clone $query)->count();
+        $replied = (clone $query)->whereNotNull('broadcast_histories.replied_at')->count();
+        $scores = (clone $query)
+            ->whereNotNull('broadcast_histories.prospect_score')
+            ->selectRaw('prospect_score, count(*) as count')
+            ->groupBy('prospect_score')
+            ->pluck('count', 'prospect_score')
+            ->toArray();
+
+        $recent = (clone $query)
+            ->with('customer:id,name,phone_number')
+            ->orderByDesc('broadcast_histories.sent_at')
+            ->limit(50)
+            ->get()
+            ->map(fn ($b) => [
+                'id' => $b->id,
+                'customer_name' => $b->customer?->name ?? "Customer #{$b->customer_id}",
+                'sent_at' => $b->sent_at?->toIso8601String(),
+                'replied_at' => $b->replied_at?->toIso8601String(),
+                'prospect_score' => $b->prospect_score,
+            ]);
+
+        return [
+            'total_sent' => $total,
+            'total_replied' => $replied,
+            'response_rate' => $total > 0 ? round($replied / $total * 100, 1) : 0,
+            'scores' => [
+                '25' => $scores[25] ?? 0,
+                '50' => $scores[50] ?? 0,
+                '75' => $scores[75] ?? 0,
+                '100' => $scores[100] ?? 0,
+            ],
+            'recent' => $recent,
+        ];
     }
 }

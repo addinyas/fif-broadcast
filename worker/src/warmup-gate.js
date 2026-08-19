@@ -6,7 +6,7 @@ const { query, getOne } = require('./db');
 const STAGES = {
   passive: { days: 3, dailyLimit: 0 },
   active: { days: 14, dailyLimit: 50 },
-  mature: { days: null, dailyLimit: 150 },
+  mature: { days: null, dailyLimit: 100 },
 };
 
 function stageForElapsed(elapsedDays) {

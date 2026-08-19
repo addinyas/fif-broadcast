@@ -109,6 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('broadcast/worker-status', [BroadcastController::class, 'workerStatus']);
             Route::post('broadcast/cancel-item', [BroadcastController::class, 'cancelItem']);
             Route::get('broadcast/response-rate', [BroadcastController::class, 'responseRate']);
+            Route::get('broadcast/report', [BroadcastController::class, 'broadcastReport']);
         });
     });
 
