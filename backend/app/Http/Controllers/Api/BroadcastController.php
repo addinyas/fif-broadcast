@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\CustomerShare;
 use App\Services\BroadcastService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,7 +41,10 @@ class BroadcastController extends Controller
                 if ($user->kios_id && $customer->kios_id !== $user->kios_id) {
                     return response()->json(['message' => 'Customer tidak ditemukan'], 404);
                 }
-                if ($user->role === 'marketing' && $customer->marketing_id !== $user->id) {
+                if ($user->role === 'marketing' && $customer->marketing_id !== $user->id && ! CustomerShare::where('customer_id', $customer->id)
+                    ->where('to_marketing_id', $user->id)
+                    ->where('status', 'approved')
+                    ->exists()) {
                     return response()->json(['message' => 'Customer tidak ditemukan'], 404);
                 }
             }

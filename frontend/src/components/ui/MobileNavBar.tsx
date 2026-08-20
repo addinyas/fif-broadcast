@@ -38,13 +38,7 @@ export function MobileNavBar() {
   return (
     <nav
       className="font-poppins fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-2 pb-safe pt-2 lg:hidden transition-all duration-300"
-      style={{
-        background: 'rgba(8, 14, 26, 0.92)',
-        backdropFilter: 'blur(10px) saturate(160%)',
-        WebkitBackdropFilter: 'blur(10px) saturate(160%)',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 -10px 30px rgba(0, 0, 0, 0.4)',
-      }}
+      style={{ backdropFilter: 'blur(10px) saturate(160%)', WebkitBackdropFilter: 'blur(10px) saturate(160%)' }}
     >
       {resolvedTabs.map((tab) => {
         const isActive = pathname === tab.to || pathname.startsWith(tab.to + '/');
@@ -53,14 +47,14 @@ export function MobileNavBar() {
             key={tab.to}
             href={tab.to}
             className={`relative flex flex-1 flex-col items-center gap-1 py-1.5 text-xs font-medium transition-all duration-200 ${
-              isActive ? 'text-blue-400' : 'text-slate-500 hover:text-slate-300'
+              isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
             {isActive && (
               <motion.span
                 layoutId="mobile-nav-active"
                 className="absolute -top-2 h-1 w-8 rounded-full bg-blue-400"
-                style={{ boxShadow: '0 0 10px rgba(96, 165, 250, 0.8)' }}
+                style={{ boxShadow: '0 0 10px rgba(37, 99, 235, 0.35)' }}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}

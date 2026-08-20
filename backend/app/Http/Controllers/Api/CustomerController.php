@@ -137,7 +137,7 @@ class CustomerController extends Controller
         try {
             $customer = $this->customerService->findById($id);
             $user = $request->user();
-            if (! in_array($user->role, ['superadmin', 'AO']) && $user->kios_id && $customer->kios_id !== $user->kios_id) {
+            if (! $this->canViewCustomer($user, $customer)) {
                 return response()->json(['message' => 'Customer not found'], 404);
             }
 
@@ -193,7 +193,7 @@ class CustomerController extends Controller
             $customer = $fallbackQuery->first();
         }
 
-        if (! $customer) {
+        if (! $customer || ! $this->canViewCustomer($user, $customer)) {
             return response()->json(['message' => 'Customer not found'], 404);
         }
 
@@ -818,6 +818,17 @@ class CustomerController extends Controller
                 }
             });
         }
+        if ($user->role === 'marketing') {
+            $sharedIds = CustomerShare::where('to_marketing_id', $user->id)
+                ->where('status', 'approved')
+                ->pluck('customer_id');
+            $query->where(function ($q) use ($user, $sharedIds) {
+                $q->where(function ($q2) use ($user) {
+                    $q2->where('marketing_id', $user->id)
+                        ->where('assignment_status', 'assigned');
+                })->orWhereIn('id', $sharedIds);
+            });
+        }
 
         $customers = $query->limit(20)
             ->get(['id', 'name', 'no_contract', 'dynamic_data']);
@@ -892,6 +903,11 @@ class CustomerController extends Controller
 
     public function broadcastMarks(int $id, Request $request): JsonResponse
     {
+        $customer = Customer::find($id);
+        if (! $customer || ! $this->canViewCustomer($request->user(), $customer)) {
+            return response()->json(['message' => 'Customer not found'], 404);
+        }
+
         $marks = CustomerSentMark::where('customer_id', $id)
             ->with('user:id,name,role,kios_id')
             ->get()
@@ -918,5 +934,29 @@ class CustomerController extends Controller
             'sent_marks' => $marks,
             'broadcasts' => $broadcasts,
         ]);
+    }
+
+    private function canViewCustomer($user, Customer $customer): bool
+    {
+        if (in_array($user->role, ['superadmin', 'AO'], true)) {
+            return true;
+        }
+
+        if ($user->kios_id && $customer->kios_id !== $user->kios_id) {
+            return false;
+        }
+
+        if ($user->role !== 'marketing') {
+            return true;
+        }
+
+        if ($customer->marketing_id === $user->id && $customer->assignment_status === 'assigned') {
+            return true;
+        }
+
+        return CustomerShare::where('customer_id', $customer->id)
+            ->where('to_marketing_id', $user->id)
+            ->where('status', 'approved')
+            ->exists();
     }
 }

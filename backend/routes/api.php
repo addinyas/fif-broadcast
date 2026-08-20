@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('feature:customer_management')->group(function () {
             Route::get('customers', [CustomerController::class, 'index']);
             Route::get('customers/{id}', [CustomerController::class, 'show']);
+            Route::get('customers/{id}/broadcast-marks', [CustomerController::class, 'broadcastMarks']);
             Route::patch('customers/{id}/cori', [CustomerController::class, 'updateCori']);
             Route::patch('customers/{id}/sisa-angsuran', [CustomerController::class, 'updateSisaAngsuran']);
             Route::post('customers/marketing-add', [CustomerController::class, 'marketingAdd']);
@@ -214,7 +215,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('admin/users/{id}/reset-password', [UserController::class, 'resetPassword']);
         Route::put('admin/users/{id}/kios', [UserController::class, 'updateKios']);
         Route::post('customers/delete-orphan', [CustomerController::class, 'deleteOrphan']);
-        Route::get('customers/{id}/broadcast-marks', [CustomerController::class, 'broadcastMarks']);
     });
 
     // Cabang Wilayah (superadmin & AO)

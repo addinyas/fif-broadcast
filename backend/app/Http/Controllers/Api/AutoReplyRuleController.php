@@ -55,6 +55,9 @@ class AutoReplyRuleController extends Controller
         if (! $rule) {
             return response()->json(['message' => 'Aturan tidak ditemukan'], 404);
         }
+        if ($request->user()->role === 'marketing' && $rule->user_id !== null && $rule->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Aturan tidak ditemukan'], 404);
+        }
 
         $validator = Validator::make($request->all(), [
             'trigger' => 'sometimes|string|max:100',
@@ -82,6 +85,9 @@ class AutoReplyRuleController extends Controller
     {
         $rule = AutoReplyRule::find($id);
         if (! $rule) {
+            return response()->json(['message' => 'Aturan tidak ditemukan'], 404);
+        }
+        if ($request->user()->role === 'marketing' && $rule->user_id !== null && $rule->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Aturan tidak ditemukan'], 404);
         }
 

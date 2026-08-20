@@ -211,6 +211,48 @@
    GLASS UTILITIES
 ══════════════════════════════════════════════════════ */
 @layer utilities {
+  /* Marketing prototype surfaces: slate canvas, blue actions, emerald outcomes. */
+  .marketing-shell {
+    --marketing-canvas: #f8fafc;
+    --marketing-card: #ffffff;
+    --marketing-action: #2563eb;
+    --marketing-success: #10b981;
+  }
+
+  .dark .marketing-shell {
+    --marketing-canvas: #080d1a;
+    --marketing-card: #0f172a;
+  }
+
+  .marketing-shell main {
+    background:
+      radial-gradient(circle at 92% 0%, rgba(37, 99, 235, 0.06), transparent 28rem),
+      var(--marketing-canvas);
+  }
+
+  .marketing-shell nav.fixed {
+    background: rgba(255, 255, 255, 0.92);
+    border-top: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.08);
+  }
+
+  .dark .marketing-shell nav.fixed {
+    background: rgba(8, 14, 26, 0.92);
+    border-top-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.4);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marketing-shell *,
+    .marketing-shell *::before,
+    .marketing-shell *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
   /* Light glassmorphism */
   .glass {
     background: rgba(255, 255, 255, 0.72);
