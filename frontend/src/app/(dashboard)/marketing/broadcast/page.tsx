@@ -194,10 +194,19 @@ export default function ProspectListPage() {
 
   const previewMessage = (() => {
     if (!templateBody) return '';
+    const target = customers.find((customer) => selectedIds.includes(customer.id)) || customers[0];
+    const dd = target?.dynamic_data || {};
     const hour = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour: 'numeric', hour12: false });
     const h = parseInt(hour, 10);
     const waktu = h >= 4 && h < 11 ? 'Pagi' : h >= 11 && h < 15 ? 'Siang' : h >= 15 && h < 18 ? 'Sore' : 'Malam';
     return templateBody
+      .replace(/#nomor_contract/g, String(dd.nomor_contract || dd.no_contract || '...'))
+      .replace(/#no_contract/g, String(dd.no_contract || '...'))
+      .replace(/#nama/g, String(dd.nama || target?.name || 'Customer'))
+      .replace(/#obj_desc/g, String(dd.obj_desc || 'motor'))
+      .replace(/#tahun/g, String(dd.tahun || 'tahun ini'))
+      .replace(/#plafon/g, calcPlafon(dd.otr, dd.cori) ? Number(calcPlafon(dd.otr, dd.cori)).toLocaleString('id-ID') : '...')
+      .replace(/#sisa_angsuran/g, String(dd.sisa_angsuran || '...'))
       .replace(/#namapanggilan/g, user?.display_name || user?.name || '...')
       .replace(/#waktu/g, waktu);
   })();
@@ -818,8 +827,8 @@ export default function ProspectListPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-100 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50">
-        <div className="border-b border-slate-50 px-5 py-3.5 dark:border-slate-700/30">
+      <div className="marketing-panel grid gap-0 overflow-hidden lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="border-b border-slate-100 px-5 py-4 dark:border-slate-700/30 lg:col-span-2">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex-1">
               <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Tersimpan</label>
@@ -840,7 +849,7 @@ export default function ProspectListPage() {
                       setSelectedTemplateId(null);
                     }
                   }}
-                  className="w-full max-w-xs rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition-all focus:border-fif-500 focus:bg-white focus:ring-2 focus:ring-fif-500/20 dark:border-slate-600 dark:bg-slate-700 dark:focus:bg-slate-700"
+                  className="marketing-field w-full"
                 >
                   <option value="">-- Pilih Template --</option>
                   {templates.map((t) => (
@@ -895,7 +904,7 @@ export default function ProspectListPage() {
             </div>
           </div>
         </div>
-        <div className="p-5">
+        <div className="p-5 lg:col-start-1">
           <label className="block text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">Template Pesan</label>
           <div className="mt-3 flex flex-wrap gap-1.5">
             {VARIABLE_BUTTONS.map((v) => (
@@ -918,7 +927,7 @@ export default function ProspectListPage() {
             placeholder="Tulis template broadcast di sini... Contoh: Halo #nama, angsuran anda #plafon"
           />
           {templateBody && (
-            <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm dark:border-slate-600 dark:from-emerald-900/10 dark:to-teal-900/10">
+            <div className="mt-3 hidden overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm dark:border-slate-600 dark:from-emerald-900/10 dark:to-teal-900/10">
               <div className="flex items-center gap-2 bg-emerald-600 px-4 py-2.5">
                 <MessageCircle className="h-4 w-4 text-emerald-100" />
                 <span className="text-xs font-semibold text-white">Preview Pesan</span>
@@ -941,11 +950,29 @@ export default function ProspectListPage() {
             </div>
           )}
         </div>
+        <aside className="phone-preview relative min-h-[430px] overflow-hidden p-5 lg:col-start-2 lg:row-start-2">
+          <div className="relative mx-auto flex h-full max-w-[260px] flex-col overflow-hidden rounded-[2.25rem] border-[7px] border-slate-900 bg-[#efeae2] shadow-2xl">
+            <div className="absolute left-1/2 top-0 z-10 h-5 w-24 -translate-x-1/2 rounded-b-2xl bg-slate-900" />
+            <div className="flex items-center gap-2 bg-[#075e54] px-4 pb-3 pt-7 text-white">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xs font-bold">{(user?.display_name || user?.name || 'M').charAt(0)}</div>
+              <div><p className="text-xs font-semibold">{user?.display_name || user?.name || 'FIF Marketing'}</p><p className="text-[10px] text-emerald-100">online</p></div>
+            </div>
+            <div className="flex-1 space-y-3 overflow-auto bg-[radial-gradient(#d7ccc1_1px,transparent_1px)] bg-[size:14px_14px] p-3">
+              <p className="mx-auto w-fit rounded-lg bg-[#e1f3fb] px-2 py-1 text-[9px] text-slate-500">PREVIEW LIVE</p>
+              <div className="ml-auto max-w-[88%] rounded-xl rounded-tr-sm bg-[#d9fdd3] px-3 py-2 text-[11px] leading-relaxed text-slate-700 shadow-sm">
+                {previewMessage || 'Pilih template untuk melihat pesan yang akan diterima customer.'}
+                <div className="mt-1 flex justify-end gap-1 text-[9px] text-slate-400">12:08 <CheckCheck className="h-3 w-3 text-blue-500" /></div>
+              </div>
+            </div>
+            <div className="bg-[#f0f2f5] p-2"><div className="rounded-full bg-white px-3 py-2 text-[10px] text-slate-400">Pesan broadcast...</div></div>
+          </div>
+        </aside>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <div className="relative min-w-[200px] flex-1 max-w-xs">
+          <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">Target customer</label>
+          <Search className="pointer-events-none absolute left-3 top-[calc(50%+0.45rem)] h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
             type="text"
             value={search}

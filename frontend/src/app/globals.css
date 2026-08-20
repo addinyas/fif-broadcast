@@ -156,6 +156,11 @@
     transform: scale(2);
     opacity: 0;
   }
+
+  @keyframes confetti-fall {
+    0% { opacity: 1; transform: translateY(-12px) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(96px) rotate(220deg); }
+  }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -213,7 +218,7 @@
 @layer utilities {
   /* Marketing prototype surfaces: slate canvas, blue actions, emerald outcomes. */
   .marketing-shell {
-    --marketing-canvas: #f8fafc;
+    --marketing-canvas: #f1f5f9;
     --marketing-card: #ffffff;
     --marketing-action: #2563eb;
     --marketing-success: #10b981;
@@ -226,8 +231,64 @@
 
   .marketing-shell main {
     background:
-      radial-gradient(circle at 92% 0%, rgba(37, 99, 235, 0.06), transparent 28rem),
+      radial-gradient(circle at 92% 0%, rgba(37, 99, 235, 0.08), transparent 28rem),
       var(--marketing-canvas);
+  }
+
+  .marketing-shell .marketing-panel {
+    border: 1px solid rgb(226 232 240 / .9);
+    border-radius: 1.5rem;
+    background: var(--marketing-card);
+    box-shadow: 0 16px 40px rgb(15 23 42 / .06);
+  }
+
+  /* Keep secondary marketing tools in the same quiet slate language. */
+  .marketing-shell .border-slate-100.bg-white,
+  .marketing-shell .border-slate-200.bg-white {
+    border-color: rgb(226 232 240 / .9);
+    border-radius: 1.25rem;
+    box-shadow: 0 10px 28px rgb(15 23 42 / .045);
+  }
+
+  .dark .marketing-shell .border-slate-100.bg-white,
+  .dark .marketing-shell .border-slate-200.bg-white {
+    border-color: rgb(51 65 85 / .8);
+    box-shadow: none;
+  }
+
+  .dark .marketing-shell .marketing-panel {
+    border-color: rgb(51 65 85 / .8);
+    box-shadow: 0 16px 40px rgb(2 6 23 / .25);
+  }
+
+  .marketing-shell .marketing-field {
+    width: 100%;
+    border-radius: .75rem;
+    border: 1px solid rgb(226 232 240);
+    background: rgb(248 250 252);
+    padding: .7rem .85rem;
+    color: rgb(30 41 59);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+
+  .marketing-shell .marketing-field:focus {
+    border-color: rgb(37 99 235);
+    background: white;
+    box-shadow: 0 0 0 4px rgb(37 99 235 / .12);
+  }
+
+  .dark .marketing-shell .marketing-field {
+    border-color: rgb(51 65 85);
+    background: rgb(30 41 59 / .8);
+    color: rgb(226 232 240);
+  }
+
+  .dark .marketing-shell .marketing-field:focus { background: rgb(30 41 59); }
+
+  .marketing-shell .phone-preview {
+    background: linear-gradient(145deg, #0f172a, #1e293b);
+    box-shadow: 0 24px 60px rgb(15 23 42 / .28), inset 0 0 0 1px rgb(255 255 255 / .12);
   }
 
   .marketing-shell nav.fixed {

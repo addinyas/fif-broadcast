@@ -39,6 +39,7 @@ export default function CalculatorPage() {
   const displayNopol = nopol || manual?.nopol || '';
 
   const [copied, setCopied] = useState(false);
+  const [confetti, setConfetti] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
   const rawTahun = manual ? manual.tahun : (selected?.dynamic_data?.tahun as string) || '';
@@ -150,7 +151,11 @@ export default function CalculatorPage() {
 
   const handleCopy = () => {
     const text = copyText();
-    const onSuccess = () => { setCopied(true); setTimeout(() => setCopied(false), 2000); };
+    const onSuccess = () => {
+      setCopied(true);
+      setConfetti(true);
+      setTimeout(() => { setCopied(false); setConfetti(false); }, 2200);
+    };
     if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text).then(onSuccess).catch(() => {
         const ta = document.createElement('textarea');
@@ -177,11 +182,17 @@ export default function CalculatorPage() {
   };
 
   return (
-    <div className="font-poppins space-y-5 animate-fade-in">
+    <div className="font-poppins space-y-6 animate-fade-in">
       {/* Header */}
       <div>
-        <h1 className="font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Kalkulator</h1>
-        <p className="mt-0.5 text-sm font-medium text-slate-400 dark:text-slate-500">Hitung angsuran dan simulasi pinjaman</p>
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">Alat follow-up</p>
+            <h1 className="mt-1 font-heading text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Kalkulator Pinjaman</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Simulasikan angka yang siap dibagikan ke nasabah.</p>
+          </div>
+          <Calculator className="hidden h-10 w-10 text-blue-600/20 sm:block" />
+        </div>
       </div>
 
       {/* Search — pill style */}
@@ -193,7 +204,7 @@ export default function CalculatorPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Cari nama atau no kontrak..."
-              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none transition-all focus:border-fif-400 focus:bg-white focus:ring-4 focus:ring-fif-500/5 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:focus:border-fif-500 dark:focus:bg-slate-800"
+              className="marketing-field w-full py-3 pl-11 pr-4"
             />
           </div>
           <button
@@ -480,7 +491,7 @@ export default function CalculatorPage() {
       {/* Main grid — Input (slate) + Output (teal) */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Input card — indigo accent */}
-        <div className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:border-indigo-800/50 dark:from-indigo-900/20 dark:to-slate-900">
+        <div className="marketing-panel overflow-hidden">
           <div className="flex items-center gap-2 border-b border-indigo-100 bg-indigo-50/50 px-5 py-3 dark:border-indigo-800/30 dark:bg-indigo-900/10">
             <div className="h-5 w-1 rounded-full bg-indigo-400 dark:bg-indigo-500" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Input</h3>
@@ -581,7 +592,7 @@ export default function CalculatorPage() {
         </div>
 
         {/* Output card — teal accent */}
-        <div className="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-white p-5 dark:border-teal-800/40 dark:from-teal-900/15 dark:to-slate-900">
+        <div className="marketing-panel bg-gradient-to-br from-white to-emerald-50/40 p-5 dark:from-slate-900 dark:to-emerald-950/20">
           <div className="mb-4 flex items-center gap-2">
             <div className="h-5 w-1 rounded-full bg-teal-400 dark:bg-teal-500" />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">Hasil</h3>
@@ -601,20 +612,20 @@ export default function CalculatorPage() {
               <span className="text-slate-400 text-xs">Pelunasan</span>
               <span className="font-satoshi font-semibold tabular-nums text-fif-600 dark:text-fif-400">{formatAngka(pelunasan)}</span>
             </div>
-            <div className="flex items-center justify-between rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 px-4 py-3 shadow-lg shadow-teal-500/20">
-              <span className="font-semibold text-sm text-teal-50">Terima</span>
-              <span className="font-satoshi font-bold tabular-nums text-base text-white">{formatAngka(terima)}</span>
+            <div className="rounded-2xl bg-emerald-500 px-5 py-4 shadow-xl shadow-emerald-500/25">
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-50">Diterima</span>
+              <span className="mt-1 block font-satoshi text-3xl font-bold tabular-nums text-white">{formatAngka(terima) || '0'}</span>
             </div>
           </div>
 
           <div className="mt-5">
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Tenor Angsuran</h4>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {visibleTenors.map((n, i) => {
                 const idx = financeTenors.indexOf(n);
                 const monthly = idx !== -1 ? (financeResult?.results[idx]?.angsuran ?? 0) : 0;
                 return (
-                  <div key={i} className="rounded-xl border border-slate-100 bg-white py-2 text-center dark:border-slate-700 dark:bg-slate-800/80">
+                  <div key={i} className="rounded-xl border border-slate-200 bg-white py-3 text-center transition-all hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-800/80">
                     <input type="number" min={1} max={36} value={n}
                       onChange={(e) => {
                         const val = Math.max(1, Math.min(36, parseInt(e.target.value) || 1));
@@ -657,7 +668,15 @@ export default function CalculatorPage() {
 
       {/* Result card — receipt style */}
       {hasRequiredInput ? (
-        <div ref={outputRef} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 dark:border-slate-700 dark:bg-slate-800 dark:shadow-none">
+        <div ref={outputRef} className="marketing-panel relative overflow-hidden bg-white shadow-xl shadow-blue-900/10 dark:bg-slate-900">
+          {confetti && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-24 overflow-hidden" aria-hidden="true">
+              {Array.from({ length: 18 }, (_, i) => (
+                <span key={i} className="absolute h-2 w-1.5 animate-[confetti-fall_1.8s_ease-out_forwards] rounded-sm"
+                  style={{ left: `${(i * 17) % 100}%`, backgroundColor: ['#2563eb', '#10b981', '#f59e0b', '#f43f5e'][i % 4], animationDelay: `${(i % 5) * 60}ms` }} />
+              ))}
+            </div>
+          )}
           <div className="relative bg-gradient-to-r from-fif-600 to-fif-500 px-5 py-3">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTR2Mkg0di0yaDM2em0wLTR2MkgxNHYtMmgzMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-50" />
             <div className="relative flex items-center justify-between">
@@ -699,8 +718,8 @@ export default function CalculatorPage() {
             </div>
             <div className="my-3 border-t border-dashed border-slate-200 dark:border-slate-600" />
             <div className="rounded-xl bg-gradient-to-r from-fif-50 to-fif-100 px-4 py-3 dark:from-fif-900/30 dark:to-fif-800/30">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-fif-500 dark:text-fif-400">Diterima</p>
-              <p className="text-xl font-bold text-fif-700 dark:text-fif-300">{formatAngka(terima)}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400">Ringkasan penerimaan</p>
+              <p className="text-xl font-bold text-blue-700 dark:text-blue-300">{formatAngka(terima)}</p>
             </div>
             {(financeResult?.results ?? []).some((r) => visibleTenors.includes(r.tenor)) && (
               <div className="mt-3">

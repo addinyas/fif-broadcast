@@ -50,13 +50,13 @@ function Greeting({ onRefresh, loading }: { onRefresh?: () => void; loading?: bo
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-2xl text-white"
+      className="relative overflow-hidden rounded-3xl text-white"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       style={{
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #1d4ed8 75%, #2563eb 100%)',
-        boxShadow: '0 20px 60px rgba(37,99,235,0.25), 0 4px 16px rgba(0,0,0,0.3)',
+        background: 'linear-gradient(120deg, #0f172a 0%, #172554 45%, #2563eb 100%)',
+        boxShadow: '0 24px 70px rgba(37,99,235,0.22), 0 4px 16px rgba(0,0,0,0.2)',
       }}
     >
       <div className="pointer-events-none absolute inset-0">
@@ -89,8 +89,8 @@ function Greeting({ onRefresh, loading }: { onRefresh?: () => void; loading?: bo
             <h1 className="font-poppins text-2xl font-bold tracking-tight sm:text-3xl">
               {user?.name || 'Marketing'}
             </h1>
-            <p className="mt-1.5 text-sm text-blue-200/60">
-              Pantau progress broadcast WhatsApp Anda secara real-time
+            <p className="mt-1.5 max-w-md text-sm text-blue-100/70">
+              Satu ruang untuk menyiapkan pesan, membaca respons, dan menjaga follow-up tetap bergerak.
             </p>
           </div>
 

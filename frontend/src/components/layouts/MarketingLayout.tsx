@@ -92,7 +92,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="marketing-shell flex h-screen overflow-hidden bg-surface dark:bg-[#080e1a]">
+    <div className="marketing-shell flex h-screen overflow-hidden bg-slate-100 dark:bg-[#0f172a]">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex flex-1 flex-col overflow-hidden">
@@ -142,12 +142,12 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
         <BroadcastStatusBanner />
 
         {/* Desktop workspace header keeps navigation context visible while scrolling. */}
-        <header className="marketing-workspace-header hidden items-center justify-between border-b border-slate-200/80 bg-white/80 px-8 py-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/70 lg:flex">
+        <header className="marketing-workspace-header hidden items-center justify-between border-b border-slate-200 bg-white px-8 py-5 dark:border-slate-800 dark:bg-slate-900 lg:flex">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
-              Ruang kerja marketing
+              FIF • ruang kerja marketing
             </p>
-            <h1 className="mt-1 font-heading text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="mt-1 font-heading text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               {pageTitles[pathname.split('/')[2] ?? 'dashboard'] ?? 'Dashboard'}
             </h1>
           </div>
@@ -157,7 +157,7 @@ export function MarketingLayout({ children }: { children: React.ReactNode }) {
               <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{user?.name ?? 'Marketing'}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{roleLabel[user?.role ?? ''] ?? 'MCE'}</p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/20">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-600/20 ring-4 ring-blue-50 dark:ring-blue-950/50">
               {(user?.name?.charAt(0) ?? 'M').toUpperCase()}
             </div>
           </div>
